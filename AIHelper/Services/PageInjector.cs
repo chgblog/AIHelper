@@ -36,16 +36,30 @@ namespace AIHelper.Services
 
             try
             {
-                string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "injector.js");
                 string injectorScript = string.Empty;
-                if (File.Exists(scriptPath))
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                using (var stream = assembly.GetManifestResourceStream("AIHelper.Assets.injector.js"))
                 {
-                    injectorScript = File.ReadAllText(scriptPath);
+                    if (stream != null)
+                    {
+                        using (var reader = new StreamReader(stream))
+                        {
+                            injectorScript = reader.ReadToEnd();
+                        }
+                    }
                 }
-                else
+
+                if (string.IsNullOrEmpty(injectorScript))
                 {
-                    // Fallback to minimal implementation if file not found
-                    return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = "注入脚本丢失" };
+                    string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "injector.js");
+                    if (File.Exists(scriptPath))
+                    {
+                        injectorScript = File.ReadAllText(scriptPath);
+                    }
+                    else
+                    {
+                        return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = "注入脚本丢失" };
+                    }
                 }
 
                 // Serialize text to safely pass it to JS

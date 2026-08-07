@@ -1,0 +1,10 @@
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <Costura>
+    <Unmanaged32Assemblies>
+      WebView2Loader
+    </Unmanaged32Assemblies>
+    <Unmanaged64Assemblies>
+      WebView2Loader
+    </Unmanaged64Assemblies>
+  </Costura>
+</Weavers>

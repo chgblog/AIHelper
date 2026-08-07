@@ -48,6 +48,7 @@
 - **运行环境 / 框架**：.NET Framework 4.8 / WPF (Windows Presentation Foundation)
 - **网页浏览器内核**：[Microsoft.Web.WebView2](https://www.nuget.org/packages/Microsoft.Web.WebView2)
 - **JSON 序列化**：[Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
+- **单文件打包**：[Costura.Fody](https://www.nuget.org/packages/Costura.Fody)
 - **脚本注入桥梁**：Vanilla JavaScript (`injector.js`)
 
 ---
@@ -85,7 +86,7 @@ AIHelper/
 ### 1. 前置条件
 
 - **操作系统**：Windows 10 / Windows 11
-- **开发工具**：Visual Studio 2019 / 2022（需安装 **.NET 桌面开发** 工作负载）
+- **开发工具**：Visual Studio 2019 / 2022（需安装 **.NET 桌面开发** 工作负载）或 .NET SDK
 - **SDK 要求**：.NET Framework 4.8 Developer Pack
 - **运行时需求**：[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Win11 已内置，Win10 通常随 Edge 自动安装）
 
@@ -99,6 +100,17 @@ AIHelper/
 2. 使用 Visual Studio 打开 [AIHelper.sln](file:///e:/CHG/develop/AIHelper/AIHelper.sln)。
 3. 在 Visual Studio 顶部菜单选择 `Any CPU` 或 `x64` 平台，解决方案配置选择 `Debug` 或 `Release`。
 4. 按下 `F5` 键运行或按 `Ctrl+Shift+B` 编译解决方案。
+
+### 3. 单文件打包 (Single EXE Packaging)
+
+本项目已集成 **Costura.Fody**，支持将依赖 DLL 及 `injector.js` 静态资源全部合并为单个独立的 `.exe` 文件：
+
+- **通过命令行编译发布**：
+  ```bash
+  dotnet build AIHelper/AIHelper.csproj -c Release
+  ```
+- **生成产物**：
+  打包后的单文件位于 `AIHelper/bin/Release/net48/AIHelper.exe`。您可以直接将 `AIHelper.exe`（及其同级配置文件 `AIHelper.exe.config`）复制到任意位置独立运行，无需附带任何 DLL 或 `Assets/` 资源目录。
 
 ---
 
