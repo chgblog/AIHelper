@@ -43,6 +43,10 @@ namespace AIHelper.Views
                 SettingsService.Instance.Save(_settings);
                 ShowSettings();
             }
+            else if (_settings.AutoStart)
+            {
+                AutoStartService.SetAutoStart(true);
+            }
 
             LoadPlatforms();
 

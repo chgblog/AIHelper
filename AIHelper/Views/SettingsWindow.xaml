@@ -11,6 +11,17 @@
         </Grid.RowDefinitions>
 
         <TabControl Background="#161622" BorderBrush="#3a3a5e">
+            <!-- 常规设置 -->
+            <TabItem Header="常规设置">
+                <Grid Margin="15">
+                    <StackPanel>
+                        <TextBlock Text="常规选项" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                        <CheckBox x:Name="chkAutoStart" Content="开机自动启动 AIHelper" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
+                        <TextBlock Text="勾选后，Windows 登录时将自动在后台运行 AIHelper" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
             <!-- 平台管理 -->
             <TabItem Header="平台管理">
                 <Grid Margin="10">

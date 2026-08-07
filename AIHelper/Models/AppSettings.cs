@@ -16,6 +16,7 @@ namespace AIHelper.Models
         public bool IsFirstRun { get; set; } = true;
         public double WindowWidth { get; set; } = 520;
         public double WindowHeight { get; set; } = 800;
+        public bool AutoStart { get; set; } = false;
 
         /// <summary>
         /// Gets the active platform

@@ -23,6 +23,7 @@ namespace AIHelper.Views
         private void LoadSettings()
         {
             _settings = SettingsService.Instance.Load();
+            chkAutoStart.IsChecked = _settings.AutoStart;
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
@@ -35,6 +36,9 @@ namespace AIHelper.Views
                 MessageBox.Show("平台列表不能为空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            _settings.AutoStart = chkAutoStart.IsChecked == true;
+            AutoStartService.SetAutoStart(_settings.AutoStart);
 
             var activePlatform = _settings.Platforms.FirstOrDefault(p => p.IsActive);
             if (activePlatform != null)
