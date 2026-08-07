@@ -51,7 +51,7 @@ namespace AIHelper.Services
                 // Serialize text to safely pass it to JS
                 string jsonText = JsonConvert.SerializeObject(text);
                 
-                string finalScript = $"{injectorScript}\n window.AiHelperInjector.inject({jsonText}, true);";
+                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true);";
 
                 string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(function() {{ {finalScript} }})()");
                 
@@ -60,9 +60,20 @@ namespace AIHelper.Services
                     return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = "注入失败，未获取到结果" };
                 }
 
-                // Actually if the result from ExecuteScriptAsync is a string returned from JSON.stringify inside JS,
-                // we might need to parse it if it comes double-encoded. But as requested, just parsing it once:
-                var result = JsonConvert.DeserializeObject<InjectionScriptResult>(resultJson);
+                string rawJson = resultJson;
+                if (rawJson.StartsWith("\"") && rawJson.EndsWith("\""))
+                {
+                    try
+                    {
+                        rawJson = JsonConvert.DeserializeObject<string>(rawJson);
+                    }
+                    catch
+                    {
+                        // Fallback to raw string if unquoting fails
+                    }
+                }
+
+                var result = JsonConvert.DeserializeObject<InjectionScriptResult>(rawJson);
                 if (result == null)
                 {
                     return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = "注入失败，结果格式错误" };
