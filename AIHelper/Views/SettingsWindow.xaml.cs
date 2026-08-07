@@ -29,12 +29,24 @@ namespace AIHelper.Views
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
         }
 
-        private void BtnSave_Click(object sender, RoutedEventArgs e)
+        private void ApplyCurrentActionEdit()
         {
+            if (_selectedAction != null)
+            {
+                _selectedAction.Name = txtActionName.Text;
+                _selectedAction.Prompt = txtActionPrompt.Text;
+                dgActions.Items.Refresh();
+            }
+        }
+
+        private bool SaveSettings()
+        {
+            ApplyCurrentActionEdit();
+
             if (_settings.Platforms.Count == 0)
             {
                 MessageBox.Show("平台列表不能为空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                return false;
             }
 
             _settings.AutoStart = chkAutoStart.IsChecked == true;
@@ -52,8 +64,16 @@ namespace AIHelper.Views
             }
 
             SettingsService.Instance.Save(_settings);
-            this.DialogResult = true;
-            this.Close();
+            return true;
+        }
+
+        private void BtnSave_Click(object sender, RoutedEventArgs e)
+        {
+            if (SaveSettings())
+            {
+                this.DialogResult = true;
+                this.Close();
+            }
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
@@ -132,12 +152,7 @@ namespace AIHelper.Views
 
         private void BtnApplyActionEdit_Click(object sender, RoutedEventArgs e)
         {
-            if (_selectedAction != null)
-            {
-                _selectedAction.Name = txtActionName.Text;
-                _selectedAction.Prompt = txtActionPrompt.Text;
-                dgActions.Items.Refresh();
-            }
+            SaveSettings();
         }
 
         private void TxtActionHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
