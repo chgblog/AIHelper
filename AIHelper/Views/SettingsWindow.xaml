@@ -1,7 +1,7 @@
 <Window x:Class="AIHelper.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="设置" Height="500" Width="600"
+        Title="设置" Height="500" Width="600" Icon="/icon.ico"
         WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
         WindowStyle="ToolWindow">
     <Grid Margin="10">
@@ -12,7 +12,7 @@
 
         <TabControl Background="#161622" BorderBrush="#3a3a5e">
             <!-- 平台管理 -->
-            <TabItem Header="平台管理" Background="#2a2a3e" Foreground="#e0e0e0">
+            <TabItem Header="平台管理">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -40,7 +40,7 @@
             </TabItem>
 
             <!-- 操作管理 -->
-            <TabItem Header="操作管理" Background="#2a2a3e" Foreground="#e0e0e0">
+            <TabItem Header="操作管理">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -92,7 +92,7 @@
             </TabItem>
 
             <!-- 快捷键设置 -->
-            <TabItem Header="快捷键设置" Background="#2a2a3e" Foreground="#e0e0e0">
+            <TabItem Header="快捷键设置">
                 <Grid Margin="10">
                     <StackPanel>
                         <TextBlock Text="面板唤醒快捷键:" Margin="0,0,0,10" FontWeight="Bold"/>

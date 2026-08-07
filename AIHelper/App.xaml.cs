@@ -39,7 +39,27 @@ namespace AIHelper
         private void InitializeTrayIcon()
         {
             _notifyIcon = new System.Windows.Forms.NotifyIcon();
-            _notifyIcon.Icon = System.Drawing.SystemIcons.Application;
+            
+            try
+            {
+                var iconStreamInfo = Application.GetResourceStream(new Uri("pack://application:,,,/icon.ico"));
+                if (iconStreamInfo != null)
+                {
+                    using (var stream = iconStreamInfo.Stream)
+                    {
+                        _notifyIcon.Icon = new System.Drawing.Icon(stream);
+                    }
+                }
+                else
+                {
+                    _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Process.GetCurrentProcess().MainModule.FileName);
+                }
+            }
+            catch
+            {
+                _notifyIcon.Icon = System.Drawing.SystemIcons.Application;
+            }
+
             _notifyIcon.Visible = true;
             _notifyIcon.Text = "AIHelper";
             _notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
