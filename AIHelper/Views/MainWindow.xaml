@@ -1,0 +1,64 @@
+<Window x:Class="AIHelper.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AIHelper.Views"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        mc:Ignorable="d"
+        Title="AIHelper" Height="600" Width="800"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
+    <Border Background="#1a1a2e" CornerRadius="8" BorderBrush="#3a3a5e" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Title Bar -->
+            <Grid Grid.Row="0" Background="#161622" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" Text="AIHelper" Foreground="#7c3aed" FontWeight="Bold" 
+                           VerticalAlignment="Center" Margin="15,0,0,0"/>
+                
+                <ComboBox x:Name="cmbPlatforms" Grid.Column="1" Width="200" HorizontalAlignment="Left" 
+                          Margin="20,0,0,0" VerticalAlignment="Center" SelectionChanged="CmbPlatforms_SelectionChanged"
+                          DisplayMemberPath="Name" />
+                          
+                <Button x:Name="btnSettings" Grid.Column="2" Content="⚙ 设置" Width="60" 
+                        Click="BtnSettings_Click" Background="Transparent" Foreground="#e0e0e0" 
+                        BorderThickness="0" Margin="0,0,10,0"/>
+                        
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <Button Content="—" Width="40" Click="BtnMinimize_Click" 
+                            Background="Transparent" Foreground="#e0e0e0" BorderThickness="0"/>
+                    <Button Content="✕" Width="40" Click="BtnClose_Click" 
+                            Background="Transparent" Foreground="#e0e0e0" BorderThickness="0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Action Panel -->
+            <local:ActionPanelControl x:Name="actionPanel" Grid.Row="1" Visibility="Collapsed" 
+                                      ActionSubmitted="ActionPanel_ActionSubmitted"/>
+
+            <!-- WebView2 -->
+            <wv2:WebView2 x:Name="webView" Grid.Row="2" NavigationCompleted="WebView_NavigationCompleted"/>
+
+            <!-- Status Bar -->
+            <StatusBar Grid.Row="3" Background="#161622" Foreground="#a0a0b0">
+                <StatusBarItem>
+                    <TextBlock x:Name="txtStatus" Text="就绪"/>
+                </StatusBarItem>
+            </StatusBar>
+        </Grid>
+    </Border>
+</Window>
