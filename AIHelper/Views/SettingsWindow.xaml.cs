@@ -132,7 +132,7 @@ namespace AIHelper.Views
         {
             if (dgPlatforms.SelectedItem is AiPlatform platform)
             {
-                var editWindow = new PlatformEditWindow(platform);
+                var editWindow = new PlatformEditWindow(platform, "编辑平台");
                 editWindow.Owner = this;
                 if (editWindow.ShowDialog() == true)
                 {
@@ -158,12 +158,23 @@ namespace AIHelper.Views
                 Url = url,
                 IsActive = _settings.Platforms.Count == 0
             };
-            if (newPlatform.IsActive)
+
+            var editWindow = new PlatformEditWindow(newPlatform, "添加平台");
+            editWindow.Owner = this;
+            if (editWindow.ShowDialog() == true)
             {
-                _settings.ActivePlatformId = newPlatform.Id;
+                if (newPlatform.IsActive)
+                {
+                    foreach (var p in _settings.Platforms)
+                    {
+                        p.IsActive = (p == newPlatform);
+                    }
+                    _settings.ActivePlatformId = newPlatform.Id;
+                }
+                _settings.Platforms.Add(newPlatform);
+                dgPlatforms.Items.Refresh();
+                dgPlatforms.SelectedItem = newPlatform;
             }
-            _settings.Platforms.Add(newPlatform);
-            dgPlatforms.Items.Refresh();
         }
 
         private void BtnAddAction_Click(object sender, RoutedEventArgs e)

@@ -7,9 +7,13 @@ namespace AIHelper.Views
     {
         private readonly AiPlatform _platform;
 
-        public PlatformEditWindow(AiPlatform platform)
+        public PlatformEditWindow(AiPlatform platform, string title = "编辑平台")
         {
             InitializeComponent();
+            if (!string.IsNullOrEmpty(title))
+            {
+                this.Title = title;
+            }
             _platform = platform;
 
             // Load current values
