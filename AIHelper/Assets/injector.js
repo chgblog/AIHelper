@@ -17,7 +17,7 @@
     }
 
     window.AiHelperInjector = {
-        inject: function(text, autoSubmit) {
+        inject: function(text, autoSubmit, inputSelector, submitSelector) {
             try {
                 const url = window.location.href;
                 
@@ -40,16 +40,25 @@
                     }
                 }
 
-                // 3. Find input element
+                // 3. Find input element - prioritize custom selector
                 let inputEl = null;
-                if (platform === "claude") {
-                    inputEl = document.querySelector('div.ProseMirror[contenteditable="true"]') || document.querySelector('[contenteditable="true"]');
-                } else if (platform === "gemini") {
-                    inputEl = document.querySelector('rich-textarea div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"]');
-                } else if (platform === "deepseek") {
-                    inputEl = document.querySelector('textarea#chat-input') || document.querySelector('textarea');
-                } else {
-                    inputEl = document.querySelector('textarea') || document.querySelector('[contenteditable="true"]');
+
+                if (inputSelector) {
+                    try {
+                        inputEl = document.querySelector(inputSelector);
+                    } catch(e) {}
+                }
+
+                if (!inputEl) {
+                    if (platform === "claude") {
+                        inputEl = document.querySelector('div.ProseMirror[contenteditable="true"]') || document.querySelector('[contenteditable="true"]');
+                    } else if (platform === "gemini") {
+                        inputEl = document.querySelector('rich-textarea div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"]');
+                    } else if (platform === "deepseek") {
+                        inputEl = document.querySelector('textarea#chat-input') || document.querySelector('textarea');
+                    } else {
+                        inputEl = document.querySelector('textarea') || document.querySelector('[contenteditable="true"]');
+                    }
                 }
 
                 if (!inputEl) {
@@ -100,7 +109,7 @@
                 if (autoSubmit) {
                     setTimeout(function() {
                         try {
-                            window.AiHelperInjector.submit(inputEl, platform);
+                            window.AiHelperInjector.submit(inputEl, platform, submitSelector);
                         } catch (e) {
                             console.error("Auto submit error:", e);
                         }
@@ -113,7 +122,7 @@
             }
         },
 
-        submit: function(inputEl, platform) {
+        submit: function(inputEl, platform, submitSelector) {
             if (!inputEl) return;
 
             // Find input container box
@@ -131,20 +140,30 @@
             }
             if (!container) container = inputEl.parentElement || document.body;
 
-            // Try explicit selectors
+            // Try custom submit selector first
             let submitBtn = null;
-            if (platform === "deepseek") {
-                submitBtn = container.querySelector('#chat-input-send-button') ||
-                            container.querySelector('div[class*="send-button"]') ||
-                            container.querySelector('div[class*="sendButton"]') ||
-                            container.querySelector('div[class*="_send_button"]');
-            } else if (platform === "claude") {
-                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
-                            container.querySelector('button[aria-label*="发送"]');
-            } else if (platform === "gemini") {
-                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
-                            container.querySelector('button[aria-label*="发送"]') ||
-                            container.querySelector('.send-button');
+
+            if (submitSelector) {
+                try {
+                    submitBtn = document.querySelector(submitSelector);
+                } catch(e) {}
+            }
+
+            // Fallback to platform-specific selectors
+            if (!submitBtn || submitBtn.offsetWidth === 0) {
+                if (platform === "deepseek") {
+                    submitBtn = container.querySelector('#chat-input-send-button') ||
+                                container.querySelector('div[class*="send-button"]') ||
+                                container.querySelector('div[class*="sendButton"]') ||
+                                container.querySelector('div[class*="_send_button"]');
+                } else if (platform === "claude") {
+                    submitBtn = container.querySelector('button[aria-label*="Send"]') ||
+                                container.querySelector('button[aria-label*="发送"]');
+                } else if (platform === "gemini") {
+                    submitBtn = container.querySelector('button[aria-label*="Send"]') ||
+                                container.querySelector('button[aria-label*="发送"]') ||
+                                container.querySelector('.send-button');
+                }
             }
 
             if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {

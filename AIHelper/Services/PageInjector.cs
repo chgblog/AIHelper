@@ -25,9 +25,9 @@ namespace AIHelper.Services
     public class PageInjector
     {
         /// <summary>
-        /// Injects text and auto-submits
+        /// Injects text and auto-submits, using optional custom CSS selectors
         /// </summary>
-        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text)
+        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text, string inputSelector = null, string submitSelector = null)
         {
             if (webView == null || webView.CoreWebView2 == null)
             {
@@ -62,10 +62,12 @@ namespace AIHelper.Services
                     }
                 }
 
-                // Serialize text to safely pass it to JS
+                // Serialize text and selectors to safely pass them to JS
                 string jsonText = JsonConvert.SerializeObject(text);
+                string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
+                string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
                 
-                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true);";
+                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true, {jsonInputSelector}, {jsonSubmitSelector});";
 
                 string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(function() {{ {finalScript} }})()");
                 

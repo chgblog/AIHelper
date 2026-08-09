@@ -11,5 +11,15 @@ namespace AIHelper.Models
         public string Name { get; set; }
         public string Url { get; set; }
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// Custom CSS selector for the input element (textarea or contenteditable)
+        /// </summary>
+        public string InputSelector { get; set; }
+
+        /// <summary>
+        /// Custom CSS selector for the submit button
+        /// </summary>
+        public string SubmitSelector { get; set; }
     }
 }

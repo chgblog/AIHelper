@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\injector.js" />
+    <EmbeddedResource Include="Assets\element-picker.js" />
   </ItemGroup>
 
 </Project>

@@ -42,6 +42,7 @@
                     
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
                         <Button Content="添加" Click="BtnAddPlatform_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
+                        <Button Content="编辑" Click="BtnEditPlatform_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
                         <Button Content="删除" Click="BtnDeletePlatform_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
                         <Button Content="+ Claude" Click="BtnAddClaude_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
                         <Button Content="+ Gemini" Click="BtnAddGemini_Click" Width="80" Margin="0,0,10,0" Padding="5"/>

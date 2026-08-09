@@ -1,6 +1,8 @@
 # AIHelper
 
-**AIHelper** 是一款基于 WPF 和 Microsoft WebView2 开发的轻量级 Windows 桌面 AI 助手工具。它旨在将网页端 AI 大模型平台（如 DeepSeek、Claude、Gemini 等）无缝集成到日常工作流中。通过全局快捷键和智能网页脚本注入，实现划词/剪贴板文本的快速翻译、解释、摘要、润色与语法检查。
+**中文** | [English](README_EN.md)
+
+**AIHelper** 是一款轻量级 Windows桌面AI助手工具。它旨在将网页端 AI 大模型平台（如 DeepSeek、ChatGPT、Claude、Gemini 等）无缝集成到日常工作中。通过全局快捷键和智能网页脚本注入，实现剪贴板文本的快速翻译、解释、摘要、润色与语法检查。
 
 ---
 
@@ -94,7 +96,7 @@ AIHelper/
 
 1. 克隆或下载本项目源码至本地：
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/chgblog/AIHelper.git
    cd AIHelper
    ```
 2. 使用 Visual Studio 打开 [AIHelper.sln](file:///e:/CHG/develop/AIHelper/AIHelper.sln)。

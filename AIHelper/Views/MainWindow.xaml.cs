@@ -198,7 +198,8 @@ namespace AIHelper.Views
             string content = ClipboardService.GetText();
             string prompt = action.Prompt.Replace("{content}", content);
             UpdateStatus($"正在执行: {action.Name}...");
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt);
+            var platform = _settings.GetActivePlatform();
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector);
             UpdateStatus(result.Success ? $"成功: {result.Message}" : $"失败: {result.Message}");
         }
 
@@ -217,7 +218,8 @@ namespace AIHelper.Views
                 return;
             }
             UpdateStatus("正在提交...");
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt);
+            var platform = _settings.GetActivePlatform();
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector);
             UpdateStatus(result.Success ? "提交成功" : $"提交失败: {result.Message}");
         }
 

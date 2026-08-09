@@ -97,6 +97,23 @@ namespace AIHelper.Views
             }
         }
 
+        private void BtnEditPlatform_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgPlatforms.SelectedItem is AiPlatform platform)
+            {
+                var editWindow = new PlatformEditWindow(platform);
+                editWindow.Owner = this;
+                if (editWindow.ShowDialog() == true)
+                {
+                    dgPlatforms.Items.Refresh();
+                }
+            }
+            else
+            {
+                MessageBox.Show("请先选择要编辑的平台。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
         private void BtnAddClaude_Click(object sender, RoutedEventArgs e) => AddPlatform("Claude", "https://claude.ai/new");
         private void BtnAddGemini_Click(object sender, RoutedEventArgs e) => AddPlatform("Gemini", "https://gemini.google.com/app");
         private void BtnAddDeepSeek_Click(object sender, RoutedEventArgs e) => AddPlatform("DeepSeek", "https://chat.deepseek.com/");
