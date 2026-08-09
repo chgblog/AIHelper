@@ -75,16 +75,8 @@ namespace AIHelper.Views
                 }
 
                 ActionClicked?.Invoke(action);
+                ActionSubmitted?.Invoke(action, txtInput.Text);
             }
-        }
-
-        private void BtnSubmit_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedAction == null && ActionItems != null && ActionItems.Count > 0)
-            {
-                _selectedAction = ActionItems[0];
-            }
-            ActionSubmitted?.Invoke(_selectedAction, txtInput.Text);
         }
     }
 }

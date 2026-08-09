@@ -32,28 +32,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-        
-        <Style TargetType="Button" x:Key="SubmitButtonStyle">
-            <Setter Property="Background" Value="#7c3aed"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#8b5cf6"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
     
     <Grid Margin="15">
@@ -74,17 +52,6 @@
                  
         <TextBlock Grid.Row="2" Text="可用操作:" Margin="0,0,0,5" Foreground="#a0a0b0"/>
         
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <WrapPanel x:Name="actionsWrapPanel" Grid.Column="0" Orientation="Horizontal"/>
-            
-            <Button x:Name="btnSubmit" Grid.Column="1" Content="▶ 提交" 
-                    Style="{StaticResource SubmitButtonStyle}" 
-                    Click="BtnSubmit_Click" VerticalAlignment="Bottom"/>
-        </Grid>
+        <WrapPanel x:Name="actionsWrapPanel" Grid.Row="3" Orientation="Horizontal"/>
     </Grid>
 </UserControl>
