@@ -36,7 +36,17 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="150"/>
                             <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="*"/>
-                            <DataGridCheckBoxColumn Header="激活" Binding="{Binding IsActive}" Width="60"/>
+                            <DataGridTemplateColumn Header="激活" Width="60">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <RadioButton IsChecked="{Binding IsActive, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                     GroupName="PlatformActiveGroup" 
+                                                     HorizontalAlignment="Center" 
+                                                     VerticalAlignment="Center"
+                                                     Click="RbPlatformActive_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                     

@@ -24,9 +24,35 @@ namespace AIHelper.Views
         {
             _settings = SettingsService.Instance.Load();
             chkAutoStart.IsChecked = _settings.AutoStart;
+
+            if (_settings.Platforms != null && _settings.Platforms.Count > 0)
+            {
+                var activePlatform = _settings.Platforms.FirstOrDefault(p => p.Id == _settings.ActivePlatformId)
+                                  ?? _settings.Platforms.FirstOrDefault(p => p.IsActive)
+                                  ?? _settings.Platforms[0];
+
+                foreach (var p in _settings.Platforms)
+                {
+                    p.IsActive = (p == activePlatform);
+                }
+                _settings.ActivePlatformId = activePlatform.Id;
+            }
+
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+        }
+
+        private void RbPlatformActive_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioButton rb && rb.DataContext is AiPlatform selectedPlatform)
+            {
+                foreach (var p in _settings.Platforms)
+                {
+                    p.IsActive = (p == selectedPlatform);
+                }
+                _settings.ActivePlatformId = selectedPlatform.Id;
+            }
         }
 
         private void ApplyCurrentActionEdit()
@@ -84,15 +110,20 @@ namespace AIHelper.Views
 
         private void BtnAddPlatform_Click(object sender, RoutedEventArgs e)
         {
-            _settings.Platforms.Add(new AiPlatform { Id = Guid.NewGuid().ToString(), Name = "新平台", Url = "https://" });
-            dgPlatforms.Items.Refresh();
+            AddPlatform("新平台", "https://");
         }
 
         private void BtnDeletePlatform_Click(object sender, RoutedEventArgs e)
         {
             if (dgPlatforms.SelectedItem is AiPlatform p)
             {
+                bool wasActive = p.IsActive;
                 _settings.Platforms.Remove(p);
+                if (wasActive && _settings.Platforms.Count > 0)
+                {
+                    _settings.Platforms[0].IsActive = true;
+                    _settings.ActivePlatformId = _settings.Platforms[0].Id;
+                }
                 dgPlatforms.Items.Refresh();
             }
         }
@@ -120,7 +151,18 @@ namespace AIHelper.Views
 
         private void AddPlatform(string name, string url)
         {
-            _settings.Platforms.Add(new AiPlatform { Id = Guid.NewGuid().ToString(), Name = name, Url = url });
+            var newPlatform = new AiPlatform
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = name,
+                Url = url,
+                IsActive = _settings.Platforms.Count == 0
+            };
+            if (newPlatform.IsActive)
+            {
+                _settings.ActivePlatformId = newPlatform.Id;
+            }
+            _settings.Platforms.Add(newPlatform);
             dgPlatforms.Items.Refresh();
         }
 
