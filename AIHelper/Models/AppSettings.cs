@@ -20,6 +20,20 @@ namespace AIHelper.Models
         public bool AutoSubmit { get; set; } = true;
         public string ProxyServer { get; set; } = "";
 
+        private string _projectUrl = "https://github.com/chgblog/AIHelper";
+        public string ProjectUrl
+        {
+            get => string.IsNullOrWhiteSpace(_projectUrl) ? "https://github.com/chgblog/AIHelper" : _projectUrl;
+            set => _projectUrl = value;
+        }
+
+        private string _updateUrl = "https://github.com/chgblog/AIHelper/releases";
+        public string UpdateUrl
+        {
+            get => string.IsNullOrWhiteSpace(_updateUrl) ? "https://github.com/chgblog/AIHelper/releases" : _updateUrl;
+            set => _updateUrl = value;
+        }
+
         /// <summary>
         /// Gets the active platform
         /// </summary>

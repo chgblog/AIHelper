@@ -13,29 +13,31 @@
         <TabControl Background="#161622" BorderBrush="#3a3a5e">
             <!-- 常规设置 -->
             <TabItem Header="常规设置">
-                <Grid Margin="15">
-                    <StackPanel>
-                        <TextBlock Text="常规选项" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
-                        <CheckBox x:Name="chkAutoStart" Content="开机自动启动 AIHelper" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
-                        <TextBlock Text="勾选后，Windows 登录时将自动在后台运行 AIHelper" Margin="20,5,0,15" Foreground="#a0a0b0" FontSize="12"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <TextBlock Text="常规选项" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <CheckBox x:Name="chkAutoStart" Content="开机自动启动 AIHelper" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="勾选后，Windows 登录时将自动在后台运行 AIHelper" Margin="20,5,0,15" Foreground="#a0a0b0" FontSize="12"/>
 
-                        <CheckBox x:Name="chkAutoSubmit" Content="自动提交提示词" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
-                        <TextBlock Text="勾选后注入提示词后自动点击发送；未勾选时仅点击新会话并注入提示词，不点击发送按钮" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+                            <CheckBox x:Name="chkAutoSubmit" Content="自动提交提示词" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="勾选后注入提示词后自动点击发送；未勾选时仅点击新会话并注入提示词，不点击发送按钮" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
 
-                        <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
+                            <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 
-                        <TextBlock Text="网络代理设置" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="代理服务器:" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox x:Name="txtProxyServer" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
-                        </Grid>
-                        <TextBlock Text="例如: http://127.0.0.1:7890 或 socks5://127.0.0.1:1080。留空则自动使用 Windows 系统代理" Margin="0,3,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
+                            <TextBlock Text="网络代理设置" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="代理服务器:" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox x:Name="txtProxyServer" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
+                            </Grid>
+                            <TextBlock Text="例如: http://127.0.0.1:7890 或 socks5://127.0.0.1:1080。留空则自动使用 Windows 系统代理" Margin="0,3,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <!-- 平台管理 -->
@@ -139,6 +141,52 @@
                         <TextBlock Text="请点击输入框并按下快捷键组合" Margin="0,5,0,0" Foreground="#a0a0b0"/>
                     </StackPanel>
                 </Grid>
+            </TabItem>
+
+            <!-- 项目与更新 -->
+            <TabItem Header="项目与更新">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="项目与更新信息" FontWeight="Bold" Foreground="#e0e0e0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbVersion" Text="v0.3.8" Foreground="#a0a0b0" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                            
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- 项目地址 -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <TextBlock Text="项目地址" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="tbProjectUrl" Text="https://github.com/chgblog/AIHelper" Foreground="#9d4edd" FontSize="13" TextWrapping="Wrap" Cursor="Hand" MouseDown="TbProjectUrl_MouseDown"/>
+                                    </StackPanel>
+                                    <Button x:Name="btnOpenProject" Content="进入项目主页" Grid.Row="0" Grid.Column="1" Click="BtnOpenProject_Click" Padding="12,6" Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+
+                                    <Border Grid.Row="1" Grid.ColumnSpan="2" Height="1" Background="#3a3a5e" Margin="0,12,0,12"/>
+
+                                    <!-- 更新地址 -->
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <TextBlock Text="更新地址" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="tbUpdateUrl" Text="https://github.com/chgblog/AIHelper/releases" Foreground="#9d4edd" FontSize="13" TextWrapping="Wrap" Cursor="Hand" MouseDown="TbUpdateUrl_MouseDown"/>
+                                    </StackPanel>
+                                    <Button x:Name="btnOpenUpdate" Content="进入 Release 列表" Grid.Row="2" Grid.Column="1" Click="BtnOpenUpdate_Click" Padding="12,6" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="提示：点击地址链接或按钮即可在默认浏览器中打开对应页面。" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 

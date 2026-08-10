@@ -26,6 +26,10 @@ namespace AIHelper.Views
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
             txtProxyServer.Text = _settings.ProxyServer ?? "";
+            tbProjectUrl.Text = _settings.ProjectUrl;
+            tbUpdateUrl.Text = _settings.UpdateUrl;
+            var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            tbVersion.Text = $"v{ver?.Major}.{ver?.Minor}.{ver?.Build}";
 
             if (_settings.Platforms != null && _settings.Platforms.Count > 0)
             {
@@ -105,6 +109,48 @@ namespace AIHelper.Views
             }
 
             return true;
+        }
+
+        private void BtnOpenProject_Click(object sender, RoutedEventArgs e)
+        {
+            OpenUrl(tbProjectUrl.Text?.Trim());
+        }
+
+        private void BtnOpenUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            OpenUrl(tbUpdateUrl.Text?.Trim());
+        }
+
+        private void TbProjectUrl_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            OpenUrl(tbProjectUrl.Text?.Trim());
+        }
+
+        private void TbUpdateUrl_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            OpenUrl(tbUpdateUrl.Text?.Trim());
+        }
+
+        private void OpenUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return;
+            try
+            {
+                if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    url = "https://" + url;
+                }
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
