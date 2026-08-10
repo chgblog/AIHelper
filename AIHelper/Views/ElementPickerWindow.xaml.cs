@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Windows;
+using AIHelper.Services;
 using Microsoft.Web.WebView2.Core;
 using Newtonsoft.Json.Linq;
 
@@ -27,11 +28,21 @@ namespace AIHelper.Views
         {
             try
             {
+                var settings = SettingsService.Instance.Load();
+                CoreWebView2EnvironmentOptions options = null;
+                if (!string.IsNullOrWhiteSpace(settings?.ProxyServer))
+                {
+                    options = new CoreWebView2EnvironmentOptions
+                    {
+                        AdditionalBrowserArguments = $"--proxy-server=\"{settings.ProxyServer.Trim()}\""
+                    };
+                }
+
                 string userDataFolder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "AIHelper", "WebView2Data");
 
-                var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
                 await pickerWebView.EnsureCoreWebView2Async(env);
 
                 pickerWebView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;

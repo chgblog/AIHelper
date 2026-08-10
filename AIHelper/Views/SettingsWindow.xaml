@@ -21,6 +21,19 @@
 
                         <CheckBox x:Name="chkAutoSubmit" Content="自动提交提示词" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
                         <TextBlock Text="勾选后注入提示词后自动点击发送；未勾选时仅点击新会话并注入提示词，不点击发送按钮" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+
+                        <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
+
+                        <TextBlock Text="网络代理设置" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="代理服务器:" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBox x:Name="txtProxyServer" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
+                        </Grid>
+                        <TextBlock Text="例如: http://127.0.0.1:7890 或 socks5://127.0.0.1:1080。留空则自动使用 Windows 系统代理" Margin="0,3,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

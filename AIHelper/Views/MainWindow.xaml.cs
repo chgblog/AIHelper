@@ -98,16 +98,34 @@ namespace AIHelper.Views
             try
             {
                 CoreWebView2Environment env = null;
+                CoreWebView2EnvironmentOptions options = null;
+                if (!string.IsNullOrWhiteSpace(_settings?.ProxyServer))
+                {
+                    options = new CoreWebView2EnvironmentOptions
+                    {
+                        AdditionalBrowserArguments = $"--proxy-server=\"{_settings.ProxyServer.Trim()}\""
+                    };
+                }
+
                 try
                 {
                     string userDataFolder = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "AIHelper", "WebView2Data");
-                    env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                    env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"CreateAsync custom folder failed, fallback to default: {ex.Message}");
+                }
+
+                if (env == null && options != null)
+                {
+                    try
+                    {
+                        env = await CoreWebView2Environment.CreateAsync(null, null, options);
+                    }
+                    catch { }
                 }
 
                 if (env != null)

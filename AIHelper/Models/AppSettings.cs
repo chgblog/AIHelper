@@ -18,6 +18,7 @@ namespace AIHelper.Models
         public double WindowHeight { get; set; } = 800;
         public bool AutoStart { get; set; } = false;
         public bool AutoSubmit { get; set; } = true;
+        public string ProxyServer { get; set; } = "";
 
         /// <summary>
         /// Gets the active platform

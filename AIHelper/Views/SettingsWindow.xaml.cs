@@ -25,6 +25,7 @@ namespace AIHelper.Views
             _settings = SettingsService.Instance.Load();
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
+            txtProxyServer.Text = _settings.ProxyServer ?? "";
 
             if (_settings.Platforms != null && _settings.Platforms.Count > 0)
             {
@@ -78,6 +79,11 @@ namespace AIHelper.Views
 
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
+            
+            string newProxy = txtProxyServer.Text?.Trim() ?? "";
+            bool proxyChanged = (_settings.ProxyServer ?? "") != newProxy;
+            _settings.ProxyServer = newProxy;
+
             AutoStartService.SetAutoStart(_settings.AutoStart);
 
             var activePlatform = _settings.Platforms.FirstOrDefault(p => p.IsActive);
@@ -92,6 +98,12 @@ namespace AIHelper.Views
             }
 
             SettingsService.Instance.Save(_settings);
+
+            if (proxyChanged)
+            {
+                MessageBox.Show("代理设置已更改，将在重启应用后完全生效。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
             return true;
         }
 
