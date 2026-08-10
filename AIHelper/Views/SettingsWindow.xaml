@@ -17,7 +17,10 @@
                     <StackPanel>
                         <TextBlock Text="常规选项" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
                         <CheckBox x:Name="chkAutoStart" Content="开机自动启动 AIHelper" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
-                        <TextBlock Text="勾选后，Windows 登录时将自动在后台运行 AIHelper" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+                        <TextBlock Text="勾选后，Windows 登录时将自动在后台运行 AIHelper" Margin="20,5,0,15" Foreground="#a0a0b0" FontSize="12"/>
+
+                        <CheckBox x:Name="chkAutoSubmit" Content="自动提交提示词" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
+                        <TextBlock Text="勾选后注入提示词后自动点击发送；未勾选时仅点击新会话并注入提示词，不点击发送按钮" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

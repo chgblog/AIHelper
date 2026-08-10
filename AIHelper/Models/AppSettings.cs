@@ -17,6 +17,7 @@ namespace AIHelper.Models
         public double WindowWidth { get; set; } = 520;
         public double WindowHeight { get; set; } = 800;
         public bool AutoStart { get; set; } = false;
+        public bool AutoSubmit { get; set; } = true;
 
         /// <summary>
         /// Gets the active platform

@@ -199,7 +199,8 @@ namespace AIHelper.Views
             string prompt = action.Prompt.Replace("{content}", content);
             UpdateStatus($"正在执行: {action.Name}...");
             var platform = _settings.GetActivePlatform();
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector);
+            bool autoSubmit = _settings?.AutoSubmit ?? true;
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
             UpdateStatus(result.Success ? $"成功: {result.Message}" : $"失败: {result.Message}");
         }
 
@@ -217,11 +218,13 @@ namespace AIHelper.Views
             {
                 return;
             }
-            UpdateStatus("正在提交...");
+            bool autoSubmit = _settings?.AutoSubmit ?? true;
+            UpdateStatus(autoSubmit ? "正在提交..." : "正在注入...");
             var platform = _settings.GetActivePlatform();
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector);
-            UpdateStatus(result.Success ? "提交成功" : $"提交失败: {result.Message}");
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
+            UpdateStatus(result.Success ? (autoSubmit ? "提交成功" : "注入成功") : $"操作失败: {result.Message}");
         }
+
 
         private async void CmbPlatforms_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

@@ -152,7 +152,7 @@
                     doInjectText(inputEl, text);
                 }
 
-                // 5. Auto-submit
+                // 5. Auto-submit or Delayed Inject
                 if (autoSubmit) {
                     const delay = newChatBtn ? 400 : 300;
                     setTimeout(function() {
@@ -168,6 +168,22 @@
                             window.AiHelperInjector.submit(currentInput, platform, submitSelector);
                         } catch (e) {
                             console.error("Auto submit error:", e);
+                        }
+                    }, delay);
+                } else if (newChatBtn) {
+                    const delay = 400;
+                    setTimeout(function() {
+                        try {
+                            let currentInput = findInput() || inputEl;
+                            if (currentInput) {
+                                const isTextarea = currentInput.tagName.toLowerCase() === 'textarea';
+                                const currentText = isTextarea ? currentInput.value : currentInput.textContent;
+                                if (!currentText || currentText.trim() === '') {
+                                    doInjectText(currentInput, text);
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Delayed inject error:", e);
                         }
                     }, delay);
                 }

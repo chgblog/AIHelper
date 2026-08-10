@@ -24,6 +24,7 @@ namespace AIHelper.Views
         {
             _settings = SettingsService.Instance.Load();
             chkAutoStart.IsChecked = _settings.AutoStart;
+            chkAutoSubmit.IsChecked = _settings.AutoSubmit;
 
             if (_settings.Platforms != null && _settings.Platforms.Count > 0)
             {
@@ -76,6 +77,7 @@ namespace AIHelper.Views
             }
 
             _settings.AutoStart = chkAutoStart.IsChecked == true;
+            _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
             AutoStartService.SetAutoStart(_settings.AutoStart);
 
             var activePlatform = _settings.Platforms.FirstOrDefault(p => p.IsActive);

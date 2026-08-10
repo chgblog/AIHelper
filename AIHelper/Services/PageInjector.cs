@@ -27,7 +27,7 @@ namespace AIHelper.Services
         /// <summary>
         /// Injects text and auto-submits, using optional custom CSS selectors
         /// </summary>
-        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text, string inputSelector = null, string submitSelector = null, string newChatSelector = null)
+        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text, string inputSelector = null, string submitSelector = null, string newChatSelector = null, bool autoSubmit = true)
         {
             if (webView == null || webView.CoreWebView2 == null)
             {
@@ -67,8 +67,9 @@ namespace AIHelper.Services
                 string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
                 string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
                 string jsonNewChatSelector = string.IsNullOrEmpty(newChatSelector) ? "null" : JsonConvert.SerializeObject(newChatSelector);
+                string jsonAutoSubmit = autoSubmit ? "true" : "false";
                 
-                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true, {jsonInputSelector}, {jsonSubmitSelector}, {jsonNewChatSelector});";
+                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, {jsonAutoSubmit}, {jsonInputSelector}, {jsonSubmitSelector}, {jsonNewChatSelector});";
 
                 string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(function() {{ {finalScript} }})()");
                 
@@ -99,7 +100,7 @@ namespace AIHelper.Services
                 bool success = result.success;
                 string reason = result.reason ?? "UNKNOWN";
                 
-                string message = success ? "发送成功" : (reason == "NOT_LOGGED_IN" ? "请先登录 AI 平台" : (reason == "INPUT_NOT_FOUND" ? "无法找到输入框，页面可能已更新" : "注入失败"));
+                string message = success ? (autoSubmit ? "发送成功" : "注入成功") : (reason == "NOT_LOGGED_IN" ? "请先登录 AI 平台" : (reason == "INPUT_NOT_FOUND" ? "无法找到输入框，页面可能已更新" : "注入失败"));
 
                 return new InjectionResult { Success = success, Reason = reason, Message = message };
             }
