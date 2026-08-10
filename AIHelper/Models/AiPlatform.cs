@@ -13,6 +13,7 @@ namespace AIHelper.Models
         private string _name;
         private string _url;
         private bool _isActive;
+        private string _newChatSelector;
         private string _inputSelector;
         private string _submitSelector;
 
@@ -45,6 +46,15 @@ namespace AIHelper.Models
         {
             get => _isActive;
             set { if (_isActive != value) { _isActive = value; OnPropertyChanged(); } }
+        }
+
+        /// <summary>
+        /// Custom CSS selector for the new chat button
+        /// </summary>
+        public string NewChatSelector
+        {
+            get => _newChatSelector;
+            set { if (_newChatSelector != value) { _newChatSelector = value; OnPropertyChanged(); } }
         }
 
         /// <summary>

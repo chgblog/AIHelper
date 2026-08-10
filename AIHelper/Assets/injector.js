@@ -16,12 +16,54 @@
         return false;
     }
 
+    function doInjectText(inputEl, text) {
+        if (!inputEl) return;
+        inputEl.focus();
+        const isTextarea = inputEl.tagName.toLowerCase() === 'textarea';
+
+        if (isTextarea) {
+            // Reset React value tracker if present so React detects value change
+            if (inputEl._valueTracker) {
+                inputEl._valueTracker.setValue('');
+            }
+
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+            if (nativeInputValueSetter) {
+                nativeInputValueSetter.call(inputEl, text);
+            } else {
+                inputEl.value = text;
+            }
+
+            // Dispatch standard input & change events
+            inputEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            inputEl.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+            
+            // Dispatch InputEvent for React 17/18 compatibility
+            try {
+                inputEl.dispatchEvent(new InputEvent('input', {
+                    bubbles: true,
+                    cancelable: true,
+                    inputType: 'insertText',
+                    data: text
+                }));
+            } catch (e) {}
+        } else {
+            // ContentEditable
+            document.execCommand('selectAll', false, null);
+            document.execCommand('insertText', false, text);
+            if (!inputEl.textContent) {
+                inputEl.textContent = text;
+            }
+            inputEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        }
+    }
+
     window.AiHelperInjector = {
-        inject: function(text, autoSubmit, inputSelector, submitSelector) {
+        inject: function(text, autoSubmit, inputSelector, submitSelector, newChatSelector) {
             try {
                 const url = window.location.href;
                 
-                // 1 & 2. Detect platform and login status
+                // 1. Detect platform and login status
                 let platform = "generic";
                 if (url.includes("claude.ai")) {
                     platform = "claude";
@@ -40,80 +82,94 @@
                     }
                 }
 
-                // 3. Find input element - prioritize custom selector
-                let inputEl = null;
-
-                if (inputSelector) {
+                // 2. Click New Chat button if selector specified or auto-detected
+                let newChatBtn = null;
+                if (newChatSelector) {
                     try {
-                        inputEl = document.querySelector(inputSelector);
+                        newChatBtn = document.querySelector(newChatSelector);
                     } catch(e) {}
                 }
-
-                if (!inputEl) {
-                    if (platform === "claude") {
-                        inputEl = document.querySelector('div.ProseMirror[contenteditable="true"]') || document.querySelector('[contenteditable="true"]');
+                if (!newChatBtn) {
+                    if (platform === "deepseek") {
+                        newChatBtn = document.querySelector('div[class*="new-chat"]') || 
+                                     document.querySelector('div[class*="sidebar"] div[class*="button"]') ||
+                                     Array.from(document.querySelectorAll('div, button, a')).find(el => el.textContent && (el.textContent.trim() === '开启新对话' || el.textContent.trim() === '新对话' || el.textContent.trim() === '新建对话'));
+                    } else if (platform === "claude") {
+                        newChatBtn = document.querySelector('button[aria-label*="New chat"]') || 
+                                     document.querySelector('button[aria-label*="新对话"]') || 
+                                     document.querySelector('a[href="/new"]');
                     } else if (platform === "gemini") {
-                        inputEl = document.querySelector('rich-textarea div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"]');
-                    } else if (platform === "deepseek") {
-                        inputEl = document.querySelector('textarea#chat-input') || document.querySelector('textarea');
-                    } else {
-                        inputEl = document.querySelector('textarea') || document.querySelector('[contenteditable="true"]');
+                        newChatBtn = document.querySelector('button[aria-label*="New chat"]') || 
+                                     document.querySelector('button[aria-label*="新对话"]') || 
+                                     document.querySelector('a[aria-label*="New chat"]') || 
+                                     document.querySelector('a[aria-label*="新对话"]');
                     }
                 }
 
-                if (!inputEl) {
+                if (newChatBtn) {
+                    try {
+                        newChatBtn.click();
+                        const svg = newChatBtn.querySelector('svg');
+                        if (svg) {
+                            svg.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                        }
+                    } catch (e) {
+                        console.error("New chat click error:", e);
+                    }
+                }
+
+                // Helper to locate input element
+                function findInput() {
+                    let el = null;
+                    if (inputSelector) {
+                        try {
+                            el = document.querySelector(inputSelector);
+                        } catch(e) {}
+                    }
+                    if (!el) {
+                        if (platform === "claude") {
+                            el = document.querySelector('div.ProseMirror[contenteditable="true"]') || document.querySelector('[contenteditable="true"]');
+                        } else if (platform === "gemini") {
+                            el = document.querySelector('rich-textarea div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"]');
+                        } else if (platform === "deepseek") {
+                            el = document.querySelector('textarea#chat-input') || document.querySelector('textarea');
+                        } else {
+                            el = document.querySelector('textarea') || document.querySelector('[contenteditable="true"]');
+                        }
+                    }
+                    return el;
+                }
+
+                // 3. Find input element
+                let inputEl = findInput();
+
+                if (!inputEl && !newChatBtn) {
                     return { success: false, reason: "INPUT_NOT_FOUND" };
                 }
 
                 // 4. Inject text
-                inputEl.focus();
-                const isTextarea = inputEl.tagName.toLowerCase() === 'textarea';
-
-                if (isTextarea) {
-                    // Reset React value tracker if present so React detects value change
-                    if (inputEl._valueTracker) {
-                        inputEl._valueTracker.setValue('');
-                    }
-
-                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-                    if (nativeInputValueSetter) {
-                        nativeInputValueSetter.call(inputEl, text);
-                    } else {
-                        inputEl.value = text;
-                    }
-
-                    // Dispatch standard input & change events
-                    inputEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-                    inputEl.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-                    
-                    // Dispatch InputEvent for React 17/18 compatibility
-                    try {
-                        inputEl.dispatchEvent(new InputEvent('input', {
-                            bubbles: true,
-                            cancelable: true,
-                            inputType: 'insertText',
-                            data: text
-                        }));
-                    } catch (e) {}
-                } else {
-                    // ContentEditable
-                    document.execCommand('selectAll', false, null);
-                    document.execCommand('insertText', false, text);
-                    if (!inputEl.textContent) {
-                        inputEl.textContent = text;
-                    }
-                    inputEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                if (inputEl) {
+                    doInjectText(inputEl, text);
                 }
 
                 // 5. Auto-submit
                 if (autoSubmit) {
+                    const delay = newChatBtn ? 400 : 300;
                     setTimeout(function() {
                         try {
-                            window.AiHelperInjector.submit(inputEl, platform, submitSelector);
+                            let currentInput = findInput() || inputEl;
+                            if (currentInput) {
+                                const isTextarea = currentInput.tagName.toLowerCase() === 'textarea';
+                                const currentText = isTextarea ? currentInput.value : currentInput.textContent;
+                                if (!currentText || currentText.trim() === '') {
+                                    doInjectText(currentInput, text);
+                                }
+                            }
+                            window.AiHelperInjector.submit(currentInput, platform, submitSelector);
                         } catch (e) {
                             console.error("Auto submit error:", e);
                         }
-                    }, 300);
+                    }, delay);
                 }
 
                 return { success: true, reason: "SUCCESS" };

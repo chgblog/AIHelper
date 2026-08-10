@@ -27,7 +27,7 @@ namespace AIHelper.Services
         /// <summary>
         /// Injects text and auto-submits, using optional custom CSS selectors
         /// </summary>
-        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text, string inputSelector = null, string submitSelector = null)
+        public async Task<InjectionResult> InjectAndSubmitAsync(WebView2 webView, string text, string inputSelector = null, string submitSelector = null, string newChatSelector = null)
         {
             if (webView == null || webView.CoreWebView2 == null)
             {
@@ -66,8 +66,9 @@ namespace AIHelper.Services
                 string jsonText = JsonConvert.SerializeObject(text);
                 string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
                 string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
+                string jsonNewChatSelector = string.IsNullOrEmpty(newChatSelector) ? "null" : JsonConvert.SerializeObject(newChatSelector);
                 
-                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true, {jsonInputSelector}, {jsonSubmitSelector});";
+                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, true, {jsonInputSelector}, {jsonSubmitSelector}, {jsonNewChatSelector});";
 
                 string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(function() {{ {finalScript} }})()");
                 

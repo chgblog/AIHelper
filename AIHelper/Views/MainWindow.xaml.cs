@@ -199,7 +199,7 @@ namespace AIHelper.Views
             string prompt = action.Prompt.Replace("{content}", content);
             UpdateStatus($"正在执行: {action.Name}...");
             var platform = _settings.GetActivePlatform();
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector);
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector);
             UpdateStatus(result.Success ? $"成功: {result.Message}" : $"失败: {result.Message}");
         }
 
@@ -219,7 +219,7 @@ namespace AIHelper.Views
             }
             UpdateStatus("正在提交...");
             var platform = _settings.GetActivePlatform();
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector);
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector);
             UpdateStatus(result.Success ? "提交成功" : $"提交失败: {result.Message}");
         }
 

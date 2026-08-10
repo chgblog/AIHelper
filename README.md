@@ -12,9 +12,10 @@
   - 按下全局快捷键（默认 `Ctrl+Alt+Space`）调出快捷动作面板。
   - 支持划词选中或复制文本后，直接通过快捷键（如 `Ctrl+Alt+T`）一键发送给 AI 处理。
 
-- **🌐 多 AI 平台集成**
-  - 内置预设支持 **DeepSeek**、**Claude**、**Gemini** 等网页版 AI 平台。
-  - 支持在设置中轻松添加、修改或切换自定义网页 AI 平台。
+- **🌐 多 AI 平台集成与精准定位**
+  - 内置 7 大主流 AI 平台预设：**DeepSeek**、**Claude**、**Gemini**、**ChatGPT**、**千问**、**智谱**、**Kimi**。
+  - 支持添加、编辑、删除自定义 AI 平台，通过单选框轻松切换当前激活平台。
+  - **🎯 可视化 DOM 元素拾取器**：支持自定义“新会话”、“输入框”及“提交按钮”的 CSS 选择器；内置 WebView2 拾取模式，悬停/点击网页元素即可自动捕获高精度选择器，无需手动查找复杂 DOM。
 
 - **⚡ 智能 DOM 脚本注入**
   - 内置 `injector.js` 脚本，可自动识别并定位各大 AI 平台的网页文本输入框。
@@ -26,7 +27,7 @@
 
 - **💻 现代且轻量的 UI**
   - 基于 WPF 构建，结合 Microsoft WebView2 提供流畅的网页浏览与交互体验。
-  - 本地化配置存储（`settings.json`），保护隐私且免去重复登录。
+  - 本地化配置存储（保存路径：`C:\Users\<你的用户名>\AppData\Roaming\AIHelper\settings.json`，即 `%APPDATA%\AIHelper\settings.json`），保护隐私且免去重复登录。
 
 ---
 
@@ -64,19 +65,22 @@ AIHelper/
     ├── AIHelper.csproj         # 项目工程文件
     ├── App.xaml / App.xaml.cs  # 应用入口与全局资源
     ├── Assets/
-    │   └── injector.js         # 自动化注入网页的 JS 脚本
+    │   ├── injector.js         # 自动化注入网页的 JS 脚本
+    │   └── element-picker.js   # 网页 DOM 元素可视化拾取 JS 脚本
     ├── Models/
     │   ├── ActionItem.cs       # 快捷动作数据模型
-    │   ├── AiPlatform.cs       # AI 平台数据模型
+    │   ├── AiPlatform.cs       # AI 平台数据模型 (包含自定义选择器)
     │   └── AppSettings.cs      # 应用配置与默认设置
     ├── Services/
     │   ├── ClipboardService.cs # 剪贴板获取与模拟按键服务
     │   ├── HotkeyService.cs    # 全局 Hotkey 注册与监听服务 (Win32 API)
     │   ├── PageInjector.cs     # 网页 JS 脚本注入与执行服务
-    │   └── SettingsService.cs   # 本地 JSON 配置加载与持久化
+    │   └── SettingsService.cs  # 本地 JSON 配置加载与持久化
     ├── Views/
     │   ├── ActionPanelControl.xaml # 快捷动作悬浮面板视图
+    │   ├── ElementPickerWindow.xaml# 网页 DOM 元素可视化拾取窗口
     │   ├── MainWindow.xaml         # 主界面（含 WebView2 控件）
+    │   ├── PlatformEditWindow.xaml # 平台编辑与元素定位配置窗口
     │   └── SettingsWindow.xaml     # 设置界面（平台/动作/快捷键配置）
     └── Converters/             # XAML 数据转换器
 ```
@@ -118,8 +122,10 @@ AIHelper/
 
 ## 📖 使用指南
 
-1. **配置 AI 平台**：
-   - 首次运行会自动打开设置窗口，可选择当前启用的 AI 平台（如 DeepSeek）并登录您的账号。
+1. **配置与管理 AI 平台**：
+   - 首次运行会自动打开设置窗口，内置 DeepSeek、Claude、Gemini、ChatGPT、千问、智谱、Kimi 等多个主流平台预设。
+   - 点击“添加”或“编辑”平台，可修改平台名称、URL 以及输入框/提交按钮选择器；点击“🎯 拾取”即可在真实网页中点击捕获目标元素选择器。
+   - 单选切换当前激活平台，或使用内置按钮一键快捷添加预设平台。
 2. **文本划词/快捷处理**：
    - 在任何软件（如浏览器、Word、代码编辑器）中**复制**或**选中**需要处理的文本。
    - 按下对应快捷键（例如 `Ctrl+Alt+T`），AIHelper 将自动唤醒、切换至指定 AI 平台窗口、填入提示词并自动提交。

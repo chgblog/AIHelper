@@ -12,9 +12,10 @@
   - Press the global hotkey (default `Ctrl+Alt+Space`) to bring up the quick action panel.
   - Select or copy text, then press a hotkey (e.g., `Ctrl+Alt+T`) to send it directly to AI for processing.
 
-- **🌐 Multi AI Platform Integration**
-  - Built-in preset support for **DeepSeek**, **Claude**, **Gemini**, and other web-based AI platforms.
-  - Easily add, modify, or switch custom AI platforms in the settings.
+- **🌐 Multi AI Platform Integration & Precise Element Selector**
+  - Built-in preset support for 7 major AI platforms: **DeepSeek**, **Claude**, **Gemini**, **ChatGPT**, **Qwen**, **Zhipu**, and **Kimi**.
+  - Easily add, edit, or delete custom AI platforms with single-click radio button activation.
+  - **🎯 Visual DOM Element Picker**: Customize CSS selectors for "New Chat", "Input Box", and "Submit Button". Built-in WebView2 element picker allows clicking elements directly on the webpage to inspect and retrieve CSS selectors effortlessly.
 
 - **⚡ Intelligent DOM Script Injection**
   - Built-in `injector.js` script that automatically identifies and locates the text input fields on major AI platforms.
@@ -26,7 +27,7 @@
 
 - **💻 Modern & Lightweight UI**
   - Built with WPF and Microsoft WebView2 for a smooth web browsing and interaction experience.
-  - Local configuration storage (`settings.json`) to protect privacy and avoid repeated logins.
+  - Local configuration storage (`settings.json` saved at `C:\Users\<your_username>\AppData\Roaming\AIHelper\settings.json`, i.e., `%APPDATA%\AIHelper\settings.json`) to protect privacy and avoid repeated logins.
 
 ---
 
@@ -64,10 +65,11 @@ AIHelper/
     ├── AIHelper.csproj         # Project file
     ├── App.xaml / App.xaml.cs  # Application entry point & global resources
     ├── Assets/
-    │   └── injector.js         # JS script for web page automation injection
+    │   ├── injector.js         # JS script for web page automation injection
+    │   └── element-picker.js   # JS script for visual DOM element picking
     ├── Models/
     │   ├── ActionItem.cs       # Action item data model
-    │   ├── AiPlatform.cs       # AI platform data model
+    │   ├── AiPlatform.cs       # AI platform data model (with custom selectors)
     │   └── AppSettings.cs      # Application settings & defaults
     ├── Services/
     │   ├── ClipboardService.cs # Clipboard access & key simulation service
@@ -76,7 +78,9 @@ AIHelper/
     │   └── SettingsService.cs  # Local JSON config loading & persistence
     ├── Views/
     │   ├── ActionPanelControl.xaml # Quick action floating panel view
+    │   ├── ElementPickerWindow.xaml# Visual DOM element picker window
     │   ├── MainWindow.xaml         # Main window (with WebView2 control)
+    │   ├── PlatformEditWindow.xaml # Platform editing & selector configuration window
     │   └── SettingsWindow.xaml     # Settings window (platform/action/hotkey config)
     └── Converters/             # XAML data converters
 ```
@@ -118,8 +122,10 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
 
 ## 📖 Usage Guide
 
-1. **Configure AI Platform**:
-   - On first launch, the settings window opens automatically. Select your preferred AI platform (e.g., DeepSeek) and log in to your account.
+1. **Configure & Manage AI Platforms**:
+   - On first launch, the settings window opens automatically. Built-in presets include DeepSeek, Claude, Gemini, ChatGPT, Qwen, Zhipu, Kimi, and more.
+   - Click "Add" or "Edit" platform to set platform URLs and custom selectors. Click the "🎯 Pick" button to visually highlight and select elements on live webpages to auto-fill input and submit selectors.
+   - Use radio buttons to switch the active AI platform instantly, or use quick-add buttons to insert preset platforms.
 2. **Text Selection & Quick Processing**:
    - **Copy** or **select** the text you want to process in any application (e.g., browser, Word, code editor).
    - Press the corresponding hotkey (e.g., `Ctrl+Alt+T`), and AIHelper will automatically activate, switch to the designated AI platform window, fill in the prompt, and submit.

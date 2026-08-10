@@ -19,8 +19,26 @@ namespace AIHelper.Views
             // Load current values
             txtName.Text = platform.Name ?? "";
             txtUrl.Text = platform.Url ?? "";
+            txtNewChatSelector.Text = platform.NewChatSelector ?? "";
             txtInputSelector.Text = platform.InputSelector ?? "";
             txtSubmitSelector.Text = platform.SubmitSelector ?? "";
+        }
+
+        private void BtnPickNewChat_Click(object sender, RoutedEventArgs e)
+        {
+            string url = txtUrl.Text?.Trim();
+            if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
+            {
+                MessageBox.Show("请先填写有效的平台 URL。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var picker = new ElementPickerWindow(url);
+            picker.Owner = this;
+            if (picker.ShowDialog() == true && !string.IsNullOrEmpty(picker.PickedSelector))
+            {
+                txtNewChatSelector.Text = picker.PickedSelector;
+            }
         }
 
         private void BtnPickInput_Click(object sender, RoutedEventArgs e)
@@ -76,6 +94,7 @@ namespace AIHelper.Views
 
             _platform.Name = name;
             _platform.Url = url;
+            _platform.NewChatSelector = txtNewChatSelector.Text?.Trim();
             _platform.InputSelector = txtInputSelector.Text?.Trim();
             _platform.SubmitSelector = txtSubmitSelector.Text?.Trim();
 
