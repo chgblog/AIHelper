@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -7,6 +8,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using System.Windows.Shapes;
 using AIHelper.Models;
+using AIHelper.Services;
 
 namespace AIHelper.Views
 {
@@ -15,6 +17,9 @@ namespace AIHelper.Views
         private string _selectedText;
         private List<ActionItem> _actions;
         private DispatcherTimer _autoHideTimer;
+        private Point _currentScreenPos;
+        private bool _isExpanded;
+        private const int MaxInitialActions = 5;
 
         public event Action<ActionItem, string> ActionRequested;
 
@@ -37,9 +42,11 @@ namespace AIHelper.Views
         {
             _selectedText = text;
             _actions = actions;
+            _currentScreenPos = screenPos;
+            _isExpanded = false;
+
             BuildButtons();
-            
-            PositionWindow(screenPos);
+            PositionWindow(_currentScreenPos);
             
             this.Show();
             _autoHideTimer.Interval = TimeSpan.FromSeconds(5);
@@ -59,9 +66,13 @@ namespace AIHelper.Views
         private void BuildButtons()
         {
             buttonPanel.Children.Clear();
-            bool isFirst = true;
+            if (_actions == null || _actions.Count == 0) return;
 
-            foreach (var action in _actions)
+            bool isFirst = true;
+            bool hasMore = _actions.Count > MaxInitialActions && !_isExpanded;
+            var displayActions = hasMore ? _actions.Take(MaxInitialActions) : _actions;
+
+            foreach (var action in displayActions)
             {
                 if (!isFirst)
                 {
@@ -84,6 +95,31 @@ namespace AIHelper.Views
                 buttonPanel.Children.Add(btn);
                 isFirst = false;
             }
+
+            if (hasMore)
+            {
+                var sep = new Rectangle { Style = (Style)FindResource("SeparatorStyle") };
+                buttonPanel.Children.Add(sep);
+
+                string moreText = LanguageManager.Instance["SelectionToolbar_More"];
+                if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
+
+                var moreBtn = new Button
+                {
+                    Content = moreText,
+                    Style = (Style)FindResource("ToolbarButtonStyle")
+                };
+
+                moreBtn.Click += (s, e) => {
+                    _isExpanded = true;
+                    BuildButtons();
+                    PositionWindow(_currentScreenPos);
+                    _autoHideTimer.Interval = TimeSpan.FromSeconds(5);
+                    StartAutoHideTimer();
+                };
+
+                buttonPanel.Children.Add(moreBtn);
+            }
         }
 
         private void PositionWindow(System.Windows.Point screenPos)
@@ -102,8 +138,9 @@ namespace AIHelper.Views
                 dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
             }
 
-            double x = screenPos.X * dpiScaleX;
-            double y = screenPos.Y * dpiScaleY - this.ActualHeight - 10;
+            // Center horizontally above the cursor position
+            double x = (screenPos.X * dpiScaleX) - (this.ActualWidth / 2.0);
+            double y = (screenPos.Y * dpiScaleY) - this.ActualHeight - 10;
 
             var screenBounds = SystemParameters.WorkArea;
 
@@ -178,3 +215,4 @@ namespace AIHelper.Views
         }
     }
 }
+

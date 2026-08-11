@@ -12,47 +12,70 @@
         ShowActivated="False"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         Opacity="0">
 
     <Window.Resources>
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#e0e0e0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI, sans-serif"/>
+            <Setter Property="FontSize" Value="14.5"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#323154"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#6366F1"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#7C3AED"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#7C3AED"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3a3a5e"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
         <Style TargetType="Rectangle" x:Key="SeparatorStyle">
             <Setter Property="Width" Value="1"/>
-            <Setter Property="Margin" Value="2,8"/>
-            <Setter Property="Fill" Value="#3a3a5e"/>
+            <Setter Property="Margin" Value="3,8"/>
+            <Setter Property="Fill" Value="#383854"/>
         </Style>
     </Window.Resources>
 
-    <Border Background="#E6242438" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="8" Margin="10" RenderTransformOrigin="0.5,0.5">
+    <Border Background="#F2171726" BorderBrush="#3E3E60" BorderThickness="1" CornerRadius="10" Margin="10" RenderTransformOrigin="0.5,0.5">
         <Border.RenderTransform>
             <ScaleTransform ScaleX="0.8" ScaleY="0.8" x:Name="WindowScale" />
         </Border.RenderTransform>
         <Border.Effect>
-            <DropShadowEffect Color="Black" Opacity="0.5" BlurRadius="10" ShadowDepth="3"/>
+            <DropShadowEffect Color="#000000" Opacity="0.45" BlurRadius="16" ShadowDepth="4"/>
         </Border.Effect>
-        <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Margin="5"/>
+        <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Margin="6,4"/>
     </Border>
 </Window>

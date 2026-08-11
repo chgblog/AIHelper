@@ -279,6 +279,7 @@ namespace AIHelper.Services
             { "Settings_General_EnableClipboardEnhancementToolbar", "使用剪贴板增强弹出工具条" },
             { "Settings_General_ClipboardEnhancementToolbarTip", "开启后，若 UI Automation 无法获取选中文本，将尝试通过剪贴板 (Ctrl+C) 获取文本" },
             { "SelectionToolbar_Sending", "正在发送到 {0}..." },
+            { "SelectionToolbar_More", "更多 ▾" },
 
             { "Inject_Exception", "注入异常: {0}" }
         };
@@ -421,6 +422,7 @@ namespace AIHelper.Services
             { "Settings_General_EnableClipboardEnhancementToolbar", "Use Clipboard Enhancement for Toolbar" },
             { "Settings_General_ClipboardEnhancementToolbarTip", "When enabled, if UI Automation fails to get selected text, try getting text via clipboard (Ctrl+C)" },
             { "SelectionToolbar_Sending", "Sending to {0}..." },
+            { "SelectionToolbar_More", "More ▾" },
 
             { "Inject_Exception", "Injection exception: {0}" }
         };
