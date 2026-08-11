@@ -85,6 +85,7 @@ namespace AIHelper.Views
         private void UpdateTextSelectionServiceState()
         {
             TextSelectionService.Instance.IsEnabled = _settings?.EnableSelectionToolbar ?? false;
+            TextSelectionService.Instance.EnableClipboardEnhancement = _settings?.EnableClipboardEnhancementToolbar ?? false;
             if (_settings?.EnableSelectionToolbar == true)
             {
                 TextSelectionService.Instance.Install();

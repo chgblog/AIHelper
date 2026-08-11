@@ -1,9 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Text;
 
 namespace AIHelper.Services
 {
@@ -44,6 +47,11 @@ namespace AIHelper.Services
         /// 全局开关
         /// </summary>
         public bool IsEnabled { get; set; } = true;
+
+        /// <summary>
+        /// 是否允许使用剪贴板增强（Ctrl+C 降级方案）
+        /// </summary>
+        public bool EnableClipboardEnhancement { get; set; } = false;
 
         private TextSelectionService()
         {
@@ -166,7 +174,34 @@ namespace AIHelper.Services
                 {
                     if (token.IsCancellationRequested) return;
 
-                    // 1. 安全抓取当前剪贴板状态（支持 DataObject 多格式及 Plain Text 备份）
+                    // 1. 优先尝试通过 UI Automation 获取选中的文本 (无键盘按键与剪贴板污染)
+                    string uiAutomationText = GetSelectedTextViaUIAutomation(mousePos);
+                    if (!string.IsNullOrWhiteSpace(uiAutomationText))
+                    {
+                        string trimmed = uiAutomationText.Trim();
+                        if (trimmed.Length > 0)
+                        {
+                            Debug.WriteLine($"TextSelectionService: Selected text via UI Automation ({trimmed.Length} chars).");
+                            Application.Current?.Dispatcher.InvokeAsync(() =>
+                            {
+                                if (!token.IsCancellationRequested)
+                                {
+                                    TextSelected?.Invoke(trimmed, mousePos);
+                                }
+                            });
+                            return;
+                        }
+                    }
+
+                    if (!EnableClipboardEnhancement)
+                    {
+                        Debug.WriteLine("TextSelectionService: UI Automation yielded no text and Clipboard Enhancement is disabled. Skipping fallback.");
+                        return;
+                    }
+
+                    Debug.WriteLine("TextSelectionService: UI Automation yielded no text, falling back to Clipboard/Ctrl+C.");
+
+                    // 2. 降级方案：安全抓取当前剪贴板状态（支持 DataObject 多格式及 Plain Text 备份）
                     IDataObject originalDataObject = null;
                     string originalText = null;
                     bool hadOriginalData = false;
@@ -213,7 +248,7 @@ namespace AIHelper.Services
 
                     if (token.IsCancellationRequested) return;
 
-                    // 2. 尝试清空剪贴板，以便精准识别 Ctrl+C 写入的新文本
+                    // 3. 尝试清空剪贴板，以便精准识别 Ctrl+C 写入的新文本
                     try
                     {
                         Clipboard.Clear();
@@ -223,10 +258,10 @@ namespace AIHelper.Services
                         Debug.WriteLine($"TextSelectionService: Failed to clear clipboard. {ex.Message}");
                     }
 
-                    // 3. 模拟 Ctrl+C
+                    // 4. 模拟 Ctrl+C
                     SimulateCtrlC();
 
-                    // 4. 后台轮询等待应用写入剪贴板（最多 300ms，每 30ms 重试，不阻塞主线程）
+                    // 5. 后台轮询等待应用写入剪贴板（最多 300ms，每 30ms 重试，不阻塞主线程）
                     string selectedText = null;
                     for (int i = 0; i < 10; i++)
                     {
@@ -253,16 +288,16 @@ namespace AIHelper.Services
                         }
                     }
 
-                    // 5. 抓取完成或超时后，无条件恢复用户原始剪贴板内容
+                    // 6. 抓取完成或超时后，无条件恢复用户原始剪贴板内容
                     RestoreClipboard(originalDataObject, originalText, hadOriginalData);
 
-                    // 6. 成功抓取选中文本，抛出事件通知 UI 显示工具条
+                    // 7. 成功抓取选中文本，抛出事件通知 UI 显示工具条
                     if (!token.IsCancellationRequested && !string.IsNullOrWhiteSpace(selectedText))
                     {
                         string trimmed = selectedText.Trim();
                         if (trimmed.Length > 0)
                         {
-                            Debug.WriteLine($"TextSelectionService: Selected text: {trimmed.Length} chars.");
+                            Debug.WriteLine($"TextSelectionService: Selected text via Clipboard: {trimmed.Length} chars.");
                             Application.Current?.Dispatcher.InvokeAsync(() =>
                             {
                                 if (!token.IsCancellationRequested)
@@ -282,6 +317,103 @@ namespace AIHelper.Services
             thread.SetApartmentState(ApartmentState.STA);
             thread.IsBackground = true;
             thread.Start();
+        }
+
+        /// <summary>
+        /// 使用 UI Automation 获取选中的文本
+        /// </summary>
+        private string GetSelectedTextViaUIAutomation(Point mousePos)
+        {
+            try
+            {
+                // 1. 优先尝试从鼠标所在的物理屏幕位置获取 AutomationElement
+                AutomationElement element = null;
+                try
+                {
+                    element = AutomationElement.FromPoint(new System.Windows.Point(mousePos.X, mousePos.Y));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"TextSelectionService UIAutomation FromPoint error: {ex.Message}");
+                }
+
+                if (element != null)
+                {
+                    string text = ExtractSelectedTextFromElement(element);
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        return text;
+                    }
+                }
+
+                // 2. 若根据 Point 未能提取选中文本，尝试从系统全局焦点元素获取
+                try
+                {
+                    AutomationElement focusedElement = AutomationElement.FocusedElement;
+                    if (focusedElement != null && focusedElement != element)
+                    {
+                        string text = ExtractSelectedTextFromElement(focusedElement);
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"TextSelectionService UIAutomation FocusedElement error: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TextSelectionService GetSelectedTextViaUIAutomation error: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 从 AutomationElement 中尝试提取 TextPattern 选中的文本
+        /// </summary>
+        private string ExtractSelectedTextFromElement(AutomationElement element)
+        {
+            if (element == null) return null;
+
+            try
+            {
+                // 尝试获取 TextPattern
+                if (element.TryGetCurrentPattern(TextPattern.Pattern, out object patternObj))
+                {
+                    TextPattern textPattern = patternObj as TextPattern;
+                    if (textPattern != null)
+                    {
+                        TextPatternRange[] selectionRanges = textPattern.GetSelection();
+                        if (selectionRanges != null && selectionRanges.Length > 0)
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            foreach (var range in selectionRanges)
+                            {
+                                string rangeText = range.GetText(-1);
+                                if (!string.IsNullOrEmpty(rangeText))
+                                {
+                                    sb.Append(rangeText);
+                                }
+                            }
+
+                            if (sb.Length > 0)
+                            {
+                                return sb.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TextSelectionService ExtractSelectedTextFromElement error: {ex.Message}");
+            }
+
+            return null;
         }
 
         private void RestoreClipboard(IDataObject originalDataObject, string originalText, bool hadOriginalData)

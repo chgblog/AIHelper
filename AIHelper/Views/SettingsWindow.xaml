@@ -37,8 +37,14 @@
                             <CheckBox x:Name="chkAutoSubmit" Content="{Binding [Settings_General_AutoSubmit], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
                             <TextBlock Text="{Binding [Settings_General_AutoSubmitTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
 
-                            <CheckBox x:Name="chkEnableSelectionToolbar" Content="{Binding [Settings_General_EnableSelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,15,0,0" VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{Binding [Settings_General_SelectionToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                            <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
+
+                            <TextBlock Text="{Binding [Settings_General_SelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <CheckBox x:Name="chkEnableSelectionToolbar" Content="{Binding [Settings_General_EnableSelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center" Click="ChkEnableSelectionToolbar_Click"/>
+                            <TextBlock Text="{Binding [Settings_General_SelectionToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,10" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <CheckBox x:Name="chkEnableClipboardEnhancementToolbar" Content="{Binding [Settings_General_EnableClipboardEnhancementToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="20,5,0,0" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="{Binding [Settings_General_ClipboardEnhancementToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="40,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
 
                             <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 

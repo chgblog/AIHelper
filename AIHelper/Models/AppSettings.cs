@@ -26,6 +26,11 @@ namespace AIHelper.Models
         /// </summary>
         public bool EnableSelectionToolbar { get; set; } = false;
 
+        /// <summary>
+        /// 是否使用剪贴板增强弹出工具条
+        /// </summary>
+        public bool EnableClipboardEnhancementToolbar { get; set; } = false;
+
         private string _projectUrl = "https://github.com/chgblog/AIHelper";
         public string ProjectUrl
         {

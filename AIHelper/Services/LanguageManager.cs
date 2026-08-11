@@ -276,6 +276,8 @@ namespace AIHelper.Services
             { "Settings_General_SelectionToolbar", "划词工具条设置" },
             { "Settings_General_EnableSelectionToolbar", "启用划词弹出工具条" },
             { "Settings_General_SelectionToolbarTip", "在任意应用中选中文字后，自动弹出操作工具条，快速调用 AI 操作" },
+            { "Settings_General_EnableClipboardEnhancementToolbar", "使用剪贴板增强弹出工具条" },
+            { "Settings_General_ClipboardEnhancementToolbarTip", "开启后，若 UI Automation 无法获取选中文本，将尝试通过剪贴板 (Ctrl+C) 获取文本" },
             { "SelectionToolbar_Sending", "正在发送到 {0}..." },
 
             { "Inject_Exception", "注入异常: {0}" }
@@ -416,6 +418,8 @@ namespace AIHelper.Services
             { "Settings_General_SelectionToolbar", "Selection Toolbar" },
             { "Settings_General_EnableSelectionToolbar", "Enable Selection Toolbar" },
             { "Settings_General_SelectionToolbarTip", "After selecting text in any app, a toolbar pops up for quick AI actions" },
+            { "Settings_General_EnableClipboardEnhancementToolbar", "Use Clipboard Enhancement for Toolbar" },
+            { "Settings_General_ClipboardEnhancementToolbarTip", "When enabled, if UI Automation fails to get selected text, try getting text via clipboard (Ctrl+C)" },
             { "SelectionToolbar_Sending", "Sending to {0}..." },
 
             { "Inject_Exception", "Injection exception: {0}" }
