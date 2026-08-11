@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -45,7 +46,8 @@ namespace AIHelper.Views
             actionsWrapPanel.Children.Clear();
             if (actions == null) return;
 
-            foreach (var action in actions)
+            var sortedActions = actions.OrderBy(a => a.SortOrder).ToList();
+            foreach (var action in sortedActions)
             {
                 var btn = new Button
                 {

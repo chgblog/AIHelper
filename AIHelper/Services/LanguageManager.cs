@@ -208,9 +208,12 @@ namespace AIHelper.Services
 
             { "Settings_Action_Name", "名称" },
             { "Settings_Action_Prompt", "提示词" },
+            { "Settings_Action_SortOrder", "排序" },
             { "Settings_Action_Hotkey", "快捷键:" },
             { "Settings_Action_ApplyEdit", "应用修改" },
             { "Settings_Action_NewAction", "新操作" },
+            { "MoveUp", "上移" },
+            { "MoveDown", "下移" },
 
             { "Settings_Hotkey_PanelKey", "面板唤醒快捷键:" },
             { "Settings_Hotkey_Tip", "请点击输入框并按下快捷键组合" },
@@ -353,9 +356,12 @@ namespace AIHelper.Services
 
             { "Settings_Action_Name", "Name" },
             { "Settings_Action_Prompt", "Prompt" },
+            { "Settings_Action_SortOrder", "Sort Order" },
             { "Settings_Action_Hotkey", "Hotkey:" },
             { "Settings_Action_ApplyEdit", "Apply Changes" },
             { "Settings_Action_NewAction", "New Action" },
+            { "MoveUp", "Move Up" },
+            { "MoveDown", "Move Down" },
 
             { "Settings_Hotkey_PanelKey", "Panel Hotkey:" },
             { "Settings_Hotkey_Tip", "Click the text box and press key combination" },

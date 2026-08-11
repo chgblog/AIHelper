@@ -56,6 +56,15 @@ namespace AIHelper.Views
                 _settings.ActivePlatformId = activePlatform.Id;
             }
 
+            if (_settings.Actions != null)
+            {
+                _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+                for (int i = 0; i < _settings.Actions.Count; i++)
+                {
+                    _settings.Actions[i].SortOrder = i + 1;
+                }
+            }
+
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
@@ -79,13 +88,28 @@ namespace AIHelper.Views
             {
                 _selectedAction.Name = txtActionName.Text;
                 _selectedAction.Prompt = txtActionPrompt.Text;
-                dgActions.Items.Refresh();
+                if (int.TryParse(txtActionSortOrder.Text, out int newSortOrder))
+                {
+                    _selectedAction.SortOrder = newSortOrder;
+                }
+                if (_settings.Actions != null)
+                {
+                    _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+                }
+                dgActions.ItemsSource = null;
+                dgActions.ItemsSource = _settings.Actions;
+                dgActions.SelectedItem = _selectedAction;
             }
         }
 
         private bool SaveSettings()
         {
             ApplyCurrentActionEdit();
+
+            if (_settings.Actions != null)
+            {
+                _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+            }
 
             if (_settings.Platforms.Count == 0)
             {
@@ -262,16 +286,23 @@ namespace AIHelper.Views
 
         private void BtnAddAction_Click(object sender, RoutedEventArgs e)
         {
+            int nextSort = (_settings.Actions != null && _settings.Actions.Count > 0)
+                ? _settings.Actions.Max(a => a.SortOrder) + 1
+                : 1;
+
             var newAction = new ActionItem
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = LanguageManager.Instance["Settings_Action_NewAction"],
                 Prompt = "{content}",
                 HotkeyModifiers = "",
-                HotkeyKey = ""
+                HotkeyKey = "",
+                SortOrder = nextSort
             };
             _settings.Actions.Add(newAction);
-            dgActions.Items.Refresh();
+            _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+            dgActions.ItemsSource = null;
+            dgActions.ItemsSource = _settings.Actions;
             dgActions.SelectedItem = newAction;
         }
 
@@ -280,7 +311,68 @@ namespace AIHelper.Views
             if (dgActions.SelectedItem is ActionItem a)
             {
                 _settings.Actions.Remove(a);
-                dgActions.Items.Refresh();
+                for (int i = 0; i < _settings.Actions.Count; i++)
+                {
+                    _settings.Actions[i].SortOrder = i + 1;
+                }
+                dgActions.ItemsSource = null;
+                dgActions.ItemsSource = _settings.Actions;
+            }
+        }
+
+        private void ReorderAction(ActionItem action, int direction)
+        {
+            if (action == null || _settings.Actions == null) return;
+
+            int currentIndex = _settings.Actions.IndexOf(action);
+            if (currentIndex < 0) return;
+
+            int newIndex = currentIndex + direction;
+            if (newIndex < 0 || newIndex >= _settings.Actions.Count) return;
+
+            var temp = _settings.Actions[currentIndex];
+            _settings.Actions[currentIndex] = _settings.Actions[newIndex];
+            _settings.Actions[newIndex] = temp;
+
+            for (int i = 0; i < _settings.Actions.Count; i++)
+            {
+                _settings.Actions[i].SortOrder = i + 1;
+            }
+
+            dgActions.ItemsSource = null;
+            dgActions.ItemsSource = _settings.Actions;
+            dgActions.SelectedItem = action;
+        }
+
+        private void BtnMoveUpAction_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgActions.SelectedItem is ActionItem action)
+            {
+                ReorderAction(action, -1);
+            }
+        }
+
+        private void BtnMoveDownAction_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgActions.SelectedItem is ActionItem action)
+            {
+                ReorderAction(action, 1);
+            }
+        }
+
+        private void BtnRowMoveUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is ActionItem action)
+            {
+                ReorderAction(action, -1);
+            }
+        }
+
+        private void BtnRowMoveDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is ActionItem action)
+            {
+                ReorderAction(action, 1);
             }
         }
 
@@ -291,6 +383,7 @@ namespace AIHelper.Views
             {
                 actionEditPanel.IsEnabled = true;
                 txtActionName.Text = _selectedAction.Name;
+                txtActionSortOrder.Text = _selectedAction.SortOrder.ToString();
                 txtActionPrompt.Text = _selectedAction.Prompt;
                 txtActionHotkey.Text = FormatHotkey(_selectedAction.HotkeyModifiers, _selectedAction.HotkeyKey);
             }
@@ -298,6 +391,7 @@ namespace AIHelper.Views
             {
                 actionEditPanel.IsEnabled = false;
                 txtActionName.Clear();
+                txtActionSortOrder.Clear();
                 txtActionPrompt.Clear();
                 txtActionHotkey.Clear();
             }

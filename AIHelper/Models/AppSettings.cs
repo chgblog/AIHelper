@@ -132,7 +132,7 @@ namespace AIHelper.Models
                     new ActionItem { Name = "Summary", Prompt = "Please extract a summary for the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "S", IsBuiltIn = true, SortOrder = 3, Icon = "📝" },
                     new ActionItem { Name = "Polish", Prompt = "Please polish the following content to make it more fluent and professional:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "R", IsBuiltIn = true, SortOrder = 4, Icon = "✨" },
                     new ActionItem { Name = "Grammar Check", Prompt = "Please check the following content for grammar errors and provide suggestions:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "G", IsBuiltIn = true, SortOrder = 5, Icon = "✅" },
-                    new ActionItem { Name = "Summarize", Prompt = "Please summarize the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 0, Icon = "📋" }
+                    new ActionItem { Name = "Summarize", Prompt = "Please summarize the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 6, Icon = "📋" }
                 } : new List<ActionItem>
                 {
                     new ActionItem { Name = "翻译", Prompt = "翻译以下内容（中文翻译为英文，英文翻译为中文）：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1, Icon = "🔄" },
@@ -140,7 +140,7 @@ namespace AIHelper.Models
                     new ActionItem { Name = "摘要", Prompt = "请为以下内容提取摘要：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "S", IsBuiltIn = true, SortOrder = 3, Icon = "📝" },
                     new ActionItem { Name = "润色", Prompt = "请润色以下内容，使其更加通顺专业：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "R", IsBuiltIn = true, SortOrder = 4, Icon = "✨" },
                     new ActionItem { Name = "语法检查", Prompt = "请检查以下内容的语法错误，并提供修改建议：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "G", IsBuiltIn = true, SortOrder = 5, Icon = "✅" },
-                    new ActionItem { Name = "总结", Prompt = "请总结以下内容：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 0, Icon = "📋" }
+                    new ActionItem { Name = "总结", Prompt = "请总结以下内容：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 6, Icon = "📋" }
                 }
             };
             return settings;

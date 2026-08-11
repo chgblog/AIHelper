@@ -125,14 +125,17 @@ namespace AIHelper.Views
             _panelHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
 
             // Register Action Hotkeys
-            foreach (var action in _settings.Actions)
+            if (_settings?.Actions != null)
             {
-                if (!string.IsNullOrEmpty(action.HotkeyKey))
+                foreach (var action in _settings.Actions.OrderBy(a => a.SortOrder))
                 {
-                    int id = HotkeyService.Instance.RegisterHotkey(action.HotkeyModifiers, action.HotkeyKey);
-                    if (id > 0)
+                    if (!string.IsNullOrEmpty(action.HotkeyKey))
                     {
-                        _hotkeyActionMap[id] = action;
+                        int id = HotkeyService.Instance.RegisterHotkey(action.HotkeyModifiers, action.HotkeyKey);
+                        if (id > 0)
+                        {
+                            _hotkeyActionMap[id] = action;
+                        }
                     }
                 }
             }

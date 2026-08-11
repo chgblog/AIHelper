@@ -112,21 +112,35 @@
                     </Grid.RowDefinitions>
                     
                     <DataGrid x:Name="dgActions" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                               Background="#1a1a2e" RowBackground="#1e1e2e" AlternatingRowBackground="#252538"
-                               Foreground="#e0e0e0" HeadersVisibility="Column" SelectionChanged="DgActions_SelectionChanged">
+                                Background="#1a1a2e" RowBackground="#1e1e2e" AlternatingRowBackground="#252538"
+                                Foreground="#e0e0e0" HeadersVisibility="Column" SelectionChanged="DgActions_SelectionChanged">
                         <DataGrid.Columns>
+                            <DataGridTextColumn Header="{Binding [Settings_Action_SortOrder], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding SortOrder}" Width="50"/>
                             <DataGridTextColumn Header="{Binding [Settings_Action_Name], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding Name}" Width="100"/>
                             <DataGridTextColumn Header="{Binding [Settings_Action_Prompt], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding Prompt}" Width="*"/>
+                            <DataGridTemplateColumn Width="75">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="▲" Click="BtnRowMoveUp_Click" Width="26" Height="20" Margin="2,0" Padding="0" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" ToolTip="{Binding [MoveUp], Source={x:Static services:LanguageManager.Instance}}"/>
+                                            <Button Content="▼" Click="BtnRowMoveDown_Click" Width="26" Height="20" Margin="2,0" Padding="0" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" ToolTip="{Binding [MoveDown], Source={x:Static services:LanguageManager.Instance}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                     
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,10">
                         <Button Content="{Binding [Add], Source={x:Static services:LanguageManager.Instance}}" Click="BtnAddAction_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
-                        <Button Content="{Binding [Delete], Source={x:Static services:LanguageManager.Instance}}" Click="BtnDeleteAction_Click" Width="80" Padding="5"/>
+                        <Button Content="{Binding [Delete], Source={x:Static services:LanguageManager.Instance}}" Click="BtnDeleteAction_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
+                        <Button Content="{Binding [MoveUp], Source={x:Static services:LanguageManager.Instance}}" Click="BtnMoveUpAction_Click" Width="80" Margin="0,0,10,0" Padding="5"/>
+                        <Button Content="{Binding [MoveDown], Source={x:Static services:LanguageManager.Instance}}" Click="BtnMoveDownAction_Click" Width="80" Padding="5"/>
                     </StackPanel>
                     
                     <Grid Grid.Row="2" Background="#252538" Margin="0,5,0,0" x:Name="actionEditPanel" IsEnabled="False">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -139,16 +153,19 @@
                         
                         <TextBlock Text="{Binding [Settings_Action_Name], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="0" Grid.Column="0" Margin="5" VerticalAlignment="Center"/>
                         <TextBox x:Name="txtActionName" Grid.Row="0" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0"/>
+
+                        <TextBlock Text="{Binding [Settings_Action_SortOrder], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="1" Grid.Column="0" Margin="5" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtActionSortOrder" Grid.Row="1" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0"/>
                         
-                        <TextBlock Text="{Binding [Settings_Action_Hotkey], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="1" Grid.Column="0" Margin="5" VerticalAlignment="Center"/>
-                        <TextBox x:Name="txtActionHotkey" Grid.Row="1" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0" 
+                        <TextBlock Text="{Binding [Settings_Action_Hotkey], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="2" Grid.Column="0" Margin="5" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtActionHotkey" Grid.Row="2" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0" 
                                   PreviewKeyDown="TxtActionHotkey_PreviewKeyDown" IsReadOnly="True"/>
                                   
-                        <TextBlock Text="{Binding [Settings_Action_Prompt], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="2" Grid.Column="0" Margin="5" VerticalAlignment="Top"/>
-                        <TextBox x:Name="txtActionPrompt" Grid.Row="2" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0"
+                        <TextBlock Text="{Binding [Settings_Action_Prompt], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="3" Grid.Column="0" Margin="5" VerticalAlignment="Top"/>
+                        <TextBox x:Name="txtActionPrompt" Grid.Row="3" Grid.Column="1" Margin="5" Background="#1a1a2e" Foreground="#e0e0e0"
                                   AcceptsReturn="True" MinLines="3" MaxLines="3" TextWrapping="Wrap"/>
                                   
-                        <Button Content="{Binding [Settings_Action_ApplyEdit], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left" Margin="5" 
+                        <Button Content="{Binding [Settings_Action_ApplyEdit], Source={x:Static services:LanguageManager.Instance}}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" Margin="5" 
                                 Padding="8,5" Click="BtnApplyActionEdit_Click"/>
                     </Grid>
                 </Grid>
@@ -173,7 +190,7 @@
                         <StackPanel>
                             <Grid Margin="0,0,0,10">
                                 <TextBlock Text="{Binding [Settings_About_Title], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="tbVersion" Text="v0.5.5" Foreground="#a0a0b0" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbVersion" Text="v0.5.6" Foreground="#a0a0b0" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
                             
                             <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">

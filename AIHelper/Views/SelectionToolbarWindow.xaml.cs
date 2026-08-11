@@ -41,7 +41,7 @@ namespace AIHelper.Views
         public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions)
         {
             _selectedText = text;
-            _actions = actions;
+            _actions = actions?.OrderBy(a => a.SortOrder).ToList();
             _currentScreenPos = screenPos;
             _isExpanded = false;
 
