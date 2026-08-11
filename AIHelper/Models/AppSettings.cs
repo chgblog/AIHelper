@@ -41,6 +41,11 @@ namespace AIHelper.Models
         /// </summary>
         public string SelectionAppScopeApps { get; set; } = "";
 
+        /// <summary>
+        /// 划词弹出工具条自动消失秒数 (默认 5 秒)
+        /// </summary>
+        public int SelectionToolbarAutoHideSeconds { get; set; } = 5;
+
         private string _projectUrl = "https://github.com/chgblog/AIHelper";
         public string ProjectUrl
         {

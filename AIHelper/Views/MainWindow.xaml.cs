@@ -106,7 +106,8 @@ namespace AIHelper.Views
             {
                 if (_settings?.Actions != null && _settings.Actions.Count > 0)
                 {
-                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions);
+                    int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 5;
+                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds);
                 }
             });
         }

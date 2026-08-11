@@ -19,6 +19,7 @@ namespace AIHelper.Views
         private DispatcherTimer _autoHideTimer;
         private Point _currentScreenPos;
         private bool _isExpanded;
+        private int _autoHideSeconds = 5;
         private const int MaxInitialActions = 5;
 
         public event Action<ActionItem, string> ActionRequested;
@@ -28,7 +29,7 @@ namespace AIHelper.Views
             InitializeComponent();
 
             _autoHideTimer = new DispatcherTimer();
-            _autoHideTimer.Interval = TimeSpan.FromSeconds(5);
+            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
             _autoHideTimer.Tick += (s, e) => HideToolbar();
         }
 
@@ -38,8 +39,10 @@ namespace AIHelper.Views
         /// <param name="text">选中的文字</param>
         /// <param name="screenPos">鼠标屏幕坐标</param>
         /// <param name="actions">可用操作列表</param>
-        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions)
+        /// <param name="autoHideSeconds">自动消失秒数</param>
+        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 5)
         {
+            _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 5;
             _selectedText = text;
             _actions = actions?.OrderBy(a => a.SortOrder).ToList();
             _currentScreenPos = screenPos;
@@ -49,7 +52,7 @@ namespace AIHelper.Views
             PositionWindow(_currentScreenPos);
             
             this.Show();
-            _autoHideTimer.Interval = TimeSpan.FromSeconds(5);
+            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
             StartAutoHideTimer();
             PlayShowAnimation();
         }
@@ -114,7 +117,7 @@ namespace AIHelper.Views
                     _isExpanded = true;
                     BuildButtons();
                     PositionWindow(_currentScreenPos);
-                    _autoHideTimer.Interval = TimeSpan.FromSeconds(5);
+                    _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
                     StartAutoHideTimer();
                 };
 
@@ -210,7 +213,7 @@ namespace AIHelper.Views
 
         private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            _autoHideTimer.Interval = TimeSpan.FromSeconds(3);
+            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
             StartAutoHideTimer();
         }
     }

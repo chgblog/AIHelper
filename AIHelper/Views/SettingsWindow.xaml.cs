@@ -17,7 +17,14 @@ namespace AIHelper.Views
         public SettingsWindow()
         {
             InitializeComponent();
+            LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
+            this.Unloaded += (s, e) => LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
             LoadSettings();
+        }
+
+        private void LanguageManager_LanguageChanged(object sender, EventArgs e)
+        {
+            UpdateAutoHideTip();
         }
 
         private void LoadSettings()
@@ -34,8 +41,10 @@ namespace AIHelper.Views
             else rbScopeAll.IsChecked = true;
 
             txtSelectionAppScopeApps.Text = _settings.SelectionAppScopeApps ?? "";
+            txtSelectionToolbarAutoHideSeconds.Text = (_settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 5).ToString();
 
             UpdateSelectionToolbarControlStates();
+            UpdateAutoHideTip();
             txtProxyServer.Text = _settings.ProxyServer ?? "";
             tbProjectUrl.Text = _settings.ProjectUrl;
             tbUpdateUrl.Text = _settings.UpdateUrl;
@@ -113,6 +122,15 @@ namespace AIHelper.Views
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
             _settings.EnableClipboardEnhancementToolbar = chkEnableClipboardEnhancementToolbar.IsChecked == true;
 
+            if (int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int autoHideSec) && autoHideSec > 0)
+            {
+                _settings.SelectionToolbarAutoHideSeconds = autoHideSec;
+            }
+            else
+            {
+                _settings.SelectionToolbarAutoHideSeconds = 5;
+            }
+
             int appScopeMode = 0;
             if (rbScopeInclude.IsChecked == true) appScopeMode = 1;
             else if (rbScopeExclude.IsChecked == true) appScopeMode = 2;
@@ -171,6 +189,28 @@ namespace AIHelper.Views
                 txtSelectionAppScopeApps.IsEnabled = isCustomScope;
             if (btnSelectApps != null)
                 btnSelectApps.IsEnabled = isCustomScope;
+
+            if (txtSelectionToolbarAutoHideSeconds != null)
+                txtSelectionToolbarAutoHideSeconds.IsEnabled = isSelectionEnabled;
+            if (tbSelectionToolbarAutoHideTip != null)
+                tbSelectionToolbarAutoHideTip.IsEnabled = isSelectionEnabled;
+        }
+
+        private void TxtSelectionToolbarAutoHideSeconds_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateAutoHideTip();
+        }
+
+        private void UpdateAutoHideTip()
+        {
+            if (tbSelectionToolbarAutoHideTip == null) return;
+
+            int sec = 5;
+            if (txtSelectionToolbarAutoHideSeconds != null && int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int parsed) && parsed > 0)
+            {
+                sec = parsed;
+            }
+            tbSelectionToolbarAutoHideTip.Text = LanguageManager.Instance.GetString("Settings_General_SelectionToolbarAutoHideTip", sec);
         }
 
         private void BtnSelectApps_Click(object sender, RoutedEventArgs e)

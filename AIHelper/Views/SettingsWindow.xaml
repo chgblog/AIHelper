@@ -66,6 +66,12 @@
                             <CheckBox x:Name="chkEnableClipboardEnhancementToolbar" Content="{Binding [Settings_General_EnableClipboardEnhancementToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="20,5,0,0" VerticalContentAlignment="Center"/>
                             <TextBlock Text="{Binding [Settings_General_ClipboardEnhancementToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="40,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
 
+                            <StackPanel Orientation="Horizontal" Margin="20,10,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding [Settings_General_SelectionToolbarAutoHide], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox x:Name="txtSelectionToolbarAutoHideSeconds" Width="60" Padding="5,3" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" VerticalAlignment="Center" TextChanged="TxtSelectionToolbarAutoHideSeconds_TextChanged"/>
+                            </StackPanel>
+                            <TextBlock x:Name="tbSelectionToolbarAutoHideTip" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
                             <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 
                             <TextBlock Text="{Binding [Settings_Selection_AppScopeTitle], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
