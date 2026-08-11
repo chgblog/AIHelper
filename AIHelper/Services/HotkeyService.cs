@@ -56,7 +56,11 @@ namespace AIHelper.Services
             uint mod = ParseModifiers(modifiers) | MOD_NOREPEAT;
             uint key = ParseKey(keyStr);
 
-            if (key == 0) return -1;
+            if (key == 0)
+            {
+                Logger.LogError($"Invalid hotkey key specified: '{keyStr}'");
+                return -1;
+            }
 
             int id = ++_currentId;
             bool success = RegisterHotKey(_hWnd, id, mod, key);
@@ -67,7 +71,9 @@ namespace AIHelper.Services
                 return id;
             }
             
-            System.Diagnostics.Debug.WriteLine($"Failed to register hotkey {modifiers}+{keyStr}");
+            int errorCode = Marshal.GetLastWin32Error();
+            Logger.LogError($"Failed to register hotkey '{modifiers}+{keyStr}' (Win32 Error Code: {errorCode})");
+            System.Diagnostics.Debug.WriteLine($"Failed to register hotkey {modifiers}+{keyStr}, Win32 Error: {errorCode}");
             return -1;
         }
 

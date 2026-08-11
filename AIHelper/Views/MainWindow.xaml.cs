@@ -22,6 +22,9 @@ namespace AIHelper.Views
         private SelectionToolbarWindow _selectionToolbar;
         private SettingsWindow _currentSettingsWindow;
 
+        public bool IsExiting { get; set; } = false;
+        public bool IsClosed { get; private set; } = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -127,6 +130,10 @@ namespace AIHelper.Views
 
             // Register Panel Hotkey
             _panelHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+            if (_panelHotkeyId < 0)
+            {
+                Logger.LogError($"Failed to register main panel hotkey: {_settings.PanelHotkeyModifiers}+{_settings.PanelHotkeyKey}");
+            }
 
             // Register Action Hotkeys
             if (_settings?.Actions != null)
@@ -354,37 +361,44 @@ namespace AIHelper.Views
 
         public async void ShowSettings(int initialTabIndex = 0)
         {
-            if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
+            try
             {
-                _currentSettingsWindow.SelectTab(initialTabIndex);
-                _currentSettingsWindow.Activate();
-                return;
-            }
-
-            if (!this.IsVisible)
-            {
-                ShowAndActivate();
-            }
-
-            _currentSettingsWindow = new SettingsWindow(initialTabIndex);
-            _currentSettingsWindow.Owner = this;
-            if (_currentSettingsWindow.ShowDialog() == true)
-            {
-                _settings = SettingsService.Instance.Load();
-                RegisterHotkeys();
-                UpdateTextSelectionServiceState();
-                LoadPlatforms();
-
-                ((App)Application.Current)?.UpdateTrayMenu();
-
-                // Navigate to new active platform
-                var active = _settings.GetActivePlatform();
-                if (active != null && !string.IsNullOrEmpty(active.Url) && await EnsureWebViewReadyAsync())
+                if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
                 {
-                    webView.CoreWebView2.Navigate(active.Url);
+                    _currentSettingsWindow.SelectTab(initialTabIndex);
+                    _currentSettingsWindow.Activate();
+                    return;
                 }
+
+                if (!this.IsVisible)
+                {
+                    ShowAndActivate();
+                }
+
+                _currentSettingsWindow = new SettingsWindow(initialTabIndex);
+                _currentSettingsWindow.Owner = this;
+                if (_currentSettingsWindow.ShowDialog() == true)
+                {
+                    _settings = SettingsService.Instance.Load();
+                    RegisterHotkeys();
+                    UpdateTextSelectionServiceState();
+                    LoadPlatforms();
+
+                    ((App)Application.Current)?.UpdateTrayMenu();
+
+                    // Navigate to new active platform
+                    var active = _settings.GetActivePlatform();
+                    if (active != null && !string.IsNullOrEmpty(active.Url) && await EnsureWebViewReadyAsync())
+                    {
+                        webView.CoreWebView2.Navigate(active.Url);
+                    }
+                }
+                _currentSettingsWindow = null;
             }
-            _currentSettingsWindow = null;
+            catch (Exception ex)
+            {
+                Logger.LogError("Error in ShowSettings", ex);
+            }
         }
 
         public void RefreshSettings()
@@ -402,6 +416,23 @@ namespace AIHelper.Views
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Hide();
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            if (!IsExiting)
+            {
+                e.Cancel = true;
+                this.Hide();
+                return;
+            }
+            base.OnClosing(e);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            IsClosed = true;
+            base.OnClosed(e);
         }
 
         private void UpdateStatus(string message)

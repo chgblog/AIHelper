@@ -1,214 +1,224 @@
 # AIHelper
 
-**中文** | [English](README_EN.md)
+**English** | [中文](README_ZH.md)
 
-**AIHelper** 是一款轻量级 Windows桌面AI助手工具。它旨在将网页端 AI 大模型平台（如 DeepSeek、ChatGPT、Claude、Gemini 等）无缝集成到日常工作中。通过划词 AI 工具条、全局快捷键和智能网页脚本注入，实现剪贴板及划词选中文本的快速翻译、解释、摘要、润色与语法检查。
+AIHelper – Your Global AI Productivity Engine for Windows.
 
----
+Stop copying, pasting, and switching tabs. AIHelper seamlessly embeds leading LLMs (ChatGPT, Claude, Gemini, DeepSeek, Qwen) directly into your workflow. With a selection-triggered toolbar, global hotkeys, and smart 
+web injection, instantly translate, explain, summarize, polish, or grammar-check any text. Lightweight, unobtrusive, and always ready — making AI a native part of your desktop experience.
 
-## 📸 界面展示
-
-### 1. 主窗口（AI 结果显示界面）
-![主窗口](assets/zh/ZhuChuangKou.jpg)
-
-### 2. 划词 AI 工具条
-![划词工具条](assets/zh/HuaCiGongJuTiao.jpg)
-
-### 3. 划词设置
-![划词设置](assets/zh/HuaCiSheZhi.jpg)
-
-### 4. 划词应用设置
-![划词应用设置](assets/zh/HuaCiYingYongSheZhi.jpg)
-
-### 5. 平台管理
-![平台管理](assets/zh/PingTaiGuanLi.jpg)
-
-### 6. 操作管理
-![操作管理](assets/zh/CaoZuoGuanLi.jpg)
-
-### 7. 操作编辑
-![操作编辑](assets/zh/CaoZuoBianJi.jpg)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white)
+![Lightweight](https://img.shields.io/badge/Lightweight-<1MB-brightgreen?style=flat-square)
+![Multi-LLM](https://img.shields.io/badge/Multi--LLM-ChatGPT%20%7C%20Claude%20%7C%20Gemini%20%7C%20Other-blueviolet?style=flat-square)
+<a href="https://github.com/chgblog/AIHelper/releases">
+![GitHub Release](https://img.shields.io/github/v/release/chgblog/AIHelper?style=flat-square&include_prereleases&label=Latest)
+</a>
 
 ---
 
-## ✨ 核心特性
+## 📸 Screenshots
 
-- **✨ 划词 AI 助手工具条 (Text Selection Helper)**
-  - 在任意软件中用鼠标划词选中文本，自动在光标旁浮现极简 AI 悬浮工具条。
-  - 支持直接点击工具条上的 Prompt 动作一键处理选中文本，无需键盘快捷键。
-  - 可在托盘右键菜单或设置窗口中随时开启/关闭划词检测，并可配置动画与防遮挡避让。
+### 1. Main Window (AI Result Interface)
+![Main Window](assets/en/ZhuChuangKou.jpg)
 
-- **🚀 全局快捷键与动作面板**
-  - 按下全局快捷键（默认 `Ctrl+Alt+Space`）调出快捷动作面板。
-  - 支持划词选中或复制文本后，直接通过快捷键（如 `Ctrl+Alt+T`）一键发送给 AI 处理。
-  - 支持在设置界面对所有快捷动作进行**自定义排序**与独立弹窗编辑。
+### 2. Text Selection AI Toolbar
+![Text Selection Toolbar](assets/en/HuaCiGongJuTiao.jpg)
 
-- **🌐 多 AI 平台集成与精准定位**
-  - 内置 7 大主流 AI 平台预设：**DeepSeek**、**Claude**、**Gemini**、**ChatGPT**、**千问**、**智谱**、**Kimi**。
-  - 支持添加、编辑、删除自定义 AI 平台，通过单选框轻松切换当前激活平台。
-  - **🎯 可视化 DOM 元素拾取器**：支持自定义“新会话”、“输入框”及“提交按钮”的 CSS 选择器；内置 WebView2 拾取模式，悬停/点击网页元素即可自动捕获高精度选择器。
-  - **🔄 自动开启新会话**：支持配置“新会话选择器”，在每次发送 Prompt 前自动点击开启全新对话。
+### 3. Selection Settings
+![Selection Settings](assets/en/HuaCiSheZhi.jpg)
 
-- **⚡ 智能 DOM 脚本注入与提交控制**
-  - 内置 `injector.js` 脚本，自动识别并定位各大 AI 平台的网页文本输入框。
-  - 自动填充 Prompt 模板与选中文本，并支持设置**是否开启自动发送/提交**。
+### 4. Selection App Settings
+![Selection App Settings](assets/en/HuaCiYingYongSheZhi.jpg)
 
-- **🛠️ 高度可定制的 Prompt 动作 (Actions)**
-  - 预设常用动作：**翻译**、**解释**、**摘要**、**润色**、**语法检查**。
-  - 用户可自由修改 Prompt 模板、添加/编辑/删除动作、调整动作排序及自定义快捷键。
+### 5. Platform Management
+![Platform Management](assets/en/PingTaiGuanLi.jpg)
 
-- **🌐 界面多语言支持 (Internationalization)**
-  - 内置语言管理器，支持**简体中文**与 **English** 双语界面随时动态切换。
+### 6. Action Management
+![Action Management](assets/en/CaoZuoGuanLi.jpg)
 
-- **🔧 代理与网络/更新配置**
-  - 支持自定义 HTTP / HTTPS / SOCKS 网络代理，保障各 AI 平台的网络连通性。
-  - 支持配置项目主页与检查更新 URL。
-
-- **💻 现代且轻量的 UI 与系统托盘**
-  - 基于 WPF 构建，结合 Microsoft WebView2 提供流畅的网页浏览与交互体验。
-  - 系统托盘图标右键菜单支持快捷「打开设置」、「开启/关闭划词搜索」等便捷控制。
-  - 本地化配置存储（保存路径：`%APPDATA%\AIHelper\settings.json`），保护隐私且免去重复登录。
+### 7. Action Editing
+![Action Editing](assets/en/CaoZuoBianJi.jpg)
 
 ---
 
-## ⌨️ 默认快捷键
+## ✨ Key Features
 
-| 快捷键 | 动作 / 功能 | 提示词说明 (Prompt) |
+- **✨ Text Selection AI Assistant Toolbar**
+  - Select text in any application using your mouse, and a minimal floating AI toolbar will automatically appear next to your cursor.
+  - One-click prompt execution directly from the floating toolbar without pressing hotkeys.
+  - Easily toggle text selection monitoring on/off via the system tray menu or settings window, with smart position adjustments and animations.
+
+- **🚀 Global Hotkeys & Action Panel**
+  - Press the global hotkey (default `Ctrl+Alt+Space`) to bring up the quick action panel.
+  - Select or copy text, then press a hotkey (e.g., `Ctrl+Alt+T`) to send it directly to AI for processing.
+  - Supports **custom action ordering** and standalone dialog editing in settings.
+
+- **🌐 Multi AI Platform Integration & Precise Element Selector**
+  - Built-in preset support for 7 major AI platforms: **DeepSeek**, **Claude**, **Gemini**, **ChatGPT**, **Qwen**, **Zhipu**, and **Kimi**.
+  - Easily add, edit, or delete custom AI platforms with single-click radio button activation.
+  - **🎯 Visual DOM Element Picker**: Customize CSS selectors for "New Chat", "Input Box", and "Submit Button". Built-in WebView2 element picker allows clicking elements directly on live webpages to inspect and retrieve CSS selectors effortlessly.
+  - **🔄 Automatic New Chat**: Supports configuring a "New Chat" selector to automatically click and initiate a fresh conversation before sending prompts.
+
+- **⚡ Intelligent DOM Script Injection & Auto-Submit Control**
+  - Built-in `injector.js` script that automatically identifies and locates text input fields on major AI platforms.
+  - Auto-fills prompt templates and selected text, with configurable **Auto Submit** toggle (auto send vs. manual confirmation).
+
+- **🛠️ Highly Customizable Prompt Actions**
+  - Preset common actions: **Translate**, **Explain**, **Summarize**, **Polish**, **Grammar Check**.
+  - Users can freely modify prompt templates, add/edit/delete actions, reorder actions, and assign custom hotkeys.
+
+- **🌐 Multi-Language Interface (I18n)**
+  - Built-in Language Manager supporting dynamic switching between **Simplified Chinese** and **English**.
+
+- **🔧 Network Proxy & Update Configuration**
+  - Supports custom HTTP / HTTPS / SOCKS network proxy settings for reliable connectivity.
+  - Supports configuring project homepage and update check URLs.
+
+- **💻 Modern & Lightweight UI with System Tray**
+  - Built with WPF and Microsoft WebView2 for a smooth web browsing and interaction experience.
+  - System tray context menu provides quick controls ("Open Settings", "Enable/Disable Selection Helper").
+  - Local configuration storage (`%APPDATA%\AIHelper\settings.json`) to protect privacy and avoid repeated logins.
+
+---
+
+## ⌨️ Default Hotkeys
+
+| Hotkey | Action | Prompt Description |
 | :--- | :--- | :--- |
-| `Ctrl + Alt + Space` | 唤醒/隐藏快捷动作面板 | 调出动作列表面板选择执行 |
-| `Ctrl + Alt + T` | 翻译 (Translate) | 将选中文本翻译为中文 |
-| `Ctrl + Alt + E` | 解释 (Explain) | 详细解释选中文本内容 |
-| `Ctrl + Alt + S` | 摘要 (Summarize) | 为选中文本提取核心摘要 |
-| `Ctrl + Alt + R` | 润色 (Polish) | 润色选中文本使其通顺专业 |
-| `Ctrl + Alt + G` | 语法检查 (Grammar) | 检查语法错误并提供修改建议 |
+| `Ctrl + Alt + Space` | Show/Hide Action Panel | Opens the action list panel |
+| `Ctrl + Alt + T` | Translate | Translates selected text to Chinese |
+| `Ctrl + Alt + E` | Explain | Provides a detailed explanation of the selected text |
+| `Ctrl + Alt + S` | Summarize | Extracts a core summary from the selected text |
+| `Ctrl + Alt + R` | Polish | Polishes the selected text for fluency and professionalism |
+| `Ctrl + Alt + G` | Grammar Check | Checks for grammatical errors and suggests corrections |
 
-> *注：所有快捷键均可在应用“设置”窗口中重新配置。*
-
----
-
-## 🛠️ 技术栈与依赖
-
-- **运行环境 / 框架**：.NET Framework 4.8 / WPF (Windows Presentation Foundation)
-- **网页浏览器内核**：[Microsoft.Web.WebView2](https://www.nuget.org/packages/Microsoft.Web.WebView2)
-- **JSON 序列化**：[Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
-- **单文件打包**：[Costura.Fody](https://www.nuget.org/packages/Costura.Fody)
-- **脚本注入桥梁**：Vanilla JavaScript (`injector.js` / `element-picker.js`)
+> *Note: All hotkeys can be reconfigured in the application's Settings window.*
 
 ---
 
-## 📁 项目结构
+## 🛠️ Tech Stack & Dependencies
+
+- **Runtime / Framework**: .NET Framework 4.8 / WPF (Windows Presentation Foundation)
+- **Web Browser Engine**: [Microsoft.Web.WebView2](https://www.nuget.org/packages/Microsoft.Web.WebView2)
+- **JSON Serialization**: [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
+- **Single-File Packaging**: [Costura.Fody](https://www.nuget.org/packages/Costura.Fody)
+- **Script Injection Bridge**: Vanilla JavaScript (`injector.js` / `element-picker.js`)
+
+---
+
+## 📁 Project Structure
 
 ```text
 AIHelper/
-├── AIHelper.sln                # Visual Studio 解决方案文件
+├── AIHelper.sln                # Visual Studio solution file
 └── AIHelper/
-    ├── AIHelper.csproj         # 项目工程文件
-    ├── App.xaml / App.xaml.cs  # 应用入口与全局资源 (含系统托盘菜单)
+    ├── AIHelper.csproj         # Project file
+    ├── App.xaml / App.xaml.cs  # Application entry point & global resources (with tray menu)
     ├── Assets/
-    │   ├── injector.js         # 自动化注入网页的 JS 脚本
-    │   └── element-picker.js   # 网页 DOM 元素可视化拾取 JS 脚本
+    │   ├── injector.js         # JS script for web page automation injection
+    │   └── element-picker.js   # JS script for visual DOM element picking
     ├── Models/
-    │   ├── ActionItem.cs       # 快捷动作数据模型 (含划词/排序)
-    │   ├── AiPlatform.cs       # AI 平台数据模型 (含新会话/选择器)
-    │   └── AppSettings.cs      # 应用配置与默认设置 (代理/语言/划词设置)
+    │   ├── ActionItem.cs       # Action item data model (with selection & ordering)
+    │   ├── AiPlatform.cs       # AI platform data model (with New Chat & selectors)
+    │   └── AppSettings.cs      # App settings & defaults (proxy, language, text selection)
     ├── Services/
-    │   ├── AutoStartService.cs # 开机自启服务
-    │   ├── ClipboardService.cs # 剪贴板获取与模拟按键服务
-    │   ├── HotkeyService.cs    # 全局 Hotkey 注册与监听服务 (Win32 API)
-    │   ├── LanguageManager.cs  # 多语言/国际化 (I18n) 动态切换服务
-    │   ├── Logger.cs           # 日志记录服务
-    │   ├── PageInjector.cs     # 网页 JS 脚本注入与执行服务
-    │   ├── SettingsService.cs  # 本地 JSON 配置加载与持久化
-    │   └── TextSelectionService.cs # 划词选中文本与悬浮工具条监听服务
+    │   ├── AutoStartService.cs # Auto-start service
+    │   ├── ClipboardService.cs # Clipboard access & key simulation service
+    │   ├── HotkeyService.cs    # Global hotkey listener (Win32 API)
+    │   ├── LanguageManager.cs  # Multi-language / I18n dynamic switching service
+    │   ├── Logger.cs           # Logging service
+    │   ├── PageInjector.cs     # Web JS script injection & execution service
+    │   ├── SettingsService.cs  # Local JSON config loading & persistence
+    │   └── TextSelectionService.cs # Text selection & floating toolbar listener service
     ├── Views/
-    │   ├── ActionEditWindow.xaml   # 快捷动作独立编辑窗口
-    │   ├── ActionPanelControl.xaml # 快捷动作悬浮面板视图
-    │   ├── ElementPickerWindow.xaml# 网页 DOM 元素可视化拾取窗口
-    │   ├── MainWindow.xaml         # 主界面（含 WebView2 控件）
-    │   ├── PlatformEditWindow.xaml # 平台编辑与元素定位配置窗口
-    │   ├── SelectionToolbarWindow.xaml # 划词 AI 悬浮工具条窗口
-    │   └── SettingsWindow.xaml     # 设置界面（平台/动作/划词/代理/语言配置）
-    └── Converters/             # XAML 数据转换器
+    │   ├── ActionEditWindow.xaml   # Standalone action editing dialog
+    │   ├── ActionPanelControl.xaml # Quick action floating panel view
+    │   ├── ElementPickerWindow.xaml# Visual DOM element picker window
+    │   ├── MainWindow.xaml         # Main window (with WebView2 control)
+    │   ├── PlatformEditWindow.xaml # Platform editing & selector configuration window
+    │   ├── SelectionToolbarWindow.xaml # Text selection AI floating toolbar window
+    │   └── SettingsWindow.xaml     # Settings window (platform/action/selection/proxy/language)
+    └── Converters/             # XAML data converters
 ```
 
 ---
 
-## 🚀 编译与运行
+## 🚀 Build & Run
 
-### 1. 前置条件
+### 1. Prerequisites
 
-- **操作系统**：Windows 10 / Windows 11
-- **开发工具**：Visual Studio 2019 / 2022（需安装 **.NET 桌面开发** 工作负载）或 .NET SDK
-- **SDK 要求**：.NET Framework 4.8 Developer Pack
-- **运行时需求**：[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Win11 已内置，Win10 通常随 Edge 自动安装）
+- **Operating System**: Windows 10 / Windows 11
+- **Development Tools**: Visual Studio 2019 / 2022 (with **.NET Desktop Development** workload installed) or .NET SDK
+- **SDK Requirement**: .NET Framework 4.8 Developer Pack
+- **Runtime Requirement**: [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (built-in on Win11, usually auto-installed with Edge on Win10)
 
-### 2. 构建步骤
+### 2. Build Steps
 
-1. 克隆或下载本项目源码至本地：
+1. Clone or download the project source code:
    ```bash
    git clone https://github.com/chgblog/AIHelper.git
    cd AIHelper
    ```
-2. 使用 Visual Studio 打开 [AIHelper.sln](file:///e:/CHG/develop/c%23/AIHelper/AIHelper.sln)。
-3. 在 Visual Studio 顶部菜单选择 `Any CPU` 或 `x64` 平台，解决方案配置选择 `Debug` 或 `Release`。
-4. 按下 `F5` 键运行或按 `Ctrl+Shift+B` 编译解决方案。
+2. Open `AIHelper.sln` in Visual Studio.
+3. Select `Any CPU` or `x64` platform and choose `Debug` or `Release` configuration.
+4. Press `F5` to run or `Ctrl+Shift+B` to build the solution.
 
-### 3. 单文件打包 (Single EXE Packaging)
+### 3. Single-File Packaging (Single EXE)
 
-本项目已集成 **Costura.Fody**，支持将依赖 DLL 及 `injector.js` 静态资源全部合并为单个独立的 `.exe` 文件：
+This project integrates **Costura.Fody** to merge all dependency DLLs and `injector.js` static resources into a single standalone `.exe` file:
 
-- **通过命令行编译发布**：
+- **Build via command line**:
   ```bash
   dotnet build AIHelper/AIHelper.csproj -c Release
   ```
-- **生成产物**：
-  打包后的单文件位于 `AIHelper/bin/Release/net48/AIHelper.exe`。您可以直接将 `AIHelper.exe`（及其同级配置文件 `AIHelper.exe.config`）复制到任意位置独立运行，无需附带任何 DLL 或 `Assets/` 资源目录。
+- **Output**:
+  The packaged single file is located at `AIHelper/bin/Release/net48/AIHelper.exe`. You can copy `AIHelper.exe` (along with `AIHelper.exe.config`) to any location and run it independently — no additional DLLs or `Assets/` directory required.
 
 ---
 
-## 📖 使用指南
+## 📖 Usage Guide
 
-1. **划词 AI 助手使用**：
-   - 选中文本后，光标处将自动显示划词 AI 悬浮工具条，直接点击所需动作图标即可发送处理。
-   - 可在系统托盘右键菜单或“设置 -> 划词设置”中随时开启/关闭划词搜索。
-2. **配置与管理 AI 平台**：
-   - 首次运行会自动打开设置窗口，内置 DeepSeek、Claude、Gemini、ChatGPT、千问、智谱、Kimi 等多个主流平台预设。
-   - 点击“添加”或“编辑”平台，可修改平台 URL、“新会话”选择器、输入框及提交按钮选择器；点击“🎯 拾取”即可在真实网页中点击捕获目标元素选择器。
-   - 可设置每次发送 Prompt 前是否自动触发“新会话”。
-3. **文本划词/快捷处理**：
-   - 在任何软件（如浏览器、Word、代码编辑器）中**复制**或**选中**需要处理的文本。
-   - 按下对应快捷键（例如 `Ctrl+Alt+T`），AIHelper 将自动唤醒、切换至指定 AI 平台窗口、填入提示词并自动提交。
-4. **面板与动作排序**：
-   - 按下 `Ctrl+Alt+Space` 可快速召唤操作面板，点击需要的 AI 操作项即可。
-   - 在“设置 -> 动作管理”中支持对动作进行**自定义排序**（上移/下移）及独立弹窗编辑。
-5. **代理与语言设置**：
-   - 支持在设置界面切换界面语言（中文 / English）以及配置 HTTP/HTTPS/SOCKS 网络代理。
-
----
-
-## 📝 更新日志 (Changelog)
-
-### > v0.3.5 至今的更新亮点
-
-- **✨ 划词 AI 助手工具条 (Text Selection Toolbar)**
-  - 新增划词选中文本监听服务，选中文本后自动浮现极简划词 AI 工具条，点击一键处理。
-  - 优化划词检测灵敏度、防遮挡算法、弹出流畅度及托盘右键快捷开关。
-- **🌐 多语言界面支持 (I18n)**
-  - 新增系统级简体中文 (Simplified Chinese) / 英文 (English) 界面语言无缝动态切换。
-- **🔄 平台“新会话”自动化**
-  - AI 平台增加“新会话选择器”配置，可在每次执行 Prompt 前自动点击开启全新对话。
-- **⚡ 自动提交控制 (Auto Submit)**
-  - 新增“自动提交”选项开关，可自由选择充填 Prompt 后自动发送或手动回车提交。
-- **⚙️ 动作管理与自定义排序**
-  - 设置界面支持 Prompt 动作上移/下移自定义排序，并提供独立的 `ActionEditWindow` 编辑弹窗。
-- **🌐 网络代理与项目/更新配置**
-  - 新增 HTTP / HTTPS / SOCKS 代理支持；新增项目主页及检查更新 URL 配置。
-- **📌 系统托盘右键菜单增强**
-  - 托盘右键菜单增加「打开设置」、「开启/关闭划词搜索」快速切控与状态反馈。
+1. **Text Selection AI Helper**:
+   - Select text in any app, and the floating AI toolbar will automatically pop up near your cursor. Click any action icon to execute instantly.
+   - Toggle text selection monitoring anytime via the system tray context menu or under "Settings -> Selection Settings".
+2. **Configure & Manage AI Platforms**:
+   - On first launch, the settings window opens automatically with built-in presets for DeepSeek, Claude, Gemini, ChatGPT, Qwen, Zhipu, Kimi, etc.
+   - Click "Add" or "Edit" to modify platform URLs, "New Chat" selectors, input boxes, and submit button selectors. Click "🎯 Pick" to visually capture elements on live webpages.
+   - Optionally toggle whether to auto-trigger a "New Chat" before sending prompts.
+3. **Text Selection & Hotkey Processing**:
+   - **Copy** or **select** text in any application (browser, Word, code editor, etc.).
+   - Press the assigned hotkey (e.g., `Ctrl+Alt+T`) to wake up AIHelper, switch to the active AI platform, inject the prompt, and submit.
+4. **Action Panel & Action Reordering**:
+   - Press `Ctrl+Alt+Space` to bring up the quick action panel.
+   - In "Settings -> Action Management", customized ordering (Move Up / Move Down) and standalone dialog editing (`ActionEditWindow`) are supported.
+5. **Proxy & Language Settings**:
+   - Switch UI language between English and Chinese, and configure HTTP/HTTPS/SOCKS proxy settings in the settings window.
 
 ---
 
-## 📄 许可协议
+## 📝 Changelog
 
-本项目采用 [Non-Commercial License](LICENSE) (非商业用途许可协议)。仅供个人学习、研究与非商业用途使用。如需商业使用，请联系原作者获取授权。
+### > v0.3.5 Updates Summary
+
+- **✨ Text Selection AI Toolbar**
+  - Added text selection listener service; floating AI toolbar automatically pops up upon text selection for one-click processing.
+  - Optimized selection sensitivity, anti-overlap positioning, popup smoothness, and tray menu toggle.
+- **🌐 Multi-Language Interface (I18n)**
+  - Added seamless dynamic switching between Simplified Chinese and English.
+- **🔄 Platform "New Chat" Automation**
+  - Added "New Chat Selector" configuration to automatically open a fresh chat session before executing prompts.
+- **⚡ Auto-Submit Control**
+  - Added "Auto Submit" toggle in settings for automatic prompt submission or manual Enter confirmation.
+- **⚙️ Action Management & Custom Ordering**
+  - Added custom action ordering (Move Up / Move Down) in settings and refactored action editing into a standalone `ActionEditWindow` dialog.
+- **🌐 Network Proxy & Update Configuration**
+  - Added HTTP / HTTPS / SOCKS proxy support; added project homepage and update check URL settings.
+- **📌 System Tray Menu Enhancements**
+  - Added "Open Settings" and "Enable/Disable Selection Toolbar" toggle options to the system tray context menu.
+
+---
+
+## 📄 License
+
+This project is licensed under the [Non-Commercial License](LICENSE). It is intended for personal study, research, and non-commercial use only. For commercial use, please contact the original author for authorization.
 

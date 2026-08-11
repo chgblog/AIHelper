@@ -26,6 +26,20 @@ namespace AIHelper
         private System.Drawing.Icon _trayIcon;
         private MainWindow _mainWindow;
 
+        public MainWindow MainWindowInstance
+        {
+            get
+            {
+                if (_mainWindow == null || _mainWindow.IsClosed)
+                {
+                    Logger.LogWarning("MainWindow was closed or null. Creating new instance.");
+                    _mainWindow = new MainWindow();
+                    new System.Windows.Interop.WindowInteropHelper(_mainWindow).EnsureHandle();
+                }
+                return _mainWindow;
+            }
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             SetupExceptionHandling();
@@ -44,7 +58,7 @@ namespace AIHelper
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             InitializeTrayIcon();
 
-            _mainWindow = new MainWindow();
+            _mainWindow = MainWindowInstance;
 
             var settings = SettingsService.Instance.Load();
 
@@ -68,8 +82,6 @@ namespace AIHelper
             else
             {
                 Logger.LogInfo("Starting hidden in system tray.");
-                _mainWindow.Show();
-                _mainWindow.Hide();
             }
 
             base.OnStartup(e);
@@ -139,11 +151,11 @@ namespace AIHelper
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
             
             _showItem = new System.Windows.Forms.ToolStripMenuItem();
-            _showItem.Click += (s, e) => _mainWindow?.ShowAndActivate();
+            _showItem.Click += (s, e) => MainWindowInstance.ShowAndActivate();
             contextMenu.Items.Add(_showItem);
 
             _settingsItem = new System.Windows.Forms.ToolStripMenuItem();
-            _settingsItem.Click += (s, e) => _mainWindow?.ShowSettings();
+            _settingsItem.Click += (s, e) => MainWindowInstance.ShowSettings();
             contextMenu.Items.Add(_settingsItem);
 
             _selectionToolbarItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -152,7 +164,7 @@ namespace AIHelper
                 var settings = SettingsService.Instance.Load();
                 settings.EnableSelectionToolbar = !settings.EnableSelectionToolbar;
                 SettingsService.Instance.Save(settings);
-                _mainWindow?.RefreshSettings();
+                MainWindowInstance.RefreshSettings();
                 UpdateTrayMenuText();
             };
             contextMenu.Items.Add(_selectionToolbarItem);
@@ -162,6 +174,11 @@ namespace AIHelper
             _exitItem = new System.Windows.Forms.ToolStripMenuItem();
             _exitItem.Click += (s, e) => 
             {
+                if (_mainWindow != null)
+                {
+                    _mainWindow.IsExiting = true;
+                    _mainWindow.Close();
+                }
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 Shutdown();
@@ -196,7 +213,7 @@ namespace AIHelper
 
         private void NotifyIcon_DoubleClick(object sender, EventArgs e)
         {
-            _mainWindow?.ShowAndActivate();
+            MainWindowInstance.ShowAndActivate();
         }
 
         private void BringToFront()
