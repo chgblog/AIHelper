@@ -31,7 +31,7 @@ namespace AIHelper.Services
         {
             if (webView == null || webView.CoreWebView2 == null)
             {
-                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = "浏览器组件未就绪" };
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
             }
 
             try
@@ -58,7 +58,7 @@ namespace AIHelper.Services
                     }
                     else
                     {
-                        return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = "注入脚本丢失" };
+                        return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = LanguageManager.Instance["Inject_ScriptNotFound"] };
                     }
                 }
 
@@ -75,7 +75,7 @@ namespace AIHelper.Services
                 
                 if (string.IsNullOrEmpty(resultJson) || resultJson == "null")
                 {
-                    return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = "注入失败，未获取到结果" };
+                    return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = LanguageManager.Instance["Inject_NoResult"] };
                 }
 
                 string rawJson = resultJson;
@@ -94,20 +94,24 @@ namespace AIHelper.Services
                 var result = JsonConvert.DeserializeObject<InjectionScriptResult>(rawJson);
                 if (result == null)
                 {
-                    return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = "注入失败，结果格式错误" };
+                    return new InjectionResult { Success = false, Reason = "UNKNOWN_ERROR", Message = LanguageManager.Instance["Inject_FormatError"] };
                 }
 
                 bool success = result.success;
                 string reason = result.reason ?? "UNKNOWN";
                 
-                string message = success ? (autoSubmit ? "发送成功" : "注入成功") : (reason == "NOT_LOGGED_IN" ? "请先登录 AI 平台" : (reason == "INPUT_NOT_FOUND" ? "无法找到输入框，页面可能已更新" : "注入失败"));
+                string message = success 
+                    ? (autoSubmit ? LanguageManager.Instance["Inject_SendSuccess"] : LanguageManager.Instance["Inject_InjectSuccess"]) 
+                    : (reason == "NOT_LOGGED_IN" ? LanguageManager.Instance["Inject_NotLoggedIn"] 
+                        : (reason == "INPUT_NOT_FOUND" ? LanguageManager.Instance["Inject_InputNotFound"] 
+                            : LanguageManager.Instance["Inject_Failed"]));
 
                 return new InjectionResult { Success = success, Reason = reason, Message = message };
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Injection error: {ex.Message}");
-                return new InjectionResult { Success = false, Reason = "EXCEPTION", Message = $"注入异常: {ex.Message}" };
+                return new InjectionResult { Success = false, Reason = "EXCEPTION", Message = LanguageManager.Instance.GetString("Inject_Exception", ex.Message) };
             }
         }
     }

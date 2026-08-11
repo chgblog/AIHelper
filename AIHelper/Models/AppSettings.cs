@@ -19,6 +19,7 @@ namespace AIHelper.Models
         public bool AutoStart { get; set; } = false;
         public bool AutoSubmit { get; set; } = true;
         public string ProxyServer { get; set; } = "";
+        public string Language { get; set; }
 
         private string _projectUrl = "https://github.com/chgblog/AIHelper";
         public string ProjectUrl
@@ -48,10 +49,13 @@ namespace AIHelper.Models
         public static AppSettings CreateDefault()
         {
             var deepSeekId = System.Guid.NewGuid().ToString();
+            var lang = Services.LanguageManager.GetDefaultLanguageByTimeZone();
+            bool isEn = lang == "en";
 
             var settings = new AppSettings
             {
                 IsFirstRun = true,
+                Language = lang,
                 ActivePlatformId = deepSeekId,
                 Platforms = new List<AiPlatform>
                 {
@@ -88,7 +92,7 @@ namespace AIHelper.Models
                     },
                     new AiPlatform
                     {
-                        Name = "千问",
+                        Name = isEn ? "Qwen" : "千问",
                         Url = "https://chat.qwen.ai/",
                         IsActive = false,
                         InputSelector = "textarea[placeholder=\"有什么我能帮您的吗？\"]",
@@ -96,7 +100,7 @@ namespace AIHelper.Models
                     },
                     new AiPlatform
                     {
-                        Name = "智谱",
+                        Name = isEn ? "Zhipu" : "智谱",
                         Url = "https://chat.z.ai/",
                         IsActive = false,
                         InputSelector = "#chat-input",
@@ -111,7 +115,15 @@ namespace AIHelper.Models
                         SubmitSelector = "div.send-button-container"
                     }
                 },
-                Actions = new List<ActionItem>
+                Actions = isEn ? new List<ActionItem>
+                {
+                    new ActionItem { Name = "Translate", Prompt = "Translate the following content (Chinese to English, English to Chinese):\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1 },
+                    new ActionItem { Name = "Explain", Prompt = "Please explain the following content in detail:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "E", IsBuiltIn = true, SortOrder = 2 },
+                    new ActionItem { Name = "Summary", Prompt = "Please extract a summary for the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "S", IsBuiltIn = true, SortOrder = 3 },
+                    new ActionItem { Name = "Polish", Prompt = "Please polish the following content to make it more fluent and professional:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "R", IsBuiltIn = true, SortOrder = 4 },
+                    new ActionItem { Name = "Grammar Check", Prompt = "Please check the following content for grammar errors and provide suggestions:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "G", IsBuiltIn = true, SortOrder = 5 },
+                    new ActionItem { Name = "Summarize", Prompt = "Please summarize the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 0 }
+                } : new List<ActionItem>
                 {
                     new ActionItem { Name = "翻译", Prompt = "翻译以下内容（中文翻译为英文，英文翻译为中文）：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1 },
                     new ActionItem { Name = "解释", Prompt = "请详细解释以下内容：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "E", IsBuiltIn = true, SortOrder = 2 },

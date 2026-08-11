@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:services="clr-namespace:AIHelper.Services"
              mc:Ignorable="d" 
              d:DesignHeight="250" d:DesignWidth="400"
              Background="#1e1e2e" Foreground="#e0e0e0">
@@ -42,7 +43,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Text="📋 内容" FontWeight="Bold" Margin="0,0,0,5" FontSize="14"/>
+        <TextBlock Text="{Binding [ActionPanel_ContentHeader], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Margin="0,0,0,5" FontSize="14"/>
         
         <TextBox x:Name="txtInput" Grid.Row="1" TextWrapping="Wrap" AcceptsReturn="True" 
                  MinLines="4" MaxLines="10" VerticalScrollBarVisibility="Auto"
@@ -50,7 +51,7 @@
                  BorderThickness="1" Padding="5" Margin="0,0,0,15"
                  Style="{DynamicResource {x:Type TextBox}}"/>
                  
-        <TextBlock Grid.Row="2" Text="可用操作:" Margin="0,0,0,5" Foreground="#a0a0b0"/>
+        <TextBlock Grid.Row="2" Text="{Binding [ActionPanel_AvailableActions], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,5" Foreground="#a0a0b0"/>
         
         <WrapPanel x:Name="actionsWrapPanel" Grid.Row="3" Orientation="Horizontal"/>
     </Grid>

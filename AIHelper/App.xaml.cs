@@ -36,6 +36,9 @@ namespace AIHelper
             base.OnStartup(e);
         }
 
+        private System.Windows.Forms.ToolStripMenuItem _showItem;
+        private System.Windows.Forms.ToolStripMenuItem _exitItem;
+
         private void InitializeTrayIcon()
         {
             _notifyIcon = new System.Windows.Forms.NotifyIcon();
@@ -66,20 +69,29 @@ namespace AIHelper
 
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
             
-            var showItem = new System.Windows.Forms.ToolStripMenuItem("显示主窗口");
-            showItem.Click += (s, e) => _mainWindow?.ShowAndActivate();
-            contextMenu.Items.Add(showItem);
+            _showItem = new System.Windows.Forms.ToolStripMenuItem();
+            _showItem.Click += (s, e) => _mainWindow?.ShowAndActivate();
+            contextMenu.Items.Add(_showItem);
 
-            var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
-            exitItem.Click += (s, e) => 
+            _exitItem = new System.Windows.Forms.ToolStripMenuItem();
+            _exitItem.Click += (s, e) => 
             {
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 Shutdown();
             };
-            contextMenu.Items.Add(exitItem);
+            contextMenu.Items.Add(_exitItem);
 
             _notifyIcon.ContextMenuStrip = contextMenu;
+
+            LanguageManager.Instance.LanguageChanged += (s, e) => UpdateTrayMenuText();
+            UpdateTrayMenuText();
+        }
+
+        private void UpdateTrayMenuText()
+        {
+            if (_showItem != null) _showItem.Text = LanguageManager.Instance["Tray_Show"];
+            if (_exitItem != null) _exitItem.Text = LanguageManager.Instance["Tray_Exit"];
         }
 
         private void NotifyIcon_DoubleClick(object sender, EventArgs e)

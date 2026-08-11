@@ -82,13 +82,13 @@ namespace AIHelper.Views
 
             try
             {
-                UpdateStatus("正在等待浏览器组件就绪...");
+                UpdateStatus(LanguageManager.Instance["Main_Status_WaitingBrowser"]);
                 await _webViewInitTcs.Task;
                 return webView.CoreWebView2 != null;
             }
             catch (Exception ex)
             {
-                UpdateStatus($"浏览器组件初始化失败: {ex.Message}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_BrowserInitFailed", ex.Message));
                 return false;
             }
         }
@@ -144,17 +144,17 @@ namespace AIHelper.Views
                 if (active != null && !string.IsNullOrEmpty(active.Url))
                 {
                     webView.CoreWebView2.Navigate(active.Url);
-                    UpdateStatus($"已导航到 {active.Name}");
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatedTo", active.Name));
                 }
                 else
                 {
-                    UpdateStatus("就绪");
+                    UpdateStatus(LanguageManager.Instance["Main_Status_Ready"]);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"WebView2 initialization failed: {ex.Message}");
-                UpdateStatus($"WebView2 初始化失败: {ex.Message}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_WebView2InitFailed", ex.Message));
                 _webViewInitTcs.TrySetException(ex);
             }
         }
@@ -215,11 +215,11 @@ namespace AIHelper.Views
             }
             string content = ClipboardService.GetText();
             string prompt = action.Prompt.Replace("{content}", content);
-            UpdateStatus($"正在执行: {action.Name}...");
+            UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Executing", action.Name));
             var platform = _settings.GetActivePlatform();
             bool autoSubmit = _settings?.AutoSubmit ?? true;
             var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
-            UpdateStatus(result.Success ? $"成功: {result.Message}" : $"失败: {result.Message}");
+            UpdateStatus(result.Success ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message) : LanguageManager.Instance.GetString("Main_Status_Failed", result.Message));
         }
 
         private void ActionPanel_ActionSubmitted(ActionItem action, string text)
@@ -237,10 +237,10 @@ namespace AIHelper.Views
                 return;
             }
             bool autoSubmit = _settings?.AutoSubmit ?? true;
-            UpdateStatus(autoSubmit ? "正在提交..." : "正在注入...");
+            UpdateStatus(autoSubmit ? LanguageManager.Instance["Main_Status_Submitting"] : LanguageManager.Instance["Main_Status_Injecting"]);
             var platform = _settings.GetActivePlatform();
             var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
-            UpdateStatus(result.Success ? (autoSubmit ? "提交成功" : "注入成功") : $"操作失败: {result.Message}");
+            UpdateStatus(result.Success ? (autoSubmit ? LanguageManager.Instance["Main_Status_SubmitSuccess"] : LanguageManager.Instance["Main_Status_InjectSuccess"]) : LanguageManager.Instance.GetString("Main_Status_OpFailed", result.Message));
         }
 
 
@@ -257,7 +257,7 @@ namespace AIHelper.Views
                     if (webView.CoreWebView2.Source != platform.Url)
                     {
                         webView.CoreWebView2.Navigate(platform.Url);
-                        UpdateStatus($"正在导航到 {platform.Name}...");
+                        UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", platform.Name));
                     }
                 }
             }
@@ -266,9 +266,9 @@ namespace AIHelper.Views
         private void WebView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             if (e.IsSuccess)
-                UpdateStatus("页面加载完成");
+                UpdateStatus(LanguageManager.Instance["Main_Status_PageLoadSuccess"]);
             else
-                UpdateStatus($"页面加载失败: {e.WebErrorStatus}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_PageLoadFailed", e.WebErrorStatus));
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

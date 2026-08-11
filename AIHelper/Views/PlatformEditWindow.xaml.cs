@@ -1,5 +1,6 @@
 using System.Windows;
 using AIHelper.Models;
+using AIHelper.Services;
 
 namespace AIHelper.Views
 {
@@ -7,12 +8,16 @@ namespace AIHelper.Views
     {
         private readonly AiPlatform _platform;
 
-        public PlatformEditWindow(AiPlatform platform, string title = "编辑平台")
+        public PlatformEditWindow(AiPlatform platform, string title = null)
         {
             InitializeComponent();
             if (!string.IsNullOrEmpty(title))
             {
                 this.Title = title;
+            }
+            else
+            {
+                this.Title = LanguageManager.Instance["PlatformEdit_Title_Edit"];
             }
             _platform = platform;
 
@@ -29,7 +34,7 @@ namespace AIHelper.Views
             string url = txtUrl.Text?.Trim();
             if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
             {
-                MessageBox.Show("请先填写有效的平台 URL。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["PlatformEdit_InvalidUrlWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -46,7 +51,7 @@ namespace AIHelper.Views
             string url = txtUrl.Text?.Trim();
             if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
             {
-                MessageBox.Show("请先填写有效的平台 URL。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["PlatformEdit_InvalidUrlWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -63,7 +68,7 @@ namespace AIHelper.Views
             string url = txtUrl.Text?.Trim();
             if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
             {
-                MessageBox.Show("请先填写有效的平台 URL。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["PlatformEdit_InvalidUrlWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -82,13 +87,13 @@ namespace AIHelper.Views
 
             if (string.IsNullOrEmpty(name))
             {
-                MessageBox.Show("名称不能为空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["PlatformEdit_EmptyNameWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrEmpty(url))
             {
-                MessageBox.Show("URL 不能为空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["PlatformEdit_EmptyUrlWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

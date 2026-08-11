@@ -48,19 +48,32 @@ namespace AIHelper.Services
         /// </summary>
         public AppSettings Load()
         {
+            AppSettings settings = null;
             try
             {
                 if (File.Exists(_settingsFilePath))
                 {
                     var json = File.ReadAllText(_settingsFilePath);
-                    return JsonConvert.DeserializeObject<AppSettings>(json) ?? AppSettings.CreateDefault();
+                    settings = JsonConvert.DeserializeObject<AppSettings>(json);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
             }
-            return AppSettings.CreateDefault();
+
+            if (settings == null)
+            {
+                settings = AppSettings.CreateDefault();
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.Language))
+            {
+                settings.Language = LanguageManager.GetDefaultLanguageByTimeZone();
+            }
+
+            LanguageManager.Instance.CurrentLanguage = settings.Language;
+            return settings;
         }
 
         /// <summary>

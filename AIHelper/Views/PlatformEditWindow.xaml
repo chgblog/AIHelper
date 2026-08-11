@@ -1,7 +1,8 @@
 <Window x:Class="AIHelper.Views.PlatformEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="编辑平台" Height="390" Width="560" Icon="/icon.ico"
+        xmlns:services="clr-namespace:AIHelper.Services"
+        Title="{Binding [PlatformEdit_Title_Edit], Source={x:Static services:LanguageManager.Instance}}" Height="390" Width="560" Icon="/icon.ico"
         WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
         WindowStyle="ToolWindow" ResizeMode="NoResize">
     <Grid Margin="16">
@@ -21,52 +22,52 @@
         </Grid.ColumnDefinitions>
 
         <!-- 名称 -->
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="名称:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [PlatformEdit_Name], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,10"/>
         <TextBox x:Name="txtName" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10"/>
 
         <!-- URL -->
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="URL:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [PlatformEdit_Url], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,10"/>
         <TextBox x:Name="txtUrl" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10"/>
 
         <!-- 新会话按钮选择器 -->
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="新会话定位:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [PlatformEdit_NewChat], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,10"/>
         <TextBox x:Name="txtNewChatSelector" Grid.Row="2" Grid.Column="1" Margin="0,0,8,10" 
-                 ToolTip="CSS 选择器，用于定位 AI 平台的新会话按钮。留空则使用自动检测。"
+                 ToolTip="{Binding [PlatformEdit_NewChatTT], Source={x:Static services:LanguageManager.Instance}}"
                  FontFamily="Consolas" FontSize="12"/>
-        <Button Grid.Row="2" Grid.Column="2" Content="🎯 拾取" Click="BtnPickNewChat_Click" 
-                Width="70" Margin="0,0,0,10" Padding="5,3"
-                ToolTip="打开平台页面，点击选择新会话按钮元素"/>
+        <Button Grid.Row="2" Grid.Column="2" Content="{Binding [PlatformEdit_Pick], Source={x:Static services:LanguageManager.Instance}}" Click="BtnPickNewChat_Click" 
+                Width="80" Margin="0,0,0,10" Padding="5,3"
+                ToolTip="{Binding [PlatformEdit_NewChatBtnTT], Source={x:Static services:LanguageManager.Instance}}"/>
 
         <!-- 输入框选择器 -->
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="输入框定位:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [PlatformEdit_Input], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,10"/>
         <TextBox x:Name="txtInputSelector" Grid.Row="3" Grid.Column="1" Margin="0,0,8,10" 
-                 ToolTip="CSS 选择器，用于定位 AI 平台的输入框。留空则使用自动检测。"
+                 ToolTip="{Binding [PlatformEdit_InputTT], Source={x:Static services:LanguageManager.Instance}}"
                  FontFamily="Consolas" FontSize="12"/>
-        <Button Grid.Row="3" Grid.Column="2" Content="🎯 拾取" Click="BtnPickInput_Click" 
-                Width="70" Margin="0,0,0,10" Padding="5,3"
-                ToolTip="打开平台页面，点击选择输入框元素"/>
+        <Button Grid.Row="3" Grid.Column="2" Content="{Binding [PlatformEdit_Pick], Source={x:Static services:LanguageManager.Instance}}" Click="BtnPickInput_Click" 
+                Width="80" Margin="0,0,0,10" Padding="5,3"
+                ToolTip="{Binding [PlatformEdit_InputBtnTT], Source={x:Static services:LanguageManager.Instance}}"/>
 
         <!-- 提交按钮选择器 -->
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="提交按钮定位:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [PlatformEdit_Submit], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,10"/>
         <TextBox x:Name="txtSubmitSelector" Grid.Row="4" Grid.Column="1" Margin="0,0,8,10"
-                 ToolTip="CSS 选择器，用于定位 AI 平台的提交按钮。留空则使用自动检测。"
+                 ToolTip="{Binding [PlatformEdit_SubmitTT], Source={x:Static services:LanguageManager.Instance}}"
                  FontFamily="Consolas" FontSize="12"/>
-        <Button Grid.Row="4" Grid.Column="2" Content="🎯 拾取" Click="BtnPickSubmit_Click" 
-                Width="70" Margin="0,0,0,10" Padding="5,3"
-                ToolTip="打开平台页面，点击选择提交按钮元素"/>
+        <Button Grid.Row="4" Grid.Column="2" Content="{Binding [PlatformEdit_Pick], Source={x:Static services:LanguageManager.Instance}}" Click="BtnPickSubmit_Click" 
+                Width="80" Margin="0,0,0,10" Padding="5,3"
+                ToolTip="{Binding [PlatformEdit_SubmitBtnTT], Source={x:Static services:LanguageManager.Instance}}"/>
 
         <!-- 提示 -->
         <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" 
-                   Text="提示: 选择器留空时将使用内置的自动检测逻辑。点击「拾取」可在平台页面上可视化选择元素。" 
+                   Text="{Binding [PlatformEdit_Tip], Source={x:Static services:LanguageManager.Instance}}" 
                    Foreground="#666680" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
                    VerticalAlignment="Top"/>
 
         <!-- 按钮 -->
         <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" 
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="确定" Click="BtnOk_Click" Width="80" Margin="0,0,10,0" Padding="5"
+            <Button Content="{Binding [OK], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOk_Click" Width="80" Margin="0,0,10,0" Padding="5"
                     Background="#7c3aed" Foreground="White" BorderThickness="0"/>
-            <Button Content="取消" Click="BtnCancel_Click" Width="80" Padding="5"
+            <Button Content="{Binding [Cancel], Source={x:Static services:LanguageManager.Instance}}" Click="BtnCancel_Click" Width="80" Padding="5"
                     Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0"/>
         </StackPanel>
     </Grid>

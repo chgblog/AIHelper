@@ -52,7 +52,7 @@ namespace AIHelper.Views
             }
             catch (Exception ex)
             {
-                txtStatus.Text = $"WebView2 初始化失败: {ex.Message}";
+                txtStatus.Text = LanguageManager.Instance.GetString("ElementPicker_Status_InitFailed", ex.Message);
             }
         }
 
@@ -60,12 +60,12 @@ namespace AIHelper.Views
         {
             if (e.IsSuccess)
             {
-                txtStatus.Text = "页面加载完成，正在注入拾取脚本...";
+                txtStatus.Text = LanguageManager.Instance["ElementPicker_Status_LoadSuccess"];
                 await InjectPickerScript();
             }
             else
             {
-                txtStatus.Text = $"页面加载失败: {e.WebErrorStatus}";
+                txtStatus.Text = LanguageManager.Instance.GetString("ElementPicker_Status_LoadFailed", e.WebErrorStatus);
             }
         }
 
@@ -95,17 +95,17 @@ namespace AIHelper.Views
                     }
                     else
                     {
-                        txtStatus.Text = "拾取脚本丢失";
+                        txtStatus.Text = LanguageManager.Instance["ElementPicker_Status_ScriptMissing"];
                         return;
                     }
                 }
 
                 await pickerWebView.CoreWebView2.ExecuteScriptAsync(script);
-                txtStatus.Text = "✅ 拾取模式已激活 — 鼠标悬停查看元素，点击选择，按 Esc 取消";
+                txtStatus.Text = LanguageManager.Instance["ElementPicker_Status_Active"];
             }
             catch (Exception ex)
             {
-                txtStatus.Text = $"注入脚本失败: {ex.Message}";
+                txtStatus.Text = LanguageManager.Instance.GetString("ElementPicker_Status_InjectFailed", ex.Message);
             }
         }
 
@@ -124,7 +124,7 @@ namespace AIHelper.Views
                     string id = msg["id"]?.ToString() ?? "";
 
                     string display = string.IsNullOrEmpty(id) ? $"<{tag}>" : $"<{tag} id=\"{id}\">";
-                    txtStatus.Text = $"已选择: {display} → {PickedSelector}";
+                    txtStatus.Text = LanguageManager.Instance.GetString("ElementPicker_Status_Selected", display, PickedSelector);
 
                     this.DialogResult = true;
                     this.Close();
@@ -143,7 +143,7 @@ namespace AIHelper.Views
 
         private async void BtnRetry_Click(object sender, RoutedEventArgs e)
         {
-            txtStatus.Text = "正在重新注入拾取脚本...";
+            txtStatus.Text = LanguageManager.Instance["ElementPicker_Status_Reinjecting"];
             await InjectPickerScript();
         }
 

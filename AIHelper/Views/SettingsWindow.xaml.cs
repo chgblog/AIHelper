@@ -31,6 +31,15 @@ namespace AIHelper.Views
             var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             tbVersion.Text = $"v{ver?.Major}.{ver?.Minor}.{ver?.Build}";
 
+            if (string.Equals(_settings.Language, "en", StringComparison.OrdinalIgnoreCase))
+            {
+                cbiLangEn.IsSelected = true;
+            }
+            else
+            {
+                cbiLangZh.IsSelected = true;
+            }
+
             if (_settings.Platforms != null && _settings.Platforms.Count > 0)
             {
                 var activePlatform = _settings.Platforms.FirstOrDefault(p => p.Id == _settings.ActivePlatformId)
@@ -77,9 +86,13 @@ namespace AIHelper.Views
 
             if (_settings.Platforms.Count == 0)
             {
-                MessageBox.Show("平台列表不能为空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageManager.Instance["Settings_Platform_EmptyWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
+
+            string selectedLang = cbiLangEn.IsSelected ? "en" : "zh";
+            _settings.Language = selectedLang;
+            LanguageManager.Instance.CurrentLanguage = selectedLang;
 
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
@@ -105,7 +118,7 @@ namespace AIHelper.Views
 
             if (proxyChanged)
             {
-                MessageBox.Show("代理设置已更改，将在重启应用后完全生效。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(LanguageManager.Instance["Settings_ProxyChangedNotice"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
             return true;
@@ -149,7 +162,7 @@ namespace AIHelper.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(LanguageManager.Instance.GetString("Settings_About_OpenUrlError", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -170,7 +183,7 @@ namespace AIHelper.Views
 
         private void BtnAddPlatform_Click(object sender, RoutedEventArgs e)
         {
-            AddPlatform("新平台", "https://");
+            AddPlatform(LanguageManager.Instance["Settings_Platform_NewPlatform"], "https://");
         }
 
         private void BtnDeletePlatform_Click(object sender, RoutedEventArgs e)
@@ -192,7 +205,7 @@ namespace AIHelper.Views
         {
             if (dgPlatforms.SelectedItem is AiPlatform platform)
             {
-                var editWindow = new PlatformEditWindow(platform, "编辑平台");
+                var editWindow = new PlatformEditWindow(platform, LanguageManager.Instance["PlatformEdit_Title_Edit"]);
                 editWindow.Owner = this;
                 if (editWindow.ShowDialog() == true)
                 {
@@ -201,7 +214,7 @@ namespace AIHelper.Views
             }
             else
             {
-                MessageBox.Show("请先选择要编辑的平台。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(LanguageManager.Instance["Settings_Platform_SelectEditWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -219,7 +232,7 @@ namespace AIHelper.Views
                 IsActive = _settings.Platforms.Count == 0
             };
 
-            var editWindow = new PlatformEditWindow(newPlatform, "添加平台");
+            var editWindow = new PlatformEditWindow(newPlatform, LanguageManager.Instance["PlatformEdit_Title_Add"]);
             editWindow.Owner = this;
             if (editWindow.ShowDialog() == true)
             {
@@ -242,7 +255,7 @@ namespace AIHelper.Views
             var newAction = new ActionItem
             {
                 Id = Guid.NewGuid().ToString(),
-                Name = "新操作",
+                Name = LanguageManager.Instance["Settings_Action_NewAction"],
                 Prompt = "{content}",
                 HotkeyModifiers = "",
                 HotkeyKey = ""
@@ -332,7 +345,7 @@ namespace AIHelper.Views
 
         private string FormatHotkey(string modifiers, string key)
         {
-            if (string.IsNullOrEmpty(key)) return "无";
+            if (string.IsNullOrEmpty(key)) return LanguageManager.Instance["None"];
             if (string.IsNullOrEmpty(modifiers)) return key;
             return modifiers.Replace("+", " + ") + " + " + key;
         }

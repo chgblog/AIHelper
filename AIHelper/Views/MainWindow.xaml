@@ -4,9 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AIHelper.Views"
+        xmlns:services="clr-namespace:AIHelper.Services"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="AIHelper" Height="600" Width="800" Icon="/icon.ico"
+        Title="{Binding [AppName], Source={x:Static services:LanguageManager.Instance}}" Height="600" Width="800" Icon="/icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
     <Border Background="#1a1a2e" CornerRadius="8" BorderBrush="#3a3a5e" BorderThickness="1">
@@ -34,7 +35,7 @@
                           Margin="20,0,0,0" VerticalAlignment="Center" SelectionChanged="CmbPlatforms_SelectionChanged"
                           DisplayMemberPath="Name" />
                           
-                <Button x:Name="btnSettings" Grid.Column="2" Content="⚙ 设置" Width="70" 
+                <Button x:Name="btnSettings" Grid.Column="2" Content="{Binding [Main_Settings], Source={x:Static services:LanguageManager.Instance}}" Padding="8,0" 
                         Click="BtnSettings_Click" Style="{StaticResource TitleBarButtonStyle}" 
                         Margin="0,0,10,0"/>
                         
@@ -56,7 +57,7 @@
             <!-- Status Bar -->
             <StatusBar Grid.Row="3" Background="#161622" Foreground="#a0a0b0">
                 <StatusBarItem>
-                    <TextBlock x:Name="txtStatus" Text="就绪"/>
+                    <TextBlock x:Name="txtStatus" Text="{Binding [Main_Status_Ready], Source={x:Static services:LanguageManager.Instance}}"/>
                 </StatusBarItem>
             </StatusBar>
         </Grid>
