@@ -59,7 +59,12 @@ namespace AIHelper.Views
             tbProjectUrl.Text = _settings.ProjectUrl;
             tbUpdateUrl.Text = _settings.UpdateUrl;
             var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            tbVersion.Text = $"v{ver?.Major}.{ver?.Minor}.{ver?.Build}";
+            if (ver != null)
+            {
+                tbVersion.Text = ver.Revision > 0 
+                    ? $"v{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}" 
+                    : $"v{ver.Major}.{ver.Minor}.{ver.Build}";
+            }
 
             if (string.Equals(_settings.Language, "en", StringComparison.OrdinalIgnoreCase))
             {

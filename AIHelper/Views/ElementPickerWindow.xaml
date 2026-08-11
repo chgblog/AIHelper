@@ -25,7 +25,7 @@
 
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
                     <Run Text="🎯" FontSize="16"/>
-                    <Run x:Name="txtPickerMode" Text="{Binding [ElementPicker_Instruction], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0"/>
+                    <Run x:Name="txtPickerMode" Text="{Binding [ElementPicker_Instruction], Source={x:Static services:LanguageManager.Instance}, Mode=OneWay}" Foreground="#a0a0b0"/>
                 </TextBlock>
 
                 <TextBlock Grid.Column="1" x:Name="txtUrl" VerticalAlignment="Center" 
