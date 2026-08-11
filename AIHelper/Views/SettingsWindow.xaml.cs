@@ -169,6 +169,41 @@ namespace AIHelper.Views
             bool isCustomScope = isSelectionEnabled && (rbScopeInclude?.IsChecked == true || rbScopeExclude?.IsChecked == true);
             if (txtSelectionAppScopeApps != null)
                 txtSelectionAppScopeApps.IsEnabled = isCustomScope;
+            if (btnSelectApps != null)
+                btnSelectApps.IsEnabled = isCustomScope;
+        }
+
+        private void BtnSelectApps_Click(object sender, RoutedEventArgs e)
+        {
+            string currentText = txtSelectionAppScopeApps.Text ?? "";
+            var dialog = new AppSelectionWindow(currentText)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true && dialog.SelectedProcessNames != null)
+            {
+                if (dialog.ResultMode == AppSelectionResultMode.Replace)
+                {
+                    txtSelectionAppScopeApps.Text = string.Join("\n", dialog.SelectedProcessNames);
+                }
+                else
+                {
+                    var existingItems = (txtSelectionAppScopeApps.Text ?? "")
+                        .Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToList();
+
+                    var newSet = new HashSet<string>(existingItems, StringComparer.OrdinalIgnoreCase);
+                    foreach (var app in dialog.SelectedProcessNames)
+                    {
+                        newSet.Add(app);
+                    }
+
+                    txtSelectionAppScopeApps.Text = string.Join("\n", newSet);
+                }
+            }
         }
 
         private void BtnOpenProject_Click(object sender, RoutedEventArgs e)
