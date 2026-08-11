@@ -191,6 +191,8 @@ namespace AIHelper.Services
             { "Settings_General_Language", "界面语言:" },
             { "Settings_General_Lang_ZH", "中文 (Chinese)" },
             { "Settings_General_Lang_EN", "English" },
+            { "Settings_General_ShowMainWindow", "程序运行后显示主窗口" },
+            { "Settings_General_ShowMainWindowTip", "勾选后启动程序自动显示主窗口；未勾选则隐藏在系统托盘运行" },
             { "Settings_General_AutoStart", "开机自动启动 AIHelper" },
             { "Settings_General_AutoStartTip", "勾选后，Windows 登录时将自动在后台运行 AIHelper" },
             { "Settings_General_AutoSubmit", "自动提交提示词" },
@@ -371,6 +373,8 @@ namespace AIHelper.Services
             { "Settings_General_Language", "Language:" },
             { "Settings_General_Lang_ZH", "中文 (Chinese)" },
             { "Settings_General_Lang_EN", "English" },
+            { "Settings_General_ShowMainWindow", "Show main window on startup" },
+            { "Settings_General_ShowMainWindowTip", "When checked, the main window will automatically be shown on startup; when unchecked, it will start hidden in system tray" },
             { "Settings_General_AutoStart", "Auto-start AIHelper on boot" },
             { "Settings_General_AutoStartTip", "When checked, AIHelper will automatically run in background on Windows startup" },
             { "Settings_General_AutoSubmit", "Auto-submit prompt" },
@@ -427,6 +431,17 @@ namespace AIHelper.Services
             { "PlatformEdit_InvalidUrlWarn", "Please enter a valid platform URL first." },
             { "PlatformEdit_EmptyNameWarn", "Name cannot be empty." },
             { "PlatformEdit_EmptyUrlWarn", "URL cannot be empty." },
+
+            // ActionEditWindow
+            { "ActionEdit_Title_Edit", "Edit Action" },
+            { "ActionEdit_Title_Add", "Add Action" },
+            { "ActionEdit_Name", "Name:" },
+            { "ActionEdit_Icon", "Icon (Emoji):" },
+            { "ActionEdit_SortOrder", "Sort Order:" },
+            { "ActionEdit_Hotkey", "Hotkey:" },
+            { "ActionEdit_Prompt", "Prompt:" },
+            { "ActionEdit_EmptyNameWarn", "Name cannot be empty." },
+            { "ActionEdit_ClearHotkey", "Clear" },
 
             // ElementPickerWindow
             { "ElementPicker_Title", "Element Picker" },

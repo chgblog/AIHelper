@@ -4,6 +4,33 @@
 
 **AIHelper** is a lightweight Windows desktop AI assistant tool. It seamlessly integrates web-based AI platforms (such as DeepSeek, ChatGPT, Claude, Gemini, etc.) into your daily workflow. Through text selection AI toolbar, global hotkeys, and intelligent web script injection, it enables quick translation, explanation, summarization, polishing, and grammar checking of clipboard and selected text.
 
+![Main Window](assets/en/ZhuChuangKou.jpg)
+
+---
+
+## 📸 Screenshots
+
+### 1. Main Window (AI Result Interface)
+![Main Window](assets/en/ZhuChuangKou.jpg)
+
+### 2. Text Selection AI Toolbar
+![Text Selection Toolbar](assets/en/HuaCiGongJuTiao.jpg)
+
+### 3. Selection Settings
+![Selection Settings](assets/en/HuaCiSheZhi.jpg)
+
+### 4. Selection App Settings
+![Selection App Settings](assets/en/HuaCiYingYongSheZhi.jpg)
+
+### 5. Platform Management
+![Platform Management](assets/en/PingTaiGuanLi.jpg)
+
+### 6. Action Management
+![Action Management](assets/en/CaoZuoGuanLi.jpg)
+
+### 7. Action Editing
+![Action Editing](assets/en/CaoZuoBianJi.jpg)
+
 ---
 
 ## ✨ Key Features

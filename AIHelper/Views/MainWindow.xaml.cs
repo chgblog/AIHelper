@@ -55,7 +55,7 @@ namespace AIHelper.Views
                 {
                     _settings.IsFirstRun = false;
                     SettingsService.Instance.Save(_settings);
-                    ShowSettings();
+                    ShowSettings(2); // 平台设置界面
                 }
                 else if (_settings.AutoStart)
                 {
@@ -106,7 +106,7 @@ namespace AIHelper.Views
             {
                 if (_settings?.Actions != null && _settings.Actions.Count > 0)
                 {
-                    int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 5;
+                    int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
                     _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds);
                 }
             });
@@ -352,10 +352,11 @@ namespace AIHelper.Views
             ShowSettings();
         }
 
-        public async void ShowSettings()
+        public async void ShowSettings(int initialTabIndex = 0)
         {
             if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
             {
+                _currentSettingsWindow.SelectTab(initialTabIndex);
                 _currentSettingsWindow.Activate();
                 return;
             }
@@ -365,7 +366,7 @@ namespace AIHelper.Views
                 ShowAndActivate();
             }
 
-            _currentSettingsWindow = new SettingsWindow();
+            _currentSettingsWindow = new SettingsWindow(initialTabIndex);
             _currentSettingsWindow.Owner = this;
             if (_currentSettingsWindow.ShowDialog() == true)
             {

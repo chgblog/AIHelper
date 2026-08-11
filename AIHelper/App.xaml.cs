@@ -46,18 +46,28 @@ namespace AIHelper
 
             _mainWindow = new MainWindow();
 
+            var settings = SettingsService.Instance.Load();
+
             bool startVisible = e.Args != null && e.Args.Any(arg => 
                 string.Equals(arg, "--show", StringComparison.OrdinalIgnoreCase) || 
                 string.Equals(arg, "-show", StringComparison.OrdinalIgnoreCase));
 
-            if (startVisible)
+            bool startMinimized = e.Args != null && e.Args.Any(arg => 
+                string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(arg, "-minimized", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(arg, "--hide", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(arg, "-hide", StringComparison.OrdinalIgnoreCase));
+
+            bool shouldShow = startVisible || (!startMinimized && settings.ShowMainWindowOnStartup);
+
+            if (shouldShow)
             {
                 Logger.LogInfo("Starting with main window visible.");
                 _mainWindow.ShowAndActivate();
             }
             else
             {
-                Logger.LogInfo("Starting hidden in system tray by default.");
+                Logger.LogInfo("Starting hidden in system tray.");
                 _mainWindow.Show();
                 _mainWindow.Hide();
             }
@@ -179,7 +189,7 @@ namespace AIHelper
             if (_selectionToolbarItem != null)
             {
                 _selectionToolbarItem.Text = LanguageManager.Instance["Tray_SelectionToolbar"];
-                _selectionToolbarItem.Checked = settings?.EnableSelectionToolbar ?? false;
+                _selectionToolbarItem.Checked = settings?.EnableSelectionToolbar ?? true;
             }
             if (_exitItem != null) _exitItem.Text = LanguageManager.Instance["Tray_Exit"];
         }

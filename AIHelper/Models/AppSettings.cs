@@ -14,6 +14,12 @@ namespace AIHelper.Models
         public string PanelHotkeyKey { get; set; } = "Space";
         public List<ActionItem> Actions { get; set; } = new List<ActionItem>();
         public bool IsFirstRun { get; set; } = true;
+
+        /// <summary>
+        /// 程序运行后是否显示主窗口
+        /// </summary>
+        public bool ShowMainWindowOnStartup { get; set; } = true;
+
         public double WindowWidth { get; set; } = 520;
         public double WindowHeight { get; set; } = 800;
         public bool AutoStart { get; set; } = false;
@@ -24,7 +30,7 @@ namespace AIHelper.Models
         /// <summary>
         /// 是否启用划词弹出工具条
         /// </summary>
-        public bool EnableSelectionToolbar { get; set; } = false;
+        public bool EnableSelectionToolbar { get; set; } = true;
 
         /// <summary>
         /// 是否使用剪贴板增强弹出工具条
@@ -42,9 +48,9 @@ namespace AIHelper.Models
         public string SelectionAppScopeApps { get; set; } = "";
 
         /// <summary>
-        /// 划词弹出工具条自动消失秒数 (默认 5 秒)
+        /// 划词弹出工具条自动消失秒数 (默认 3 秒)
         /// </summary>
-        public int SelectionToolbarAutoHideSeconds { get; set; } = 5;
+        public int SelectionToolbarAutoHideSeconds { get; set; } = 3;
 
         private string _projectUrl = "https://github.com/chgblog/AIHelper";
         public string ProjectUrl
@@ -80,6 +86,7 @@ namespace AIHelper.Models
             var settings = new AppSettings
             {
                 IsFirstRun = true,
+                ShowMainWindowOnStartup = true,
                 Language = lang,
                 ActivePlatformId = deepSeekId,
                 Platforms = new List<AiPlatform>
@@ -142,7 +149,7 @@ namespace AIHelper.Models
                 },
                 Actions = isEn ? new List<ActionItem>
                 {
-                    new ActionItem { Name = "Translate", Prompt = "Translate the following content (Chinese to English, English to Chinese):\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1, Icon = "🔄" },
+                    new ActionItem { Name = "Translate", Prompt = "Translate:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1, Icon = "🔄" },
                     new ActionItem { Name = "Explain", Prompt = "Please explain the following content in detail:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "E", IsBuiltIn = true, SortOrder = 2, Icon = "📖" },
                     new ActionItem { Name = "Summary", Prompt = "Please extract a summary for the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "S", IsBuiltIn = true, SortOrder = 3, Icon = "📝" },
                     new ActionItem { Name = "Polish", Prompt = "Please polish the following content to make it more fluent and professional:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "R", IsBuiltIn = true, SortOrder = 4, Icon = "✨" },
@@ -150,7 +157,7 @@ namespace AIHelper.Models
                     new ActionItem { Name = "Summarize", Prompt = "Please summarize the following content:\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 6, Icon = "📋" }
                 } : new List<ActionItem>
                 {
-                    new ActionItem { Name = "翻译", Prompt = "翻译以下内容（中文翻译为英文，英文翻译为中文）：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1, Icon = "🔄" },
+                    new ActionItem { Name = "翻译", Prompt = "翻译：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "T", IsBuiltIn = true, SortOrder = 1, Icon = "🔄" },
                     new ActionItem { Name = "解释", Prompt = "请详细解释以下内容：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "E", IsBuiltIn = true, SortOrder = 2, Icon = "📖" },
                     new ActionItem { Name = "摘要", Prompt = "请为以下内容提取摘要：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "S", IsBuiltIn = true, SortOrder = 3, Icon = "📝" },
                     new ActionItem { Name = "润色", Prompt = "请润色以下内容，使其更加通顺专业：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "R", IsBuiltIn = true, SortOrder = 4, Icon = "✨" },
