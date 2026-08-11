@@ -31,6 +31,16 @@ namespace AIHelper.Models
         /// </summary>
         public bool EnableClipboardEnhancementToolbar { get; set; } = false;
 
+        /// <summary>
+        /// 划词弹出工具条应用范围模式 (0: 全部应用 [默认], 1: 指定应用, 2: 排除应用)
+        /// </summary>
+        public int SelectionAppScopeMode { get; set; } = 0;
+
+        /// <summary>
+        /// 划词弹出工具条指定/排除的应用进程名列表 (例如: notepad.exe, chrome.exe，换行或逗号分隔)
+        /// </summary>
+        public string SelectionAppScopeApps { get; set; } = "";
+
         private string _projectUrl = "https://github.com/chgblog/AIHelper";
         public string ProjectUrl
         {

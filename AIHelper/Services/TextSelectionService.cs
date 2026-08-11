@@ -53,6 +53,16 @@ namespace AIHelper.Services
         /// </summary>
         public bool EnableClipboardEnhancement { get; set; } = false;
 
+        /// <summary>
+        /// 划词弹出工具条应用范围模式 (0: 全部应用 [默认], 1: 指定应用, 2: 排除应用)
+        /// </summary>
+        public int AppScopeMode { get; set; } = 0;
+
+        /// <summary>
+        /// 划词弹出工具条指定/排除的应用进程名列表 (例如: notepad.exe, chrome.exe，换行或逗号分隔)
+        /// </summary>
+        public string AppScopeApps { get; set; } = "";
+
         private TextSelectionService()
         {
             _proc = HookCallback;
@@ -141,7 +151,7 @@ namespace AIHelper.Services
                         IntPtr hwnd = Win32Api.GetForegroundWindow();
                         Win32Api.GetWindowThreadProcessId(hwnd, out uint processId);
 
-                        if (processId != (uint)_currentProcessId)
+                        if (processId != (uint)_currentProcessId && IsProcessInScope(processId))
                         {
                             _debounceCts?.Cancel();
                             _debounceCts = new CancellationTokenSource();
@@ -158,7 +168,7 @@ namespace AIHelper.Services
                         }
                         else
                         {
-                            Debug.WriteLine("TextSelectionService: Ignored self window.");
+                            Debug.WriteLine("TextSelectionService: Ignored self window or out of scope app.");
                         }
                     }
                 }
@@ -481,6 +491,74 @@ namespace AIHelper.Services
             inputs[3].u.ki.dwFlags = KEYEVENTF_KEYUP;
 
             Win32Api.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Win32Api.INPUT)));
+        }
+
+        private bool IsProcessInScope(uint processId)
+        {
+            if (AppScopeMode == 0) return true; // 全部应用
+
+            var rawApps = AppScopeApps;
+            if (string.IsNullOrWhiteSpace(rawApps))
+            {
+                // 如果是指定应用模式且列表为空 -> 不触发；如果是排除应用模式且列表为空 -> 全部允许
+                return AppScopeMode == 2;
+            }
+
+            var appList = rawApps.Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+            var targetApps = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in appList)
+            {
+                string clean = item.Trim();
+                if (clean.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    clean = clean.Substring(0, clean.Length - 4);
+                }
+                if (!string.IsNullOrEmpty(clean))
+                {
+                    targetApps.Add(clean);
+                }
+            }
+
+            if (targetApps.Count == 0)
+            {
+                return AppScopeMode == 2;
+            }
+
+            string processName = null;
+            try
+            {
+                using (var proc = Process.GetProcessById((int)processId))
+                {
+                    processName = proc.ProcessName;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TextSelectionService: Failed to get process name for PID {processId}: {ex.Message}");
+            }
+
+            if (string.IsNullOrEmpty(processName))
+            {
+                return true;
+            }
+
+            if (processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                processName = processName.Substring(0, processName.Length - 4);
+            }
+
+            bool isMatch = targetApps.Contains(processName);
+
+            if (AppScopeMode == 1) // 指定应用
+            {
+                return isMatch;
+            }
+            else if (AppScopeMode == 2) // 排除应用
+            {
+                return !isMatch;
+            }
+
+            return true;
         }
 
         public void Dispose()

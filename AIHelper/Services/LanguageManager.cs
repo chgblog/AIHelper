@@ -181,6 +181,7 @@ namespace AIHelper.Services
             // SettingsWindow
             { "Settings_Title", "设置" },
             { "Settings_Tab_General", "常规设置" },
+            { "Settings_Tab_SelectionToolbar", "划词设置" },
             { "Settings_Tab_Platforms", "平台管理" },
             { "Settings_Tab_Actions", "操作管理" },
             { "Settings_Tab_Hotkeys", "快捷键设置" },
@@ -295,6 +296,11 @@ namespace AIHelper.Services
             { "Settings_General_SelectionToolbarTip", "在任意应用中选中文字后，自动弹出操作工具条，快速调用 AI 操作" },
             { "Settings_General_EnableClipboardEnhancementToolbar", "使用剪贴板增强弹出工具条" },
             { "Settings_General_ClipboardEnhancementToolbarTip", "开启后，若 UI Automation 无法获取选中文本，将尝试通过剪贴板 (Ctrl+C) 获取文本" },
+            { "Settings_Selection_AppScopeTitle", "应用范围设置" },
+            { "Settings_Selection_AppScopeAll", "全部应用（默认）" },
+            { "Settings_Selection_AppScopeInclude", "指定应用" },
+            { "Settings_Selection_AppScopeExclude", "排除应用" },
+            { "Settings_Selection_AppScopeAppsTip", "请输入应用程序进程名称，多个应用请换行或用逗号分隔（例如：notepad.exe, chrome.exe 或 devenv）" },
             { "SelectionToolbar_Sending", "正在发送到 {0}..." },
             { "SelectionToolbar_More", "更多 ▾" },
 
@@ -341,6 +347,7 @@ namespace AIHelper.Services
             // SettingsWindow
             { "Settings_Title", "Settings" },
             { "Settings_Tab_General", "General Settings" },
+            { "Settings_Tab_SelectionToolbar", "Selection Settings" },
             { "Settings_Tab_Platforms", "Platforms" },
             { "Settings_Tab_Actions", "Actions" },
             { "Settings_Tab_Hotkeys", "Hotkeys" },
@@ -444,6 +451,11 @@ namespace AIHelper.Services
             { "Settings_General_SelectionToolbarTip", "After selecting text in any app, a toolbar pops up for quick AI actions" },
             { "Settings_General_EnableClipboardEnhancementToolbar", "Use Clipboard Enhancement for Toolbar" },
             { "Settings_General_ClipboardEnhancementToolbarTip", "When enabled, if UI Automation fails to get selected text, try getting text via clipboard (Ctrl+C)" },
+            { "Settings_Selection_AppScopeTitle", "Application Scope Settings" },
+            { "Settings_Selection_AppScopeAll", "All Applications (Default)" },
+            { "Settings_Selection_AppScopeInclude", "Specified Applications" },
+            { "Settings_Selection_AppScopeExclude", "Excluded Applications" },
+            { "Settings_Selection_AppScopeAppsTip", "Enter application process names, separated by newline or comma (e.g. notepad.exe, chrome.exe, or devenv)" },
             { "SelectionToolbar_Sending", "Sending to {0}..." },
             { "SelectionToolbar_More", "More ▾" },
 

@@ -39,15 +39,6 @@
 
                             <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 
-                            <TextBlock Text="{Binding [Settings_General_SelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
-                            <CheckBox x:Name="chkEnableSelectionToolbar" Content="{Binding [Settings_General_EnableSelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center" Click="ChkEnableSelectionToolbar_Click"/>
-                            <TextBlock Text="{Binding [Settings_General_SelectionToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,10" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
-
-                            <CheckBox x:Name="chkEnableClipboardEnhancementToolbar" Content="{Binding [Settings_General_EnableClipboardEnhancementToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="20,5,0,0" VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{Binding [Settings_General_ClipboardEnhancementToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="40,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
-
-                            <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
-
                             <TextBlock Text="{Binding [Settings_General_ProxySettings], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
                             <Grid Margin="0,0,0,5">
                                 <Grid.ColumnDefinitions>
@@ -58,6 +49,35 @@
                                 <TextBox x:Name="txtProxyServer" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
                             </Grid>
                             <TextBlock Text="{Binding [Settings_General_ProxyTip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,3,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 划词设置 -->
+            <TabItem Header="{Binding [Settings_Tab_SelectionToolbar], Source={x:Static services:LanguageManager.Instance}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Settings_General_SelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <CheckBox x:Name="chkEnableSelectionToolbar" Content="{Binding [Settings_General_EnableSelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center" Click="ChkEnableSelectionToolbar_Click"/>
+                            <TextBlock Text="{Binding [Settings_General_SelectionToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,10" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <CheckBox x:Name="chkEnableClipboardEnhancementToolbar" Content="{Binding [Settings_General_EnableClipboardEnhancementToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="20,5,0,0" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="{Binding [Settings_General_ClipboardEnhancementToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="40,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
+
+                            <TextBlock Text="{Binding [Settings_Selection_AppScopeTitle], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            
+                            <StackPanel Margin="0,0,0,10">
+                                <RadioButton x:Name="rbScopeAll" GroupName="AppScopeGroup" Content="{Binding [Settings_Selection_AppScopeAll], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,3,0,3" Checked="RbScope_CheckedChanged"/>
+                                <RadioButton x:Name="rbScopeInclude" GroupName="AppScopeGroup" Content="{Binding [Settings_Selection_AppScopeInclude], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,3,0,3" Checked="RbScope_CheckedChanged"/>
+                                <RadioButton x:Name="rbScopeExclude" GroupName="AppScopeGroup" Content="{Binding [Settings_Selection_AppScopeExclude], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,3,0,3" Checked="RbScope_CheckedChanged"/>
+                            </StackPanel>
+
+                            <TextBox x:Name="txtSelectionAppScopeApps" Height="70" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5" Margin="0,5,0,5"/>
+                            <TextBlock Text="{Binding [Settings_Selection_AppScopeAppsTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Grid>
                 </ScrollViewer>

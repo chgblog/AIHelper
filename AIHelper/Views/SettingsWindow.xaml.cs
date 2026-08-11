@@ -27,7 +27,15 @@ namespace AIHelper.Views
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
             chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
             chkEnableClipboardEnhancementToolbar.IsChecked = _settings.EnableClipboardEnhancementToolbar;
-            chkEnableClipboardEnhancementToolbar.IsEnabled = _settings.EnableSelectionToolbar;
+
+            int mode = _settings.SelectionAppScopeMode;
+            if (mode == 1) rbScopeInclude.IsChecked = true;
+            else if (mode == 2) rbScopeExclude.IsChecked = true;
+            else rbScopeAll.IsChecked = true;
+
+            txtSelectionAppScopeApps.Text = _settings.SelectionAppScopeApps ?? "";
+
+            UpdateSelectionToolbarControlStates();
             txtProxyServer.Text = _settings.ProxyServer ?? "";
             tbProjectUrl.Text = _settings.ProjectUrl;
             tbUpdateUrl.Text = _settings.UpdateUrl;
@@ -104,6 +112,12 @@ namespace AIHelper.Views
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
             _settings.EnableClipboardEnhancementToolbar = chkEnableClipboardEnhancementToolbar.IsChecked == true;
+
+            int appScopeMode = 0;
+            if (rbScopeInclude.IsChecked == true) appScopeMode = 1;
+            else if (rbScopeExclude.IsChecked == true) appScopeMode = 2;
+            _settings.SelectionAppScopeMode = appScopeMode;
+            _settings.SelectionAppScopeApps = txtSelectionAppScopeApps.Text?.Trim() ?? "";
             
             string newProxy = txtProxyServer.Text?.Trim() ?? "";
             bool proxyChanged = (_settings.ProxyServer ?? "") != newProxy;
@@ -134,7 +148,27 @@ namespace AIHelper.Views
 
         private void ChkEnableSelectionToolbar_Click(object sender, RoutedEventArgs e)
         {
-            chkEnableClipboardEnhancementToolbar.IsEnabled = chkEnableSelectionToolbar.IsChecked == true;
+            UpdateSelectionToolbarControlStates();
+        }
+
+        private void RbScope_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateSelectionToolbarControlStates();
+        }
+
+        private void UpdateSelectionToolbarControlStates()
+        {
+            bool isSelectionEnabled = chkEnableSelectionToolbar.IsChecked == true;
+            if (chkEnableClipboardEnhancementToolbar != null)
+                chkEnableClipboardEnhancementToolbar.IsEnabled = isSelectionEnabled;
+
+            if (rbScopeAll != null) rbScopeAll.IsEnabled = isSelectionEnabled;
+            if (rbScopeInclude != null) rbScopeInclude.IsEnabled = isSelectionEnabled;
+            if (rbScopeExclude != null) rbScopeExclude.IsEnabled = isSelectionEnabled;
+
+            bool isCustomScope = isSelectionEnabled && (rbScopeInclude?.IsChecked == true || rbScopeExclude?.IsChecked == true);
+            if (txtSelectionAppScopeApps != null)
+                txtSelectionAppScopeApps.IsEnabled = isCustomScope;
         }
 
         private void BtnOpenProject_Click(object sender, RoutedEventArgs e)
