@@ -20,6 +20,7 @@ namespace AIHelper.Views
         private readonly Dictionary<int, ActionItem> _hotkeyActionMap = new Dictionary<int, ActionItem>();
         private readonly TaskCompletionSource<bool> _webViewInitTcs = new TaskCompletionSource<bool>();
         private SelectionToolbarWindow _selectionToolbar;
+        private SettingsWindow _currentSettingsWindow;
 
         public MainWindow()
         {
@@ -344,16 +345,29 @@ namespace AIHelper.Views
             ShowSettings();
         }
 
-        private async void ShowSettings()
+        public async void ShowSettings()
         {
-            var settingsWindow = new SettingsWindow();
-            settingsWindow.Owner = this;
-            if (settingsWindow.ShowDialog() == true)
+            if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
+            {
+                _currentSettingsWindow.Activate();
+                return;
+            }
+
+            if (!this.IsVisible)
+            {
+                ShowAndActivate();
+            }
+
+            _currentSettingsWindow = new SettingsWindow();
+            _currentSettingsWindow.Owner = this;
+            if (_currentSettingsWindow.ShowDialog() == true)
             {
                 _settings = SettingsService.Instance.Load();
                 RegisterHotkeys();
                 UpdateTextSelectionServiceState();
                 LoadPlatforms();
+
+                ((App)Application.Current)?.UpdateTrayMenu();
 
                 // Navigate to new active platform
                 var active = _settings.GetActivePlatform();
@@ -362,6 +376,14 @@ namespace AIHelper.Views
                     webView.CoreWebView2.Navigate(active.Url);
                 }
             }
+            _currentSettingsWindow = null;
+        }
+
+        public void RefreshSettings()
+        {
+            _settings = SettingsService.Instance.Load();
+            UpdateTextSelectionServiceState();
+            ((App)Application.Current)?.UpdateTrayMenu();
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)

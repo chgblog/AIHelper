@@ -46,20 +46,20 @@ namespace AIHelper
 
             _mainWindow = new MainWindow();
 
-            bool startMinimized = e.Args != null && e.Args.Any(arg => 
-                string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase) || 
-                string.Equals(arg, "-minimized", StringComparison.OrdinalIgnoreCase));
+            bool startVisible = e.Args != null && e.Args.Any(arg => 
+                string.Equals(arg, "--show", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(arg, "-show", StringComparison.OrdinalIgnoreCase));
 
-            if (startMinimized)
-            {
-                Logger.LogInfo("Starting minimized to system tray.");
-                _mainWindow.Show();
-                _mainWindow.Hide();
-            }
-            else
+            if (startVisible)
             {
                 Logger.LogInfo("Starting with main window visible.");
                 _mainWindow.ShowAndActivate();
+            }
+            else
+            {
+                Logger.LogInfo("Starting hidden in system tray by default.");
+                _mainWindow.Show();
+                _mainWindow.Hide();
             }
 
             base.OnStartup(e);
@@ -91,6 +91,8 @@ namespace AIHelper
         }
 
         private System.Windows.Forms.ToolStripMenuItem _showItem;
+        private System.Windows.Forms.ToolStripMenuItem _settingsItem;
+        private System.Windows.Forms.ToolStripMenuItem _selectionToolbarItem;
         private System.Windows.Forms.ToolStripMenuItem _exitItem;
 
         private void InitializeTrayIcon()
@@ -130,6 +132,23 @@ namespace AIHelper
             _showItem.Click += (s, e) => _mainWindow?.ShowAndActivate();
             contextMenu.Items.Add(_showItem);
 
+            _settingsItem = new System.Windows.Forms.ToolStripMenuItem();
+            _settingsItem.Click += (s, e) => _mainWindow?.ShowSettings();
+            contextMenu.Items.Add(_settingsItem);
+
+            _selectionToolbarItem = new System.Windows.Forms.ToolStripMenuItem();
+            _selectionToolbarItem.Click += (s, e) =>
+            {
+                var settings = SettingsService.Instance.Load();
+                settings.EnableSelectionToolbar = !settings.EnableSelectionToolbar;
+                SettingsService.Instance.Save(settings);
+                _mainWindow?.RefreshSettings();
+                UpdateTrayMenuText();
+            };
+            contextMenu.Items.Add(_selectionToolbarItem);
+
+            contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
             _exitItem = new System.Windows.Forms.ToolStripMenuItem();
             _exitItem.Click += (s, e) => 
             {
@@ -139,15 +158,29 @@ namespace AIHelper
             };
             contextMenu.Items.Add(_exitItem);
 
+            contextMenu.Opening += (s, e) => UpdateTrayMenuText();
+
             _notifyIcon.ContextMenuStrip = contextMenu;
 
             LanguageManager.Instance.LanguageChanged += (s, e) => UpdateTrayMenuText();
             UpdateTrayMenuText();
         }
 
+        public void UpdateTrayMenu()
+        {
+            UpdateTrayMenuText();
+        }
+
         private void UpdateTrayMenuText()
         {
+            var settings = SettingsService.Instance.Load();
             if (_showItem != null) _showItem.Text = LanguageManager.Instance["Tray_Show"];
+            if (_settingsItem != null) _settingsItem.Text = LanguageManager.Instance["Tray_Settings"];
+            if (_selectionToolbarItem != null)
+            {
+                _selectionToolbarItem.Text = LanguageManager.Instance["Tray_SelectionToolbar"];
+                _selectionToolbarItem.Checked = settings?.EnableSelectionToolbar ?? false;
+            }
             if (_exitItem != null) _exitItem.Text = LanguageManager.Instance["Tray_Exit"];
         }
 

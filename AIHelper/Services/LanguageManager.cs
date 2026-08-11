@@ -259,6 +259,8 @@ namespace AIHelper.Services
 
             // Tray Menu
             { "Tray_Show", "显示主窗口" },
+            { "Tray_Settings", "打开设置" },
+            { "Tray_SelectionToolbar", "开启划词搜索" },
             { "Tray_Exit", "退出" },
 
             // Injection Messages
@@ -402,6 +404,8 @@ namespace AIHelper.Services
 
             // Tray Menu
             { "Tray_Show", "Show Main Window" },
+            { "Tray_Settings", "Open Settings" },
+            { "Tray_SelectionToolbar", "Enable Selection Search" },
             { "Tray_Exit", "Exit" },
 
             // Injection Messages
