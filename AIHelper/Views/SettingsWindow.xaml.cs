@@ -25,6 +25,7 @@ namespace AIHelper.Views
             _settings = SettingsService.Instance.Load();
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
+            chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
             txtProxyServer.Text = _settings.ProxyServer ?? "";
             tbProjectUrl.Text = _settings.ProjectUrl;
             tbUpdateUrl.Text = _settings.UpdateUrl;
@@ -96,6 +97,7 @@ namespace AIHelper.Views
 
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
+            _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
             
             string newProxy = txtProxyServer.Text?.Trim() ?? "";
             bool proxyChanged = (_settings.ProxyServer ?? "") != newProxy;

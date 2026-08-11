@@ -19,6 +19,7 @@ namespace AIHelper.Views
         private int _panelHotkeyId = -1;
         private readonly Dictionary<int, ActionItem> _hotkeyActionMap = new Dictionary<int, ActionItem>();
         private readonly TaskCompletionSource<bool> _webViewInitTcs = new TaskCompletionSource<bool>();
+        private SelectionToolbarWindow _selectionToolbar;
 
         public MainWindow()
         {
@@ -28,29 +29,88 @@ namespace AIHelper.Views
 
         private async void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
-            _settings = SettingsService.Instance.Load();
-
-            HotkeyService.Instance.Initialize(this);
-            HotkeyService.Instance.HotkeyPressed += HotkeyService_HotkeyPressed;
-            RegisterHotkeys();
-
-            // Start initializing WebView2 immediately in background
-            var initTask = InitializeWebViewAsync();
-
-            if (_settings.IsFirstRun)
+            try
             {
-                _settings.IsFirstRun = false;
-                SettingsService.Instance.Save(_settings);
-                ShowSettings();
+                _settings = SettingsService.Instance.Load();
+
+                HotkeyService.Instance.Initialize(this);
+                HotkeyService.Instance.HotkeyPressed += HotkeyService_HotkeyPressed;
+                RegisterHotkeys();
+
+                _selectionToolbar = new SelectionToolbarWindow();
+                _selectionToolbar.ActionRequested += SelectionToolbar_ActionRequested;
+
+                TextSelectionService.Instance.TextSelected += TextSelectionService_TextSelected;
+                UpdateTextSelectionServiceState();
+
+                var helper = new System.Windows.Interop.WindowInteropHelper(this);
+                var source = System.Windows.Interop.HwndSource.FromHwnd(helper.Handle);
+                source?.AddHook(WndProc);
+
+                // Start initializing WebView2 immediately in background
+                var initTask = InitializeWebViewAsync();
+
+                if (_settings.IsFirstRun)
+                {
+                    _settings.IsFirstRun = false;
+                    SettingsService.Instance.Save(_settings);
+                    ShowSettings();
+                }
+                else if (_settings.AutoStart)
+                {
+                    AutoStartService.SetAutoStart(true);
+                }
+
+                LoadPlatforms();
+
+                await initTask;
             }
-            else if (_settings.AutoStart)
+            catch (Exception ex)
             {
-                AutoStartService.SetAutoStart(true);
+                Logger.LogError("Error in MainWindow_SourceInitialized", ex);
             }
+        }
 
-            LoadPlatforms();
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == App.WM_SHOWFIRSTINSTANCE)
+            {
+                Logger.LogInfo("WM_SHOWFIRSTINSTANCE received in MainWindow. Restoring window.");
+                Dispatcher.Invoke(() => ShowAndActivate());
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
 
-            await initTask;
+        private void UpdateTextSelectionServiceState()
+        {
+            TextSelectionService.Instance.IsEnabled = _settings?.EnableSelectionToolbar ?? false;
+            if (_settings?.EnableSelectionToolbar == true)
+            {
+                TextSelectionService.Instance.Install();
+            }
+            else
+            {
+                TextSelectionService.Instance.Uninstall();
+            }
+        }
+
+        private void TextSelectionService_TextSelected(string selectedText, Point screenPos)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_settings?.Actions != null && _settings.Actions.Count > 0)
+                {
+                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions);
+                }
+            });
+        }
+
+        private void SelectionToolbar_ActionRequested(ActionItem action, string text)
+        {
+            ShowAndActivate();
+            string prompt = action.Prompt.Replace("{content}", text);
+            ExecutePrompt(prompt);
         }
 
         private void RegisterHotkeys()
@@ -153,6 +213,7 @@ namespace AIHelper.Views
             }
             catch (Exception ex)
             {
+                Logger.LogError("WebView2 initialization failed", ex);
                 System.Diagnostics.Debug.WriteLine($"WebView2 initialization failed: {ex.Message}");
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_WebView2InitFailed", ex.Message));
                 _webViewInitTcs.TrySetException(ex);
@@ -290,6 +351,7 @@ namespace AIHelper.Views
             {
                 _settings = SettingsService.Instance.Load();
                 RegisterHotkeys();
+                UpdateTextSelectionServiceState();
                 LoadPlatforms();
 
                 // Navigate to new active platform

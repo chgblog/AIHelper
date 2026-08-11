@@ -1,7 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using AIHelper.Services;
 using AIHelper.Views;
@@ -10,12 +12,25 @@ namespace AIHelper
 {
     public partial class App : Application
     {
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern int RegisterWindowMessage(string message);
+
+        [DllImport("user32.dll")]
+        public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam);
+
+        public const int HWND_BROADCAST = 0xffff;
+        public static readonly int WM_SHOWFIRSTINSTANCE = RegisterWindowMessage("AIHelper_ShowFirstInstance");
+
         private Mutex _mutex;
         private System.Windows.Forms.NotifyIcon _notifyIcon;
+        private System.Drawing.Icon _trayIcon;
         private MainWindow _mainWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            SetupExceptionHandling();
+            Logger.LogInfo($"App starting up with args: {string.Join(" ", e.Args)}");
+
             bool createdNew;
             _mutex = new Mutex(true, "AIHelper_SingleInstance", out createdNew);
 
@@ -30,10 +45,49 @@ namespace AIHelper
             InitializeTrayIcon();
 
             _mainWindow = new MainWindow();
-            _mainWindow.Show();
-            _mainWindow.Hide(); // Start minimized
+
+            bool startMinimized = e.Args != null && e.Args.Any(arg => 
+                string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(arg, "-minimized", StringComparison.OrdinalIgnoreCase));
+
+            if (startMinimized)
+            {
+                Logger.LogInfo("Starting minimized to system tray.");
+                _mainWindow.Show();
+                _mainWindow.Hide();
+            }
+            else
+            {
+                Logger.LogInfo("Starting with main window visible.");
+                _mainWindow.ShowAndActivate();
+            }
 
             base.OnStartup(e);
+        }
+
+        private void SetupExceptionHandling()
+        {
+            this.DispatcherUnhandledException += (s, e) =>
+            {
+                Logger.LogCrash("DispatcherUnhandledException", e.Exception);
+                MessageBox.Show($"程序遇到未处理的异常：\n{e.Exception.Message}\n\n详细日志已保存至:\n{Logger.GetLogFolderPath()}", "AI助手 错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                e.Handled = true;
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                if (e.ExceptionObject is Exception ex)
+                {
+                    Logger.LogCrash("AppDomain.UnhandledException", ex);
+                    MessageBox.Show($"程序遇到严重内部错误：\n{ex.Message}\n\n详细日志已保存至:\n{Logger.GetLogFolderPath()}", "AI助手 致命错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                Logger.LogError("UnobservedTaskException", e.Exception);
+                e.SetObserved();
+            };
         }
 
         private System.Windows.Forms.ToolStripMenuItem _showItem;
@@ -49,17 +103,20 @@ namespace AIHelper
                 if (iconStreamInfo != null)
                 {
                     using (var stream = iconStreamInfo.Stream)
+                    using (var tempIcon = new System.Drawing.Icon(stream))
                     {
-                        _notifyIcon.Icon = new System.Drawing.Icon(stream);
+                        _trayIcon = (System.Drawing.Icon)tempIcon.Clone();
                     }
+                    _notifyIcon.Icon = _trayIcon;
                 }
                 else
                 {
                     _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Process.GetCurrentProcess().MainModule.FileName);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.LogError("Failed to load tray icon", ex);
                 _notifyIcon.Icon = System.Drawing.SystemIcons.Application;
             }
 
@@ -101,13 +158,8 @@ namespace AIHelper
 
         private void BringToFront()
         {
-            var currentProcess = Process.GetCurrentProcess();
-            var processes = Process.GetProcessesByName(currentProcess.ProcessName);
-            var otherProcess = processes.FirstOrDefault(p => p.Id != currentProcess.Id);
-            if (otherProcess != null)
-            {
-                // Basic logic, more complex Interop might be needed
-            }
+            Logger.LogInfo("Another instance detected. Sending WM_SHOWFIRSTINSTANCE to bring existing window to front.");
+            PostMessage((IntPtr)HWND_BROADCAST, WM_SHOWFIRSTINSTANCE, IntPtr.Zero, IntPtr.Zero);
         }
 
         protected override void OnExit(ExitEventArgs e)
@@ -117,8 +169,11 @@ namespace AIHelper
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
             }
+            _trayIcon?.Dispose();
+            TextSelectionService.Instance?.Dispose();
             HotkeyService.Instance?.UnregisterAll();
             base.OnExit(e);
         }
     }
 }
+

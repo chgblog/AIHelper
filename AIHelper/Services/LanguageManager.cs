@@ -271,6 +271,13 @@ namespace AIHelper.Services
             { "Inject_NotLoggedIn", "请先登录 AI 平台" },
             { "Inject_InputNotFound", "无法找到输入框，页面可能已更新" },
             { "Inject_Failed", "注入失败" },
+
+            // Selection Toolbar
+            { "Settings_General_SelectionToolbar", "划词工具条设置" },
+            { "Settings_General_EnableSelectionToolbar", "启用划词弹出工具条" },
+            { "Settings_General_SelectionToolbarTip", "在任意应用中选中文字后，自动弹出操作工具条，快速调用 AI 操作" },
+            { "SelectionToolbar_Sending", "正在发送到 {0}..." },
+
             { "Inject_Exception", "注入异常: {0}" }
         };
 
@@ -404,6 +411,13 @@ namespace AIHelper.Services
             { "Inject_NotLoggedIn", "Please log in to the AI platform first" },
             { "Inject_InputNotFound", "Input box not found, page structure may have changed" },
             { "Inject_Failed", "Injection failed" },
+
+            // Selection Toolbar
+            { "Settings_General_SelectionToolbar", "Selection Toolbar" },
+            { "Settings_General_EnableSelectionToolbar", "Enable Selection Toolbar" },
+            { "Settings_General_SelectionToolbarTip", "After selecting text in any app, a toolbar pops up for quick AI actions" },
+            { "SelectionToolbar_Sending", "Sending to {0}..." },
+
             { "Inject_Exception", "Injection exception: {0}" }
         };
     }

@@ -27,13 +27,15 @@ namespace AIHelper.Services
                         if (enable)
                         {
                             string exePath = Process.GetCurrentProcess().MainModule.FileName;
-                            key.SetValue(AppName, $"\"{exePath}\"");
+                            key.SetValue(AppName, $"\"{exePath}\" --minimized");
+                            Logger.LogInfo("AutoStart enabled with --minimized flag.");
                         }
                         else
                         {
                             if (key.GetValue(AppName) != null)
                             {
                                 key.DeleteValue(AppName, false);
+                                Logger.LogInfo("AutoStart disabled.");
                             }
                         }
                     }
@@ -41,6 +43,7 @@ namespace AIHelper.Services
             }
             catch (Exception ex)
             {
+                Logger.LogError("Failed to set auto start", ex);
                 Debug.WriteLine($"Failed to set auto start: {ex.Message}");
             }
         }

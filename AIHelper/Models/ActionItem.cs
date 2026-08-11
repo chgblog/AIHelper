@@ -14,5 +14,10 @@ namespace AIHelper.Models
         public string HotkeyKey { get; set; }
         public bool IsBuiltIn { get; set; }
         public int SortOrder { get; set; }
+
+        /// <summary>
+        /// Emoji icon for display in selection toolbar
+        /// </summary>
+        public string Icon { get; set; } = "";
     }
 }
