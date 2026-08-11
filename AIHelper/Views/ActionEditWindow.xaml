@@ -1,0 +1,65 @@
+<Window x:Class="AIHelper.Views.ActionEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:AIHelper.Services"
+        Title="{Binding [ActionEdit_Title_Edit], Source={x:Static services:LanguageManager.Instance}}" Height="400" Width="520" Icon="/icon.ico"
+        WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
+        WindowStyle="ToolWindow" ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 名称 与 图标 -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [ActionEdit_Name], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12" Foreground="#e0e0e0"/>
+        <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="80"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="txtName" Grid.Column="0" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
+            <TextBlock Grid.Column="1" Text="{Binding [ActionEdit_Icon], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="12,0,8,0" Foreground="#e0e0e0"/>
+            <TextBox x:Name="txtIcon" Grid.Column="2" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" HorizontalContentAlignment="Center"/>
+        </Grid>
+
+        <!-- 排序号 -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [ActionEdit_SortOrder], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12" Foreground="#e0e0e0"/>
+        <TextBox x:Name="txtSortOrder" Grid.Row="1" Grid.Column="1" Margin="0,0,0,12" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
+
+        <!-- 快捷键 -->
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [ActionEdit_Hotkey], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12" Foreground="#e0e0e0"/>
+        <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="txtHotkey" Grid.Column="0" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" 
+                     PreviewKeyDown="TxtHotkey_PreviewKeyDown" IsReadOnly="True" Margin="0,0,8,0"/>
+            <Button Grid.Column="1" Content="{Binding [ActionEdit_ClearHotkey], Source={x:Static services:LanguageManager.Instance}}" Click="BtnClearHotkey_Click" 
+                    Width="60" Padding="5,3" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0"/>
+        </Grid>
+
+        <!-- 提示词 -->
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [ActionEdit_Prompt], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Top" Margin="0,4,10,12" Foreground="#e0e0e0"/>
+        <TextBox x:Name="txtPrompt" Grid.Row="3" Grid.Column="1" Margin="0,0,0,12" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"
+                 AcceptsReturn="True" MinLines="5" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 
+                    Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="{Binding [OK], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOk_Click" Width="80" Margin="0,0,10,0" Padding="5"
+                    Background="#7c3aed" Foreground="White" BorderThickness="0"/>
+            <Button Content="{Binding [Cancel], Source={x:Static services:LanguageManager.Instance}}" Click="BtnCancel_Click" Width="80" Padding="5"
+                    Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0"/>
+        </StackPanel>
+    </Grid>
+</Window>

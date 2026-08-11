@@ -212,6 +212,7 @@ namespace AIHelper.Services
             { "Settings_Action_Hotkey", "快捷键:" },
             { "Settings_Action_ApplyEdit", "应用修改" },
             { "Settings_Action_NewAction", "新操作" },
+            { "Settings_Action_SelectEditWarn", "请先选择要编辑的操作。" },
             { "MoveUp", "上移" },
             { "MoveDown", "下移" },
 
@@ -245,6 +246,17 @@ namespace AIHelper.Services
             { "PlatformEdit_InvalidUrlWarn", "请先填写有效的平台 URL。" },
             { "PlatformEdit_EmptyNameWarn", "名称不能为空。" },
             { "PlatformEdit_EmptyUrlWarn", "URL 不能为空。" },
+
+            // ActionEditWindow
+            { "ActionEdit_Title_Edit", "编辑操作" },
+            { "ActionEdit_Title_Add", "添加操作" },
+            { "ActionEdit_Name", "名称:" },
+            { "ActionEdit_Icon", "图标 (Emoji):" },
+            { "ActionEdit_SortOrder", "排序号:" },
+            { "ActionEdit_Hotkey", "快捷键:" },
+            { "ActionEdit_Prompt", "提示词:" },
+            { "ActionEdit_EmptyNameWarn", "名称不能为空。" },
+            { "ActionEdit_ClearHotkey", "清除" },
 
             // ElementPickerWindow
             { "ElementPicker_Title", "元素选择器" },
@@ -360,6 +372,7 @@ namespace AIHelper.Services
             { "Settings_Action_Hotkey", "Hotkey:" },
             { "Settings_Action_ApplyEdit", "Apply Changes" },
             { "Settings_Action_NewAction", "New Action" },
+            { "Settings_Action_SelectEditWarn", "Please select an action to edit." },
             { "MoveUp", "Move Up" },
             { "MoveDown", "Move Down" },
 

@@ -82,29 +82,8 @@ namespace AIHelper.Views
             }
         }
 
-        private void ApplyCurrentActionEdit()
-        {
-            if (_selectedAction != null)
-            {
-                _selectedAction.Name = txtActionName.Text;
-                _selectedAction.Prompt = txtActionPrompt.Text;
-                if (int.TryParse(txtActionSortOrder.Text, out int newSortOrder))
-                {
-                    _selectedAction.SortOrder = newSortOrder;
-                }
-                if (_settings.Actions != null)
-                {
-                    _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
-                }
-                dgActions.ItemsSource = null;
-                dgActions.ItemsSource = _settings.Actions;
-                dgActions.SelectedItem = _selectedAction;
-            }
-        }
-
         private bool SaveSettings()
         {
-            ApplyCurrentActionEdit();
 
             if (_settings.Actions != null)
             {
@@ -297,13 +276,59 @@ namespace AIHelper.Views
                 Prompt = "{content}",
                 HotkeyModifiers = "",
                 HotkeyKey = "",
-                SortOrder = nextSort
+                SortOrder = nextSort,
+                Icon = "📋"
             };
-            _settings.Actions.Add(newAction);
-            _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
-            dgActions.ItemsSource = null;
-            dgActions.ItemsSource = _settings.Actions;
-            dgActions.SelectedItem = newAction;
+
+            var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"]);
+            editWindow.Owner = this;
+            if (editWindow.ShowDialog() == true)
+            {
+                _settings.Actions.Add(newAction);
+                _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+                dgActions.ItemsSource = null;
+                dgActions.ItemsSource = _settings.Actions;
+                dgActions.SelectedItem = newAction;
+            }
+        }
+
+        private void BtnEditAction_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgActions.SelectedItem is ActionItem selectedAction)
+            {
+                var clone = new ActionItem
+                {
+                    Id = selectedAction.Id,
+                    Name = selectedAction.Name,
+                    Prompt = selectedAction.Prompt,
+                    HotkeyModifiers = selectedAction.HotkeyModifiers,
+                    HotkeyKey = selectedAction.HotkeyKey,
+                    IsBuiltIn = selectedAction.IsBuiltIn,
+                    SortOrder = selectedAction.SortOrder,
+                    Icon = selectedAction.Icon
+                };
+
+                var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"]);
+                editWindow.Owner = this;
+                if (editWindow.ShowDialog() == true)
+                {
+                    selectedAction.Name = clone.Name;
+                    selectedAction.Prompt = clone.Prompt;
+                    selectedAction.HotkeyModifiers = clone.HotkeyModifiers;
+                    selectedAction.HotkeyKey = clone.HotkeyKey;
+                    selectedAction.SortOrder = clone.SortOrder;
+                    selectedAction.Icon = clone.Icon;
+
+                    _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+                    dgActions.ItemsSource = null;
+                    dgActions.ItemsSource = _settings.Actions;
+                    dgActions.SelectedItem = selectedAction;
+                }
+            }
+            else
+            {
+                MessageBox.Show(LanguageManager.Instance["Settings_Action_SelectEditWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         private void BtnDeleteAction_Click(object sender, RoutedEventArgs e)
@@ -379,47 +404,6 @@ namespace AIHelper.Views
         private void DgActions_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _selectedAction = dgActions.SelectedItem as ActionItem;
-            if (_selectedAction != null)
-            {
-                actionEditPanel.IsEnabled = true;
-                txtActionName.Text = _selectedAction.Name;
-                txtActionSortOrder.Text = _selectedAction.SortOrder.ToString();
-                txtActionPrompt.Text = _selectedAction.Prompt;
-                txtActionHotkey.Text = FormatHotkey(_selectedAction.HotkeyModifiers, _selectedAction.HotkeyKey);
-            }
-            else
-            {
-                actionEditPanel.IsEnabled = false;
-                txtActionName.Clear();
-                txtActionSortOrder.Clear();
-                txtActionPrompt.Clear();
-                txtActionHotkey.Clear();
-            }
-        }
-
-        private void BtnApplyActionEdit_Click(object sender, RoutedEventArgs e)
-        {
-            SaveSettings();
-        }
-
-        private void TxtActionHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            e.Handled = true;
-            var key = e.Key == Key.System ? e.SystemKey : e.Key;
-            // Ignore pure modifier keys
-            if (key == Key.LeftCtrl || key == Key.RightCtrl || key == Key.LeftAlt || key == Key.RightAlt ||
-                key == Key.LeftShift || key == Key.RightShift || key == Key.LWin || key == Key.RWin)
-                return;
-
-            string modifiers = GetModifiersString();
-            string keyStr = key.ToString();
-
-            if (_selectedAction != null)
-            {
-                _selectedAction.HotkeyModifiers = modifiers;
-                _selectedAction.HotkeyKey = keyStr;
-            }
-            txtActionHotkey.Text = FormatHotkey(modifiers, keyStr);
         }
 
         private void TxtPanelHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
