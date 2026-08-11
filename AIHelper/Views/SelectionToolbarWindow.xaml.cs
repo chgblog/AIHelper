@@ -19,7 +19,7 @@ namespace AIHelper.Views
         private DispatcherTimer _autoHideTimer;
         private Point _currentScreenPos;
         private bool _isExpanded;
-        private int _autoHideSeconds = 5;
+        private int _autoHideSeconds = 3;
         private const int MaxInitialActions = 5;
 
         public event Action<ActionItem, string> ActionRequested;
@@ -40,9 +40,9 @@ namespace AIHelper.Views
         /// <param name="screenPos">鼠标屏幕坐标</param>
         /// <param name="actions">可用操作列表</param>
         /// <param name="autoHideSeconds">自动消失秒数</param>
-        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 5)
+        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3)
         {
-            _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 5;
+            _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
             _selectedText = text;
             _actions = actions?.OrderBy(a => a.SortOrder).ToList();
             _currentScreenPos = screenPos;

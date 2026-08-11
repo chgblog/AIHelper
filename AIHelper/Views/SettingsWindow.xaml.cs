@@ -14,12 +14,21 @@ namespace AIHelper.Views
         private AppSettings _settings;
         private ActionItem _selectedAction;
 
-        public SettingsWindow()
+        public SettingsWindow(int initialTabIndex = 0)
         {
             InitializeComponent();
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
             this.Unloaded += (s, e) => LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
             LoadSettings();
+            SelectTab(initialTabIndex);
+        }
+
+        public void SelectTab(int index)
+        {
+            if (tabControl != null && index >= 0 && index < tabControl.Items.Count)
+            {
+                tabControl.SelectedIndex = index;
+            }
         }
 
         private void LanguageManager_LanguageChanged(object sender, EventArgs e)
@@ -30,6 +39,7 @@ namespace AIHelper.Views
         private void LoadSettings()
         {
             _settings = SettingsService.Instance.Load();
+            chkShowMainWindow.IsChecked = _settings.ShowMainWindowOnStartup;
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
             chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
@@ -41,7 +51,7 @@ namespace AIHelper.Views
             else rbScopeAll.IsChecked = true;
 
             txtSelectionAppScopeApps.Text = _settings.SelectionAppScopeApps ?? "";
-            txtSelectionToolbarAutoHideSeconds.Text = (_settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 5).ToString();
+            txtSelectionToolbarAutoHideSeconds.Text = (_settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3).ToString();
 
             UpdateSelectionToolbarControlStates();
             UpdateAutoHideTip();
@@ -117,6 +127,7 @@ namespace AIHelper.Views
             _settings.Language = selectedLang;
             LanguageManager.Instance.CurrentLanguage = selectedLang;
 
+            _settings.ShowMainWindowOnStartup = chkShowMainWindow.IsChecked == true;
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
@@ -128,7 +139,7 @@ namespace AIHelper.Views
             }
             else
             {
-                _settings.SelectionToolbarAutoHideSeconds = 5;
+                _settings.SelectionToolbarAutoHideSeconds = 3;
             }
 
             int appScopeMode = 0;
@@ -205,7 +216,7 @@ namespace AIHelper.Views
         {
             if (tbSelectionToolbarAutoHideTip == null) return;
 
-            int sec = 5;
+            int sec = 3;
             if (txtSelectionToolbarAutoHideSeconds != null && int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int parsed) && parsed > 0)
             {
                 sec = parsed;
