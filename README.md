@@ -4,8 +4,6 @@
 
 **AIHelper** 是一款轻量级 Windows桌面AI助手工具。它旨在将网页端 AI 大模型平台（如 DeepSeek、ChatGPT、Claude、Gemini 等）无缝集成到日常工作中。通过划词 AI 工具条、全局快捷键和智能网页脚本注入，实现剪贴板及划词选中文本的快速翻译、解释、摘要、润色与语法检查。
 
-![主窗口](assets/zh/ZhuChuangKou.jpg)
-
 ---
 
 ## 📸 界面展示
