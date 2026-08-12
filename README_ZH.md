@@ -13,7 +13,7 @@ AIHelper —— 你的 Windows 全局 AI 效率引擎。
 ![GitHub Release](https://img.shields.io/github/v/release/chgblog/AIHelper?style=flat-square&include_prereleases&label=Latest)
 </a>
 
-<video src="assets/zh/AIHelper.mp4" controls></video>
+https://github.com/user-attachments/assets/5b0386f3-706b-4be9-bb22-960bb03d147a
 
 ---
 
