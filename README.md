@@ -14,6 +14,8 @@ web injection, instantly translate, explain, summarize, polish, or grammar-check
 ![GitHub Release](https://img.shields.io/github/v/release/chgblog/AIHelper?style=flat-square&include_prereleases&label=Latest)
 </a>
 
+https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
+
 ---
 
 ## 📸 Screenshots
