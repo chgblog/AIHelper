@@ -69,9 +69,9 @@ namespace AIHelper.Services
                 string jsonNewChatSelector = string.IsNullOrEmpty(newChatSelector) ? "null" : JsonConvert.SerializeObject(newChatSelector);
                 string jsonAutoSubmit = autoSubmit ? "true" : "false";
                 
-                string finalScript = $"{injectorScript}\n return window.AiHelperInjector.inject({jsonText}, {jsonAutoSubmit}, {jsonInputSelector}, {jsonSubmitSelector}, {jsonNewChatSelector});";
+                string finalScript = $"{injectorScript}\n return await window.AiHelperInjector.inject({jsonText}, {jsonAutoSubmit}, {jsonInputSelector}, {jsonSubmitSelector}, {jsonNewChatSelector});";
 
-                string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(function() {{ {finalScript} }})()");
+                string resultJson = await webView.CoreWebView2.ExecuteScriptAsync($"(async function() {{ {finalScript} }})()");
                 
                 if (string.IsNullOrEmpty(resultJson) || resultJson == "null")
                 {

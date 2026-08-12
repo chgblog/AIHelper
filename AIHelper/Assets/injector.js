@@ -58,8 +58,10 @@
         }
     }
 
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
     window.AiHelperInjector = {
-        inject: function(text, autoSubmit, inputSelector, submitSelector, newChatSelector) {
+        inject: async function(text, autoSubmit, inputSelector, submitSelector, newChatSelector) {
             try {
                 const url = window.location.href;
                 
@@ -116,6 +118,8 @@
                     } catch (e) {
                         console.error("New chat click error:", e);
                     }
+                    // Delay 500ms after clicking new session before proceeding to prompt injection
+                    await sleep(500);
                 }
 
                 // Helper to locate input element
@@ -140,52 +144,40 @@
                     return el;
                 }
 
-                // 3. Find input element
+                // 3. Find input element (with retries if needed for DOM to stabilize)
                 let inputEl = findInput();
+                if (!inputEl) {
+                    for (let i = 0; i < 10; i++) {
+                        await sleep(100);
+                        inputEl = findInput();
+                        if (inputEl) break;
+                    }
+                }
 
-                if (!inputEl && !newChatBtn) {
+                if (!inputEl) {
                     return { success: false, reason: "INPUT_NOT_FOUND" };
                 }
 
                 // 4. Inject text
-                if (inputEl) {
-                    doInjectText(inputEl, text);
-                }
+                doInjectText(inputEl, text);
 
-                // 5. Auto-submit or Delayed Inject
+                // 5. Auto-submit after 500ms delay
                 if (autoSubmit) {
-                    const delay = newChatBtn ? 400 : 300;
-                    setTimeout(function() {
-                        try {
-                            let currentInput = findInput() || inputEl;
-                            if (currentInput) {
-                                const isTextarea = currentInput.tagName.toLowerCase() === 'textarea';
-                                const currentText = isTextarea ? currentInput.value : currentInput.textContent;
-                                if (!currentText || currentText.trim() === '') {
-                                    doInjectText(currentInput, text);
-                                }
+                    // Delay 500ms after injecting prompt before clicking submit
+                    await sleep(500);
+                    try {
+                        let currentInput = findInput() || inputEl;
+                        if (currentInput) {
+                            const isTextarea = currentInput.tagName.toLowerCase() === 'textarea';
+                            const currentText = isTextarea ? currentInput.value : currentInput.textContent;
+                            if (!currentText || currentText.trim() === '') {
+                                doInjectText(currentInput, text);
                             }
-                            window.AiHelperInjector.submit(currentInput, platform, submitSelector);
-                        } catch (e) {
-                            console.error("Auto submit error:", e);
                         }
-                    }, delay);
-                } else if (newChatBtn) {
-                    const delay = 400;
-                    setTimeout(function() {
-                        try {
-                            let currentInput = findInput() || inputEl;
-                            if (currentInput) {
-                                const isTextarea = currentInput.tagName.toLowerCase() === 'textarea';
-                                const currentText = isTextarea ? currentInput.value : currentInput.textContent;
-                                if (!currentText || currentText.trim() === '') {
-                                    doInjectText(currentInput, text);
-                                }
-                            }
-                        } catch (e) {
-                            console.error("Delayed inject error:", e);
-                        }
-                    }, delay);
+                        window.AiHelperInjector.submit(currentInput || inputEl, platform, submitSelector);
+                    } catch (e) {
+                        console.error("Auto submit error:", e);
+                    }
                 }
 
                 return { success: true, reason: "SUCCESS" };
