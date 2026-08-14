@@ -1,0 +1,38 @@
+name: Build AIHelper
+
+on:
+  push:
+    branches:
+      - main
+      
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+
+    # 拉取代码
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # 安装 NuGet
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    # 还原依赖
+    - name: Restore
+      run: nuget restore AIHelper.sln
+
+    # 编译 Release
+    - name: Build
+      run: dotnet build AIHelper/AIHelper.csproj -c Release
+
+    # 上传单文件
+    - name: Upload EXE
+      uses: actions/upload-artifact@v4
+      with:
+        name: AIHelper
+        path: |
+          AIHelper/bin/Release/net48/AIHelper.exe
