@@ -176,16 +176,29 @@
                 </Grid>
             </TabItem>
 
-            <!-- 快捷键设置 -->
+            <!-- 其他设置 -->
             <TabItem Header="{Binding [Settings_Tab_Hotkeys], Source={x:Static services:LanguageManager.Instance}}">
-                <Grid Margin="10">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [Settings_Hotkey_PanelKey], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold"/>
-                        <TextBox x:Name="txtPanelHotkey" Background="#1a1a2e" Foreground="#e0e0e0" Padding="10" 
-                                  PreviewKeyDown="TxtPanelHotkey_PreviewKeyDown" IsReadOnly="True"/>
-                        <TextBlock Text="{Binding [Settings_Hotkey_Tip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,5,0,0" Foreground="#a0a0b0"/>
-                    </StackPanel>
-                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Settings_Hotkey_PanelKey], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <TextBox x:Name="txtPanelHotkey" Background="#1a1a2e" Foreground="#e0e0e0" Padding="10" 
+                                      PreviewKeyDown="TxtPanelHotkey_PreviewKeyDown" IsReadOnly="True" BorderBrush="#3a3a5e"/>
+                            <TextBlock Text="{Binding [Settings_Hotkey_Tip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+
+                            <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
+
+                            <TextBlock Text="{Binding [Settings_Other_ConfigManagement], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <TextBlock Text="{Binding [Settings_Other_ConfigManagementTip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Content="{Binding [Settings_Other_BackupConfig], Source={x:Static services:LanguageManager.Instance}}" Click="BtnBackupConfig_Click" Padding="12,6" Margin="0,0,10,0" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                                <Button Content="{Binding [Settings_Other_RestoreConfig], Source={x:Static services:LanguageManager.Instance}}" Click="BtnRestoreConfig_Click" Padding="12,6" Margin="0,0,10,0" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                                <Button Content="{Binding [Settings_Other_OpenConfigDir], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOpenConfigDir_Click" Padding="12,6" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <!-- 项目与更新 -->

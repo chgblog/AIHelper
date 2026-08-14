@@ -184,7 +184,7 @@ namespace AIHelper.Services
             { "Settings_Tab_SelectionToolbar", "划词设置" },
             { "Settings_Tab_Platforms", "平台管理" },
             { "Settings_Tab_Actions", "操作管理" },
-            { "Settings_Tab_Hotkeys", "快捷键设置" },
+            { "Settings_Tab_Hotkeys", "其他设置" },
             { "Settings_Tab_About", "项目与更新" },
 
             { "Settings_General_Options", "常规选项" },
@@ -324,7 +324,21 @@ namespace AIHelper.Services
             { "SelectionToolbar_Sending", "正在发送到 {0}..." },
             { "SelectionToolbar_More", "更多 ▾" },
 
-            { "Inject_Exception", "注入异常: {0}" }
+            { "Inject_Exception", "注入异常: {0}" },
+
+            // Other Settings - Config Management
+            { "Settings_Other_ConfigManagement", "配置管理" },
+            { "Settings_Other_ConfigManagementTip", "备份当前配置到文件，或从备份文件恢复配置。" },
+            { "Settings_Other_BackupConfig", "📦 备份配置" },
+            { "Settings_Other_RestoreConfig", "📂 恢复配置" },
+            { "Settings_Other_OpenConfigDir", "📁 打开配置目录" },
+            { "Settings_Other_NoConfigFile", "未找到配置文件" },
+            { "Settings_Other_BackupSuccess", "配置备份成功！" },
+            { "Settings_Other_BackupFailed", "配置备份失败: {0}" },
+            { "Settings_Other_RestoreConfirm", "确定要恢复配置吗？当前配置将被覆盖。" },
+            { "Settings_Other_RestoreSuccess", "配置恢复成功！" },
+            { "Settings_Other_RestoreFailed", "配置恢复失败: {0}" },
+            { "Settings_Other_OpenDirFailed", "打开配置目录失败: {0}" }
         };
 
         private static readonly Dictionary<string, string> _enDict = new Dictionary<string, string>
@@ -370,7 +384,7 @@ namespace AIHelper.Services
             { "Settings_Tab_SelectionToolbar", "Selection Settings" },
             { "Settings_Tab_Platforms", "Platforms" },
             { "Settings_Tab_Actions", "Actions" },
-            { "Settings_Tab_Hotkeys", "Hotkeys" },
+            { "Settings_Tab_Hotkeys", "Other Settings" },
             { "Settings_Tab_About", "About & Updates" },
 
             { "Settings_General_Options", "General Options" },
@@ -510,7 +524,21 @@ namespace AIHelper.Services
             { "SelectionToolbar_Sending", "Sending to {0}..." },
             { "SelectionToolbar_More", "More ▾" },
 
-            { "Inject_Exception", "Injection exception: {0}" }
+            { "Inject_Exception", "Injection exception: {0}" },
+
+            // Other Settings - Config Management
+            { "Settings_Other_ConfigManagement", "Config Management" },
+            { "Settings_Other_ConfigManagementTip", "Backup current configuration to a file, or restore from a backup file." },
+            { "Settings_Other_BackupConfig", "📦 Backup Config" },
+            { "Settings_Other_RestoreConfig", "📂 Restore Config" },
+            { "Settings_Other_OpenConfigDir", "📁 Open Config Dir" },
+            { "Settings_Other_NoConfigFile", "Configuration file not found." },
+            { "Settings_Other_BackupSuccess", "Configuration backup successful!" },
+            { "Settings_Other_BackupFailed", "Configuration backup failed: {0}" },
+            { "Settings_Other_RestoreConfirm", "Are you sure you want to restore configuration? Current settings will be overwritten." },
+            { "Settings_Other_RestoreSuccess", "Configuration restored successfully!" },
+            { "Settings_Other_RestoreFailed", "Configuration restore failed: {0}" },
+            { "Settings_Other_OpenDirFailed", "Failed to open config directory: {0}" }
         };
     }
 }

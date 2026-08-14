@@ -44,6 +44,14 @@ namespace AIHelper.Services
         }
 
         /// <summary>
+        /// Gets the directory where settings files are stored
+        /// </summary>
+        public string GetSettingsDirectory()
+        {
+            return Path.GetDirectoryName(_settingsFilePath);
+        }
+
+        /// <summary>
         /// Loads settings from file or creates default
         /// </summary>
         public AppSettings Load()

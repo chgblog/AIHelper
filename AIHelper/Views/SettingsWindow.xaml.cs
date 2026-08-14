@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -531,6 +532,92 @@ namespace AIHelper.Views
         private void DgActions_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _selectedAction = dgActions.SelectedItem as ActionItem;
+        }
+
+        private void BtnBackupConfig_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var configDir = SettingsService.Instance.GetSettingsDirectory();
+                var configFile = Path.Combine(configDir, "settings.json");
+
+                if (!File.Exists(configFile))
+                {
+                    MessageBox.Show(LanguageManager.Instance["Settings_Other_NoConfigFile"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var saveDialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = LanguageManager.Instance["Settings_Other_BackupConfig"],
+                    Filter = "JSON Files (*.json)|*.json",
+                    FileName = $"AIHelper_settings_backup_{DateTime.Now:yyyyMMdd_HHmmss}.json",
+                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+                };
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    File.Copy(configFile, saveDialog.FileName, true);
+                    MessageBox.Show(LanguageManager.Instance["Settings_Other_BackupSuccess"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(LanguageManager.Instance.GetString("Settings_Other_BackupFailed", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnRestoreConfig_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var openDialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = LanguageManager.Instance["Settings_Other_RestoreConfig"],
+                    Filter = "JSON Files (*.json)|*.json",
+                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+                };
+
+                if (openDialog.ShowDialog() == true)
+                {
+                    var result = MessageBox.Show(
+                        LanguageManager.Instance["Settings_Other_RestoreConfirm"],
+                        LanguageManager.Instance["Notice"],
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        var configDir = SettingsService.Instance.GetSettingsDirectory();
+                        var configFile = Path.Combine(configDir, "settings.json");
+
+                        File.Copy(openDialog.FileName, configFile, true);
+                        LoadSettings();
+                        MessageBox.Show(LanguageManager.Instance["Settings_Other_RestoreSuccess"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(LanguageManager.Instance.GetString("Settings_Other_RestoreFailed", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnOpenConfigDir_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var configDir = SettingsService.Instance.GetSettingsDirectory();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = configDir,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(LanguageManager.Instance.GetString("Settings_Other_OpenDirFailed", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void TxtPanelHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
