@@ -228,6 +228,9 @@
                                 </Grid>
                             </Border>
 
+                            <CheckBox x:Name="chkAutoCheckUpdate" Content="{Binding [Settings_About_AutoCheckUpdate], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,0,0,5" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="{Binding [Settings_About_AutoCheckUpdateTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,0,0,15" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
                             <TextBlock Text="{Binding [Settings_About_Tip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Grid>

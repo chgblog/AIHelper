@@ -229,6 +229,10 @@ namespace AIHelper.Services
             { "Settings_About_OpenUpdate", "进入 Release 列表" },
             { "Settings_About_Tip", "提示：点击地址链接或按钮即可在默认浏览器中打开对应页面。" },
             { "Settings_About_OpenUrlError", "无法打开链接: {0}" },
+            { "Settings_About_AutoCheckUpdate", "自动检测新版本" },
+            { "Settings_About_AutoCheckUpdateTip", "启动程序 1 分钟后在后台检测 GitHub Release 是否有新版本" },
+            { "Update_NewVersionTitle", "发现新版本" },
+            { "Update_NewVersionMessage", "发现新版本 {0}（当前版本 {1}），是否打开下载页面？" },
 
             // PlatformEditWindow
             { "PlatformEdit_Title_Edit", "编辑平台" },
@@ -411,6 +415,10 @@ namespace AIHelper.Services
             { "Settings_About_OpenUpdate", "View Releases" },
             { "Settings_About_Tip", "Tip: Click the link or button to open the page in your default browser." },
             { "Settings_About_OpenUrlError", "Cannot open link: {0}" },
+            { "Settings_About_AutoCheckUpdate", "Auto-check for updates" },
+            { "Settings_About_AutoCheckUpdateTip", "Check for new versions on GitHub Releases 1 minute after app startup" },
+            { "Update_NewVersionTitle", "New Version Available" },
+            { "Update_NewVersionMessage", "New version {0} is available (current: {1}). Open download page?" },
 
             // PlatformEditWindow
             { "PlatformEdit_Title_Edit", "Edit Platform" },

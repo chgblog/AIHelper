@@ -44,6 +44,7 @@ namespace AIHelper.Views
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
             chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
             chkEnableClipboardEnhancementToolbar.IsChecked = _settings.EnableClipboardEnhancementToolbar;
+            chkAutoCheckUpdate.IsChecked = _settings.AutoCheckUpdate;
 
             int mode = _settings.SelectionAppScopeMode;
             if (mode == 1) rbScopeInclude.IsChecked = true;
@@ -137,6 +138,7 @@ namespace AIHelper.Views
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
             _settings.EnableClipboardEnhancementToolbar = chkEnableClipboardEnhancementToolbar.IsChecked == true;
+            _settings.AutoCheckUpdate = chkAutoCheckUpdate.IsChecked == true;
 
             if (int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int autoHideSec) && autoHideSec > 0)
             {

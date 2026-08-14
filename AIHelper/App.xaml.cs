@@ -85,6 +85,12 @@ namespace AIHelper
             }
 
             base.OnStartup(e);
+
+            // 启动后台自动检测新版本
+            if (settings.AutoCheckUpdate)
+            {
+                UpdateCheckService.StartDelayedCheck(settings);
+            }
         }
 
         private void SetupExceptionHandling()

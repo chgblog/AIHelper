@@ -24,6 +24,12 @@ namespace AIHelper.Models
         public double WindowHeight { get; set; } = 800;
         public bool AutoStart { get; set; } = false;
         public bool AutoSubmit { get; set; } = true;
+
+        /// <summary>
+        /// 是否启用自动检测新版本（默认不选中）
+        /// </summary>
+        public bool AutoCheckUpdate { get; set; } = false;
+
         public string ProxyServer { get; set; } = "";
         public string Language { get; set; }
 
