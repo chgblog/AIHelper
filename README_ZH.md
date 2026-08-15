@@ -219,7 +219,11 @@ AIHelper/
 
 ---
 
+## 🔗 友情链接 
+
+- **[linux.do](https://linux.do)** - 没事儿就想去逛逛的社区
+
 ## 📄 许可协议
 
-本项目采用 [Non-Commercial License](LICENSE) (非商业用途许可协议)。仅供个人学习、研究与非商业用途使用。如需商业使用，请联系原作者获取授权。
+基于 [GNU 通用公共许可证 v3.0（GPL-3.0）](LICENSE) 发布。
 
