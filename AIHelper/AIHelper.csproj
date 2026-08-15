@@ -10,13 +10,14 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
-    <Title>AI助手</Title>
-    <Authors>i龙虾</Authors>
+    <Title>AIHelper</Title>
+    <Authors>chgblog</Authors>
     <Version>0.6.2</Version>
-    <Company>i龙虾</Company>
-    <Product>AI助手</Product>
+    <Company>chgblog</Company>
+    <Product>AIHelper</Product>
     <PackageProjectUrl>https://github.com/chgblog/AIHelper</PackageProjectUrl>
     <RepositoryUrl>https://github.com/chgblog/AIHelper</RepositoryUrl>
+    <Copyright>Copyright (C) 2026 chgblog</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
