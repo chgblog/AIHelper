@@ -220,7 +220,12 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
 
 ---
 
+## 🔗 Community
+
+- **[linux.do](https://linux.do)** - A community you always feel like visiting.
+
+
 ## 📄 License
 
-This project is licensed under the [Non-Commercial License](LICENSE). It is intended for personal study, research, and non-commercial use only. For commercial use, please contact the original author for authorization.
+Released under the [GNU General Public License v3.0](LICENSE).
 
