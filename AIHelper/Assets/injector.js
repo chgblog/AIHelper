@@ -1,4 +1,6 @@
-(function() {
+// Copyright (C) 2026 chgblog
+// SPDX-License-Identifier: GPL-3.0
+(function () {
     function isFileUploadElement(el) {
         if (!el) return false;
         if (el.tagName === 'INPUT' && el.type === 'file') return true;

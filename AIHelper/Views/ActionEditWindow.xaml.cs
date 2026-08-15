@@ -1,3 +1,5 @@
+// Copyright (C) 2026 chgblog
+// SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
 using System.Windows;

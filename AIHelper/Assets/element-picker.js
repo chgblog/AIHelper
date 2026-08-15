@@ -1,4 +1,6 @@
-(function() {
+// Copyright (C) 2026 chgblog
+// SPDX-License-Identifier: GPL-3.0
+(function () {
     // Prevent re-injection
     if (window.__aihelper_picker_active) return;
     window.__aihelper_picker_active = true;
