@@ -19,5 +19,10 @@ namespace AIHelper.Models
         /// Emoji icon for display in selection toolbar
         /// </summary>
         public string Icon { get; set; } = "";
+
+        /// <summary>
+        /// 指定使用的平台 Id，为空时使用当前激活平台
+        /// </summary>
+        public string PlatformId { get; set; } = "";
     }
 }

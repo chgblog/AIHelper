@@ -161,6 +161,7 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{Binding [Settings_Action_SortOrder], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding SortOrder}" Width="50"/>
                             <DataGridTextColumn Header="{Binding [Settings_Action_Name], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding Name}" Width="100"/>
+                            <DataGridTextColumn x:Name="colActionPlatform" Header="{Binding [Settings_Action_Platform], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding PlatformId}" Width="80"/>
                             <DataGridTextColumn Header="{Binding [Settings_Action_Prompt], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding Prompt}" Width="*"/>
                             <DataGridTemplateColumn Width="75">
                                 <DataGridTemplateColumn.CellTemplate>

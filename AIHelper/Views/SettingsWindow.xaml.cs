@@ -104,6 +104,19 @@ namespace AIHelper.Views
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+
+            // Set up platform name converter for actions DataGrid
+            UpdateActionPlatformColumnBinding();
+        }
+
+        private void UpdateActionPlatformColumnBinding()
+        {
+            if (colActionPlatform != null && _settings?.Platforms != null)
+            {
+                var converter = new Converters.PlatformIdToNameConverter { Platforms = _settings.Platforms };
+                var binding = new System.Windows.Data.Binding("PlatformId") { Converter = converter };
+                colActionPlatform.Binding = binding;
+            }
         }
 
         private void RbPlatformActive_Click(object sender, RoutedEventArgs e)
@@ -410,7 +423,7 @@ namespace AIHelper.Views
                 Icon = "📋"
             };
 
-            var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"]);
+            var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"], _settings.Platforms);
             editWindow.Owner = this;
             if (editWindow.ShowDialog() == true)
             {
@@ -435,10 +448,11 @@ namespace AIHelper.Views
                     HotkeyKey = selectedAction.HotkeyKey,
                     IsBuiltIn = selectedAction.IsBuiltIn,
                     SortOrder = selectedAction.SortOrder,
-                    Icon = selectedAction.Icon
+                    Icon = selectedAction.Icon,
+                    PlatformId = selectedAction.PlatformId
                 };
 
-                var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"]);
+                var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"], _settings.Platforms);
                 editWindow.Owner = this;
                 if (editWindow.ShowDialog() == true)
                 {
@@ -448,6 +462,7 @@ namespace AIHelper.Views
                     selectedAction.HotkeyKey = clone.HotkeyKey;
                     selectedAction.SortOrder = clone.SortOrder;
                     selectedAction.Icon = clone.Icon;
+                    selectedAction.PlatformId = clone.PlatformId;
 
                     _settings.Actions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
                     dgActions.ItemsSource = null;

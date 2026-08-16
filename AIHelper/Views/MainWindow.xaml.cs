@@ -120,11 +120,12 @@ namespace AIHelper.Views
             });
         }
 
-        private void SelectionToolbar_ActionRequested(ActionItem action, string text)
+        private async void SelectionToolbar_ActionRequested(ActionItem action, string text)
         {
             ShowAndActivate();
             string prompt = action.Prompt.Replace("{content}", text);
-            ExecutePrompt(prompt);
+            var platform = GetPlatformForAction(action);
+            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
         }
 
         private void RegisterHotkeys()
@@ -456,38 +457,107 @@ namespace AIHelper.Views
         private async void ExecuteAction(ActionItem action)
         {
             ShowAndActivate();
-            if (!await EnsureWebViewReadyAsync())
-            {
-                return;
-            }
             string content = ClipboardService.GetText();
             string prompt = action.Prompt.Replace("{content}", content);
-            UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Executing", action.Name));
-            var platform = _settings.GetActivePlatform();
-            bool autoSubmit = _settings?.AutoSubmit ?? true;
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
-            UpdateStatus(result.Success ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message) : LanguageManager.Instance.GetString("Main_Status_Failed", result.Message));
+            var platform = GetPlatformForAction(action);
+            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
         }
 
-        private void ActionPanel_ActionSubmitted(ActionItem action, string text)
+        private async void ActionPanel_ActionSubmitted(ActionItem action, string text)
         {
             actionPanel.Visibility = Visibility.Collapsed;
             if (action == null) return;
             string prompt = action.Prompt.Replace("{content}", text);
-            ExecutePrompt(prompt);
+            var platform = GetPlatformForAction(action);
+            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+        }
+
+        /// <summary>
+        /// Gets the platform to use for the given action.
+        /// If the action has a specified PlatformId, returns that platform;
+        /// otherwise returns the active platform.
+        /// </summary>
+        private AiPlatform GetPlatformForAction(ActionItem action)
+        {
+            if (action != null && !string.IsNullOrEmpty(action.PlatformId))
+            {
+                var specified = _settings.Platforms?.FirstOrDefault(p => p.Id == action.PlatformId);
+                if (specified != null) return specified;
+            }
+            return _settings.GetActivePlatform();
+        }
+
+        /// <summary>
+        /// Ensures the WebView2 is on the correct platform and executes the prompt.
+        /// Handles platform switching including proxy reinitializtion if needed.
+        /// </summary>
+        private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null)
+        {
+            if (platform == null)
+            {
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", "No platform"));
+                return;
+            }
+
+            bool needProxy = ShouldUseProxy(platform);
+            if (needProxy != _currentWebViewUsesProxy)
+            {
+                // Proxy setting differs, need to reinitialize WebView2
+                await ReinitializeWebViewAsync(platform);
+            }
+            else if (await EnsureWebViewReadyAsync())
+            {
+                // Check if we need to navigate to the target platform
+                if (!string.IsNullOrEmpty(platform.Url) && webView.CoreWebView2.Source != platform.Url)
+                {
+                    webView.CoreWebView2.Navigate(platform.Url);
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", platform.Name));
+                    // Wait for navigation to complete
+                    var navTcs = new TaskCompletionSource<bool>();
+                    void handler(object s, CoreWebView2NavigationCompletedEventArgs args) { navTcs.TrySetResult(args.IsSuccess); }
+                    webView.CoreWebView2.NavigationCompleted += handler;
+                    try
+                    {
+                        await navTcs.Task;
+                    }
+                    finally
+                    {
+                        webView.CoreWebView2.NavigationCompleted -= handler;
+                    }
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            if (!await EnsureWebViewReadyAsync()) return;
+
+            // Update platform dropdown to reflect current platform
+            var currentSelected = cmbPlatforms.SelectedItem as AiPlatform;
+            if (currentSelected?.Id != platform.Id)
+            {
+                cmbPlatforms.SelectionChanged -= CmbPlatforms_SelectionChanged;
+                cmbPlatforms.SelectedItem = platform;
+                cmbPlatforms.SelectionChanged += CmbPlatforms_SelectionChanged;
+            }
+
+            bool autoSubmit = _settings?.AutoSubmit ?? true;
+            string statusMsg = !string.IsNullOrEmpty(actionName)
+                ? LanguageManager.Instance.GetString("Main_Status_Executing", actionName)
+                : (autoSubmit ? LanguageManager.Instance["Main_Status_Submitting"] : LanguageManager.Instance["Main_Status_Injecting"]);
+            UpdateStatus(statusMsg);
+
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
+            UpdateStatus(result.Success
+                ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message)
+                : LanguageManager.Instance.GetString("Main_Status_Failed", result.Message));
         }
 
         private async void ExecutePrompt(string prompt)
         {
-            if (!await EnsureWebViewReadyAsync())
-            {
-                return;
-            }
-            bool autoSubmit = _settings?.AutoSubmit ?? true;
-            UpdateStatus(autoSubmit ? LanguageManager.Instance["Main_Status_Submitting"] : LanguageManager.Instance["Main_Status_Injecting"]);
             var platform = _settings.GetActivePlatform();
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
-            UpdateStatus(result.Success ? (autoSubmit ? LanguageManager.Instance["Main_Status_SubmitSuccess"] : LanguageManager.Instance["Main_Status_InjectSuccess"]) : LanguageManager.Instance.GetString("Main_Status_OpFailed", result.Message));
+            await EnsurePlatformAndExecuteAsync(platform, prompt);
         }
 
 

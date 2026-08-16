@@ -269,6 +269,10 @@ namespace AIHelper.Services
             { "ActionEdit_Prompt", "提示词:" },
             { "ActionEdit_EmptyNameWarn", "名称不能为空。" },
             { "ActionEdit_ClearHotkey", "清除" },
+            { "ActionEdit_Platform", "使用平台:" },
+            { "ActionEdit_Platform_Default", "默认（激活平台）" },
+            { "Settings_Action_Platform", "平台" },
+            { "Settings_Action_Platform_Default", "默认" },
 
             // ElementPickerWindow
             { "ElementPicker_Title", "元素选择器" },
@@ -472,6 +476,10 @@ namespace AIHelper.Services
             { "ActionEdit_Prompt", "Prompt:" },
             { "ActionEdit_EmptyNameWarn", "Name cannot be empty." },
             { "ActionEdit_ClearHotkey", "Clear" },
+            { "ActionEdit_Platform", "Platform:" },
+            { "ActionEdit_Platform_Default", "Default (Active Platform)" },
+            { "Settings_Action_Platform", "Platform" },
+            { "Settings_Action_Platform_Default", "Default" },
 
             // ElementPickerWindow
             { "ElementPicker_Title", "Element Picker" },

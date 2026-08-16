@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using AIHelper.Models;
@@ -14,8 +15,19 @@ namespace AIHelper.Views
         private readonly ActionItem _action;
         private string _hotkeyModifiers = "";
         private string _hotkeyKey = "";
+        private List<PlatformOption> _platformOptions;
 
-        public ActionEditWindow(ActionItem action, string title = null)
+        /// <summary>
+        /// Helper class for platform ComboBox items
+        /// </summary>
+        private class PlatformOption
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public override string ToString() => Name;
+        }
+
+        public ActionEditWindow(ActionItem action, string title = null, List<AiPlatform> platforms = null)
         {
             InitializeComponent();
             if (!string.IsNullOrEmpty(title))
@@ -37,6 +49,34 @@ namespace AIHelper.Views
             _hotkeyKey = _action.HotkeyKey ?? "";
             txtHotkey.Text = FormatHotkey(_hotkeyModifiers, _hotkeyKey);
             txtPrompt.Text = _action.Prompt ?? "";
+
+            // Initialize platform ComboBox
+            InitializePlatformComboBox(platforms, _action.PlatformId);
+        }
+
+        private void InitializePlatformComboBox(List<AiPlatform> platforms, string selectedPlatformId)
+        {
+            _platformOptions = new List<PlatformOption>();
+            _platformOptions.Add(new PlatformOption
+            {
+                Id = "",
+                Name = LanguageManager.Instance["ActionEdit_Platform_Default"]
+            });
+
+            if (platforms != null)
+            {
+                foreach (var p in platforms)
+                {
+                    _platformOptions.Add(new PlatformOption { Id = p.Id, Name = p.Name });
+                }
+            }
+
+            cmbPlatform.DisplayMemberPath = "Name";
+            cmbPlatform.ItemsSource = _platformOptions;
+
+            // Select the matching platform
+            var selected = _platformOptions.FirstOrDefault(o => o.Id == (selectedPlatformId ?? ""));
+            cmbPlatform.SelectedItem = selected ?? _platformOptions[0];
         }
 
         private void TxtHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -95,6 +135,16 @@ namespace AIHelper.Views
             _action.HotkeyModifiers = _hotkeyModifiers;
             _action.HotkeyKey = _hotkeyKey;
             _action.Prompt = txtPrompt.Text ?? "";
+
+            // Save selected platform
+            if (cmbPlatform.SelectedItem is PlatformOption selectedPlatform)
+            {
+                _action.PlatformId = selectedPlatform.Id ?? "";
+            }
+            else
+            {
+                _action.PlatformId = "";
+            }
 
             this.DialogResult = true;
             this.Close();
