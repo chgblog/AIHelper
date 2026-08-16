@@ -12,6 +12,17 @@ namespace AIHelper.Models
         public string ActivePlatformId { get; set; }
         public string PanelHotkeyModifiers { get; set; } = "Ctrl+Alt";
         public string PanelHotkeyKey { get; set; } = "Space";
+
+        /// <summary>
+        /// 打开主界面快捷键修饰键（默认 Ctrl+Alt）
+        /// </summary>
+        public string MainWindowHotkeyModifiers { get; set; } = "Ctrl+Alt";
+
+        /// <summary>
+        /// 打开主界面快捷键主键（默认 1）
+        /// </summary>
+        public string MainWindowHotkeyKey { get; set; } = "D1";
+
         public List<ActionItem> Actions { get; set; } = new List<ActionItem>();
         public bool IsFirstRun { get; set; } = true;
 

@@ -196,6 +196,11 @@
                                       PreviewKeyDown="TxtPanelHotkey_PreviewKeyDown" IsReadOnly="True" BorderBrush="#3a3a5e"/>
                             <TextBlock Text="{Binding [Settings_Hotkey_Tip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
 
+                            <TextBlock Text="{Binding [Settings_Hotkey_MainWindowKey], Source={x:Static services:LanguageManager.Instance}}" Margin="0,15,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <TextBox x:Name="txtMainWindowHotkey" Background="#1a1a2e" Foreground="#e0e0e0" Padding="10"
+                                      PreviewKeyDown="TxtMainWindowHotkey_PreviewKeyDown" IsReadOnly="True" BorderBrush="#3a3a5e"/>
+                            <TextBlock Text="{Binding [Settings_Hotkey_Tip], Source={x:Static services:LanguageManager.Instance}}" Margin="0,5,0,0" Foreground="#a0a0b0" FontSize="12"/>
+
                             <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 
                             <TextBlock Text="{Binding [Settings_Other_ConfigManagement], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>

@@ -31,6 +31,7 @@ namespace AIHelper.Views
         private AppSettings _settings;
         private readonly PageInjector _pageInjector = new PageInjector();
         private int _panelHotkeyId = -1;
+        private int _mainWindowHotkeyId = -1;
         private readonly Dictionary<int, ActionItem> _hotkeyActionMap = new Dictionary<int, ActionItem>();
         private TaskCompletionSource<bool> _webViewInitTcs = new TaskCompletionSource<bool>();
         private SelectionToolbarWindow _selectionToolbar;
@@ -150,12 +151,23 @@ namespace AIHelper.Views
             HotkeyService.Instance.UnregisterAll();
             _hotkeyActionMap.Clear();
             _panelHotkeyId = -1;
+            _mainWindowHotkeyId = -1;
 
             // Register Panel Hotkey
             _panelHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
             if (_panelHotkeyId < 0)
             {
                 Logger.LogError($"Failed to register main panel hotkey: {_settings.PanelHotkeyModifiers}+{_settings.PanelHotkeyKey}");
+            }
+
+            // Register Main Window Hotkey (打开主界面)
+            if (!string.IsNullOrEmpty(_settings.MainWindowHotkeyKey))
+            {
+                _mainWindowHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
+                if (_mainWindowHotkeyId < 0)
+                {
+                    Logger.LogError($"Failed to register main window hotkey: {_settings.MainWindowHotkeyModifiers}+{_settings.MainWindowHotkeyKey}");
+                }
             }
 
             // Register Action Hotkeys
@@ -440,6 +452,10 @@ namespace AIHelper.Views
             {
                 ShowAndActivate();
                 ToggleActionPanel();
+            }
+            else if (id == _mainWindowHotkeyId)
+            {
+                ShowAndActivate();
             }
             else if (_hotkeyActionMap.TryGetValue(id, out var action))
             {

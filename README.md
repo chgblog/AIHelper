@@ -52,6 +52,7 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 
 - **🚀 Global Hotkeys & Action Panel**
   - Press the global hotkey (default `Ctrl+Alt+Space`) to bring up the quick action panel.
+  - Press the open-main-window hotkey (default `Ctrl+Alt+1`) to wake up and activate the main window at any time.
   - Select or copy text, then press a hotkey (e.g., `Ctrl+Alt+T`) to send it directly to AI for processing.
   - Supports **custom action ordering** and standalone dialog editing in settings.
 
@@ -192,6 +193,7 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
    - Press the assigned hotkey (e.g., `Ctrl+Alt+T`) to wake up AIHelper, switch to the active AI platform, inject the prompt, and submit.
 4. **Action Panel & Action Reordering**:
    - Press `Ctrl+Alt+Space` to bring up the quick action panel.
+   - Press `Ctrl+Alt+1` to open the main window directly; both hotkeys can be customized in "Settings -> Other Settings".
    - In "Settings -> Action Management", customized ordering (Move Up / Move Down) and standalone dialog editing (`ActionEditWindow`) are supported.
 5. **Proxy & Language Settings**:
    - Switch UI language between English and Chinese, and configure HTTP/HTTPS/SOCKS proxy settings in the settings window.

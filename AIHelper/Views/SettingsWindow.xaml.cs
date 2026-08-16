@@ -104,6 +104,7 @@ namespace AIHelper.Views
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
             txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+            txtMainWindowHotkey.Text = FormatHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
 
             // Set up platform name converter for actions DataGrid
             UpdateActionPlatformColumnBinding();
@@ -653,6 +654,22 @@ namespace AIHelper.Views
             txtPanelHotkey.Text = FormatHotkey(modifiers, keyStr);
         }
 
+        private void TxtMainWindowHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (key == Key.LeftCtrl || key == Key.RightCtrl || key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftShift || key == Key.RightShift || key == Key.LWin || key == Key.RWin)
+                return;
+
+            string modifiers = GetModifiersString();
+            string keyStr = key.ToString();
+
+            _settings.MainWindowHotkeyModifiers = modifiers;
+            _settings.MainWindowHotkeyKey = keyStr;
+            txtMainWindowHotkey.Text = FormatHotkey(modifiers, keyStr);
+        }
+
         private string GetModifiersString()
         {
             var parts = new List<string>();
@@ -665,8 +682,21 @@ namespace AIHelper.Views
         private string FormatHotkey(string modifiers, string key)
         {
             if (string.IsNullOrEmpty(key)) return LanguageManager.Instance["None"];
-            if (string.IsNullOrEmpty(modifiers)) return key;
-            return modifiers.Replace("+", " + ") + " + " + key;
+            string keyText = FormatKeyName(key);
+            if (string.IsNullOrEmpty(modifiers)) return keyText;
+            return modifiers.Replace("+", " + ") + " + " + keyText;
+        }
+
+        /// <summary>
+        /// 将 WPF Key 枚举名转换为更易读的显示文本（如 D1 -> 1，NumPad1 -> Num 1）
+        /// </summary>
+        private string FormatKeyName(string key)
+        {
+            if (key.Length == 2 && key[0] == 'D' && char.IsDigit(key[1]))
+                return key.Substring(1);
+            if (key.StartsWith("NumPad") && key.Length > 6)
+                return "Num " + key.Substring(6);
+            return key;
         }
     }
 }

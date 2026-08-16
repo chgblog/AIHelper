@@ -227,6 +227,7 @@ namespace AIHelper.Services
             { "MoveDown", "下移" },
 
             { "Settings_Hotkey_PanelKey", "面板唤醒快捷键:" },
+            { "Settings_Hotkey_MainWindowKey", "打开主界面快捷键:" },
             { "Settings_Hotkey_Tip", "请点击输入框并按下快捷键组合" },
 
             { "Settings_About_Title", "项目与更新信息" },
@@ -438,6 +439,7 @@ namespace AIHelper.Services
             { "MoveDown", "Move Down" },
 
             { "Settings_Hotkey_PanelKey", "Panel Hotkey:" },
+            { "Settings_Hotkey_MainWindowKey", "Open Main Window Hotkey:" },
             { "Settings_Hotkey_Tip", "Click the text box and press key combination" },
 
             { "Settings_About_Title", "Project & Update Information" },
