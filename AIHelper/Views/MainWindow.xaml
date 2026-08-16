@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AIHelper.Views"
         xmlns:services="clr-namespace:AIHelper.Services"
-        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         Title="{Binding [AppName], Source={x:Static services:LanguageManager.Instance}}" Height="600" Width="800" Icon="/icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
@@ -51,8 +50,8 @@
             <local:ActionPanelControl x:Name="actionPanel" Grid.Row="1" Visibility="Collapsed" 
                                       ActionSubmitted="ActionPanel_ActionSubmitted"/>
 
-            <!-- WebView2 -->
-            <wv2:WebView2 x:Name="webView" Grid.Row="2" NavigationCompleted="WebView_NavigationCompleted"/>
+            <!-- WebView2 Container -->
+            <Grid x:Name="webViewContainer" Grid.Row="2"/>
 
             <!-- Status Bar -->
             <StatusBar Grid.Row="3" Background="#161622" Foreground="#a0a0b0">

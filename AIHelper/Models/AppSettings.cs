@@ -102,6 +102,7 @@ namespace AIHelper.Models
                         Name = "Claude",
                         Url = "https://claude.ai/new",
                         IsActive = false,
+                        UseProxy = true,
                         InputSelector = "p.is-empty.is-editor-empty",
                         SubmitSelector = "#_r_b8_ > span.inline-flex.min-w-0 > span"
                     },
@@ -110,6 +111,7 @@ namespace AIHelper.Models
                         Name = "Gemini",
                         Url = "https://gemini.google.com/app",
                         IsActive = false,
+                        UseProxy = true,
                         InputSelector = "div.ng-tns-c4151070770-5.single-line-format > div.text-input-field-main-area.ng-tns-c4151070770-5 > div.text-input-field_textarea-inner.ng-tns-c4151070770-5 > div.ng-tns-c4151070770-5.textarea-wrapper > rich-textarea.text-input-field_textarea.ql-container > div.ql-editor.ql-blank > p",
                         SubmitSelector = "div.trailing-actions-wrapper.ng-tns-c4151070770-6 > div.input-buttons-wrapper-bottom.persistent-mic > div.mat-mdc-tooltip-trigger.send-button-container > gem-icon-button.send-button.ng-tns-c4151070770-6 > button.mdc-icon-button.mat-mdc-icon-button > gem-icon > mat-icon.mat-icon.notranslate"
                     },
@@ -118,13 +120,15 @@ namespace AIHelper.Models
                         Id = deepSeekId,
                         Name = "DeepSeek",
                         Url = "https://chat.deepseek.com/",
-                        IsActive = true
+                        IsActive = true,
+                        UseProxy = false
                     },
                     new AiPlatform
                     {
                         Name = "ChatGPT",
                         Url = "https://chatgpt.com/",
                         IsActive = false,
+                        UseProxy = true,
                         InputSelector = "p.placeholder",
                         SubmitSelector = "#composer-submit-button"
                     },
@@ -133,6 +137,7 @@ namespace AIHelper.Models
                         Name = isEn ? "Qwen" : "千问",
                         Url = "https://chat.qwen.ai/",
                         IsActive = false,
+                        UseProxy = false,
                         InputSelector = "textarea[placeholder=\"有什么我能帮您的吗？\"]",
                         SubmitSelector = "div.message-input-container-area > div.message-input-right-button > div.message-input-right-button-send > div.chat-prompt-send-button > button.send-button > span.anticon.icon-send > svg"
                     },
@@ -141,6 +146,7 @@ namespace AIHelper.Models
                         Name = isEn ? "Zhipu" : "智谱",
                         Url = "https://chat.z.ai/",
                         IsActive = false,
+                        UseProxy = false,
                         InputSelector = "#chat-input",
                         SubmitSelector = "#send-message-button"
                     },
@@ -149,6 +155,7 @@ namespace AIHelper.Models
                         Name = "Kimi",
                         Url = "https://www.kimi.com",
                         IsActive = false,
+                        UseProxy = false,
                         InputSelector = "#chat-box > div.chat-editor > div.chat-editor-content > div.chat-input > div.chat-input-editor-container > div.chat-input-editor > p",
                         SubmitSelector = "div.send-button-container"
                     }

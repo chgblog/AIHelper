@@ -11,6 +11,7 @@ using System.Windows.Input;
 using AIHelper.Models;
 using AIHelper.Services;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 
 namespace AIHelper.Views
 {
@@ -20,9 +21,11 @@ namespace AIHelper.Views
         private readonly PageInjector _pageInjector = new PageInjector();
         private int _panelHotkeyId = -1;
         private readonly Dictionary<int, ActionItem> _hotkeyActionMap = new Dictionary<int, ActionItem>();
-        private readonly TaskCompletionSource<bool> _webViewInitTcs = new TaskCompletionSource<bool>();
+        private TaskCompletionSource<bool> _webViewInitTcs = new TaskCompletionSource<bool>();
         private SelectionToolbarWindow _selectionToolbar;
         private SettingsWindow _currentSettingsWindow;
+        private WebView2 webView;
+        private bool _currentWebViewUsesProxy;
 
         public bool IsExiting { get; set; } = false;
         public bool IsClosed { get; private set; } = false;
@@ -154,15 +157,77 @@ namespace AIHelper.Views
             }
         }
 
+        /// <summary>
+        /// Determines whether the given platform should use proxy based on its UseProxy flag and global proxy config
+        /// </summary>
+        private bool ShouldUseProxy(AiPlatform platform)
+        {
+            return (platform?.UseProxy ?? true) && !string.IsNullOrWhiteSpace(_settings?.ProxyServer);
+        }
+
+        /// <summary>
+        /// Gets the appropriate userDataFolder path based on whether proxy is used.
+        /// WebView2 requires separate userDataFolder for different environment options.
+        /// </summary>
+        private string GetUserDataFolder(bool useProxy)
+        {
+            string basePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AIHelper", "WebView2Data");
+            return useProxy ? basePath + "_Proxy" : basePath + "_Direct";
+        }
+
+        /// <summary>
+        /// Creates a new WebView2 control and adds it to the container
+        /// </summary>
+        private WebView2 CreateWebView()
+        {
+            var wv = new WebView2();
+            wv.NavigationCompleted += WebView_NavigationCompleted;
+            webViewContainer.Children.Add(wv);
+            return wv;
+        }
+
+        /// <summary>
+        /// Destroys the current WebView2 control
+        /// </summary>
+        private void DestroyWebView()
+        {
+            if (webView != null)
+            {
+                webView.NavigationCompleted -= WebView_NavigationCompleted;
+                webViewContainer.Children.Remove(webView);
+                var wv = webView;
+                webView = null;
+                try
+                {
+                    // Stop any pending navigation before dispose
+                    if (wv.CoreWebView2 != null)
+                    {
+                        wv.CoreWebView2.Stop();
+                    }
+                }
+                catch { }
+                try
+                {
+                    wv.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Error disposing WebView2", ex);
+                }
+            }
+        }
+
         private async Task<bool> EnsureWebViewReadyAsync()
         {
-            if (webView.CoreWebView2 != null) return true;
+            if (webView?.CoreWebView2 != null) return true;
 
             try
             {
                 UpdateStatus(LanguageManager.Instance["Main_Status_WaitingBrowser"]);
                 await _webViewInitTcs.Task;
-                return webView.CoreWebView2 != null;
+                return webView?.CoreWebView2 != null;
             }
             catch (Exception ex)
             {
@@ -175,9 +240,13 @@ namespace AIHelper.Views
         {
             try
             {
+                var activePlatform = _settings?.GetActivePlatform();
+                bool useProxy = ShouldUseProxy(activePlatform);
+                _currentWebViewUsesProxy = useProxy;
+
                 CoreWebView2Environment env = null;
                 CoreWebView2EnvironmentOptions options = null;
-                if (!string.IsNullOrWhiteSpace(_settings?.ProxyServer))
+                if (useProxy)
                 {
                     options = new CoreWebView2EnvironmentOptions
                     {
@@ -185,11 +254,12 @@ namespace AIHelper.Views
                     };
                 }
 
+                // Create WebView2 control dynamically
+                webView = CreateWebView();
+
                 try
                 {
-                    string userDataFolder = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "AIHelper", "WebView2Data");
+                    string userDataFolder = GetUserDataFolder(useProxy);
                     env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
                 }
                 catch (Exception ex)
@@ -197,7 +267,7 @@ namespace AIHelper.Views
                     System.Diagnostics.Debug.WriteLine($"CreateAsync custom folder failed, fallback to default: {ex.Message}");
                 }
 
-                if (env == null && options != null)
+                if (env == null)
                 {
                     try
                     {
@@ -218,11 +288,10 @@ namespace AIHelper.Views
                 _webViewInitTcs.TrySetResult(true);
 
                 // Navigate to active platform
-                var active = _settings?.GetActivePlatform();
-                if (active != null && !string.IsNullOrEmpty(active.Url))
+                if (activePlatform != null && !string.IsNullOrEmpty(activePlatform.Url))
                 {
-                    webView.CoreWebView2.Navigate(active.Url);
-                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatedTo", active.Name));
+                    webView.CoreWebView2.Navigate(activePlatform.Url);
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatedTo", activePlatform.Name));
                 }
                 else
                 {
@@ -233,6 +302,105 @@ namespace AIHelper.Views
             {
                 Logger.LogError("WebView2 initialization failed", ex);
                 System.Diagnostics.Debug.WriteLine($"WebView2 initialization failed: {ex.Message}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_WebView2InitFailed", ex.Message));
+                _webViewInitTcs.TrySetException(ex);
+            }
+        }
+
+        /// <summary>
+        /// Reinitializes WebView2 with new proxy settings and navigates to the specified URL
+        /// </summary>
+        private async Task ReinitializeWebViewAsync(AiPlatform targetPlatform)
+        {
+            try
+            {
+                UpdateStatus(LanguageManager.Instance["Main_Status_WaitingBrowser"]);
+
+                // Destroy old WebView2
+                DestroyWebView();
+
+                // Wait for the browser process to release resources
+                await Task.Delay(500);
+
+                // Reset the init task
+                _webViewInitTcs = new TaskCompletionSource<bool>();
+
+                bool useProxy = ShouldUseProxy(targetPlatform);
+                _currentWebViewUsesProxy = useProxy;
+
+                CoreWebView2EnvironmentOptions options = null;
+                if (useProxy)
+                {
+                    options = new CoreWebView2EnvironmentOptions
+                    {
+                        AdditionalBrowserArguments = $"--proxy-server=\"{_settings.ProxyServer.Trim()}\""
+                    };
+                }
+
+                // Create new WebView2 control
+                webView = CreateWebView();
+
+                // Retry environment creation with delay to handle transient COM errors
+                CoreWebView2Environment env = null;
+                string userDataFolder = GetUserDataFolder(useProxy);
+                const int maxRetries = 3;
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+                        break;
+                    }
+                    catch (System.Runtime.InteropServices.COMException ex) when (attempt < maxRetries)
+                    {
+                        Logger.LogError($"WebView2 CreateAsync attempt {attempt} failed, retrying...", ex);
+                        await Task.Delay(1000 * attempt);
+                    }
+                    catch (Exception ex) when (attempt < maxRetries)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"CreateAsync attempt {attempt} failed: {ex.Message}");
+                        await Task.Delay(1000 * attempt);
+                    }
+                }
+
+                // Fallback to default userDataFolder if custom folder failed
+                if (env == null)
+                {
+                    try
+                    {
+                        env = await CoreWebView2Environment.CreateAsync(null, null, options);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("WebView2 CreateAsync fallback also failed", ex);
+                    }
+                }
+
+                if (env != null)
+                {
+                    await webView.EnsureCoreWebView2Async(env);
+                }
+                else
+                {
+                    await webView.EnsureCoreWebView2Async(null);
+                }
+
+                _webViewInitTcs.TrySetResult(true);
+
+                // Navigate to target platform
+                if (targetPlatform != null && !string.IsNullOrEmpty(targetPlatform.Url))
+                {
+                    webView.CoreWebView2.Navigate(targetPlatform.Url);
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", targetPlatform.Name));
+                }
+                else
+                {
+                    UpdateStatus(LanguageManager.Instance["Main_Status_Ready"]);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("WebView2 reinitialization failed", ex);
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_WebView2InitFailed", ex.Message));
                 _webViewInitTcs.TrySetException(ex);
             }
@@ -331,7 +499,13 @@ namespace AIHelper.Views
                 _settings.ActivePlatformId = platform.Id;
                 SettingsService.Instance.Save(_settings);
 
-                if (await EnsureWebViewReadyAsync() && !string.IsNullOrEmpty(platform.Url))
+                bool needProxy = ShouldUseProxy(platform);
+                if (needProxy != _currentWebViewUsesProxy)
+                {
+                    // Proxy setting changed, need to reinitialize WebView2
+                    await ReinitializeWebViewAsync(platform);
+                }
+                else if (await EnsureWebViewReadyAsync() && !string.IsNullOrEmpty(platform.Url))
                 {
                     if (webView.CoreWebView2.Source != platform.Url)
                     {
@@ -388,11 +562,20 @@ namespace AIHelper.Views
 
                     ((App)Application.Current)?.UpdateTrayMenu();
 
-                    // Navigate to new active platform
+                    // Check if proxy settings changed for active platform
                     var active = _settings.GetActivePlatform();
-                    if (active != null && !string.IsNullOrEmpty(active.Url) && await EnsureWebViewReadyAsync())
+                    if (active != null && !string.IsNullOrEmpty(active.Url))
                     {
-                        webView.CoreWebView2.Navigate(active.Url);
+                        bool needProxy = ShouldUseProxy(active);
+                        if (needProxy != _currentWebViewUsesProxy)
+                        {
+                            // Proxy config changed, reinitialize WebView2
+                            await ReinitializeWebViewAsync(active);
+                        }
+                        else if (await EnsureWebViewReadyAsync())
+                        {
+                            webView.CoreWebView2.Navigate(active.Url);
+                        }
                     }
                 }
                 _currentSettingsWindow = null;

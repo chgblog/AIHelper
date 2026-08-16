@@ -2,11 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="clr-namespace:AIHelper.Services"
-        Title="{Binding [PlatformEdit_Title_Edit], Source={x:Static services:LanguageManager.Instance}}" Height="390" Width="560" Icon="/icon.ico"
+        Title="{Binding [PlatformEdit_Title_Edit], Source={x:Static services:LanguageManager.Instance}}" Height="420" Width="560" Icon="/icon.ico"
         WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
         WindowStyle="ToolWindow" ResizeMode="NoResize">
     <Grid Margin="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -56,14 +57,20 @@
                 Width="80" Margin="0,0,0,10" Padding="5,3"
                 ToolTip="{Binding [PlatformEdit_SubmitBtnTT], Source={x:Static services:LanguageManager.Instance}}"/>
 
+        <!-- 使用代理 -->
+        <CheckBox x:Name="chkUseProxy" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3"
+                  Content="{Binding [PlatformEdit_UseProxy], Source={x:Static services:LanguageManager.Instance}}"
+                  ToolTip="{Binding [PlatformEdit_UseProxyTT], Source={x:Static services:LanguageManager.Instance}}"
+                  Foreground="#e0e0e0" Margin="0,0,0,10" VerticalContentAlignment="Center"/>
+
         <!-- 提示 -->
-        <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" 
+        <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" 
                    Text="{Binding [PlatformEdit_Tip], Source={x:Static services:LanguageManager.Instance}}" 
                    Foreground="#666680" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
                    VerticalAlignment="Top"/>
 
         <!-- 按钮 -->
-        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" 
+        <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" 
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="{Binding [OK], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOk_Click" Width="80" Margin="0,0,10,0" Padding="5"
                     Background="#7c3aed" Foreground="White" BorderThickness="0"/>

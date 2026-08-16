@@ -16,6 +16,7 @@ namespace AIHelper.Models
         private string _newChatSelector;
         private string _inputSelector;
         private string _submitSelector;
+        private bool _useProxy = true;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -73,6 +74,15 @@ namespace AIHelper.Models
         {
             get => _submitSelector;
             set { if (_submitSelector != value) { _submitSelector = value; OnPropertyChanged(); } }
+        }
+
+        /// <summary>
+        /// Whether to use proxy for this platform
+        /// </summary>
+        public bool UseProxy
+        {
+            get => _useProxy;
+            set { if (_useProxy != value) { _useProxy = value; OnPropertyChanged(); } }
         }
     }
 }

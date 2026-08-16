@@ -29,6 +29,7 @@ namespace AIHelper.Views
             txtNewChatSelector.Text = platform.NewChatSelector ?? "";
             txtInputSelector.Text = platform.InputSelector ?? "";
             txtSubmitSelector.Text = platform.SubmitSelector ?? "";
+            chkUseProxy.IsChecked = platform.UseProxy;
         }
 
         private void BtnPickNewChat_Click(object sender, RoutedEventArgs e)
@@ -104,6 +105,7 @@ namespace AIHelper.Views
             _platform.NewChatSelector = txtNewChatSelector.Text?.Trim();
             _platform.InputSelector = txtInputSelector.Text?.Trim();
             _platform.SubmitSelector = txtSubmitSelector.Text?.Trim();
+            _platform.UseProxy = chkUseProxy.IsChecked == true;
 
             this.DialogResult = true;
             this.Close();

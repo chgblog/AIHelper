@@ -206,6 +206,7 @@ namespace AIHelper.Services
             { "Settings_Platform_Name", "名称" },
             { "Settings_Platform_Url", "URL" },
             { "Settings_Platform_Active", "激活" },
+            { "Settings_Platform_Proxy", "代理" },
             { "Settings_Platform_NewPlatform", "新平台" },
             { "Settings_Platform_EmptyWarn", "平台列表不能为空。" },
             { "Settings_Platform_SelectEditWarn", "请先选择要编辑的平台。" },
@@ -255,6 +256,8 @@ namespace AIHelper.Services
             { "PlatformEdit_InvalidUrlWarn", "请先填写有效的平台 URL。" },
             { "PlatformEdit_EmptyNameWarn", "名称不能为空。" },
             { "PlatformEdit_EmptyUrlWarn", "URL 不能为空。" },
+            { "PlatformEdit_UseProxy", "使用代理:" },
+            { "PlatformEdit_UseProxyTT", "勾选后访问该平台时使用常规设置中配置的代理服务器" },
 
             // ActionEditWindow
             { "ActionEdit_Title_Edit", "编辑操作" },
@@ -406,6 +409,7 @@ namespace AIHelper.Services
             { "Settings_Platform_Name", "Name" },
             { "Settings_Platform_Url", "URL" },
             { "Settings_Platform_Active", "Active" },
+            { "Settings_Platform_Proxy", "Proxy" },
             { "Settings_Platform_NewPlatform", "New Platform" },
             { "Settings_Platform_EmptyWarn", "Platform list cannot be empty." },
             { "Settings_Platform_SelectEditWarn", "Please select a platform to edit." },
@@ -455,6 +459,8 @@ namespace AIHelper.Services
             { "PlatformEdit_InvalidUrlWarn", "Please enter a valid platform URL first." },
             { "PlatformEdit_EmptyNameWarn", "Name cannot be empty." },
             { "PlatformEdit_EmptyUrlWarn", "URL cannot be empty." },
+            { "PlatformEdit_UseProxy", "Use Proxy:" },
+            { "PlatformEdit_UseProxyTT", "When checked, use the proxy server configured in General Settings for this platform" },
 
             // ActionEditWindow
             { "ActionEdit_Title_Edit", "Edit Action" },
