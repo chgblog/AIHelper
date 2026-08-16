@@ -17,6 +17,17 @@ namespace AIHelper.Views
 {
     public partial class MainWindow : Window
     {
+        // Max time to wait for a top-level navigation to complete
+        private const int NavigationTimeoutMs = 30000;
+        // A page is considered settled when no new navigation starts within this window
+        // (sites often bounce through a client-side redirect right after loading)
+        private const int NavigationQuietMs = 800;
+        // How long to watch for a reload triggered by the new chat button. A click that
+        // reloads the page starts navigating almost immediately, while a client side
+        // (SPA) new chat never navigates at all — so this window is waited out in full
+        // on most platforms and is kept short on purpose.
+        private const int NewChatObserveMs = 800;
+
         private AppSettings _settings;
         private readonly PageInjector _pageInjector = new PageInjector();
         private int _panelHotkeyId = -1;
@@ -388,11 +399,11 @@ namespace AIHelper.Views
 
                 _webViewInitTcs.TrySetResult(true);
 
-                // Navigate to target platform
+                // Navigate to target platform and wait for it — callers inject right after
                 if (targetPlatform != null && !string.IsNullOrEmpty(targetPlatform.Url))
                 {
-                    webView.CoreWebView2.Navigate(targetPlatform.Url);
                     UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", targetPlatform.Name));
+                    await NavigateAndWaitAsync(targetPlatform.Url);
                 }
                 else
                 {
@@ -502,28 +513,17 @@ namespace AIHelper.Views
             bool needProxy = ShouldUseProxy(platform);
             if (needProxy != _currentWebViewUsesProxy)
             {
-                // Proxy setting differs, need to reinitialize WebView2
+                // Proxy setting differs, need to reinitialize WebView2 (this also navigates and waits)
                 await ReinitializeWebViewAsync(platform);
             }
             else if (await EnsureWebViewReadyAsync())
             {
-                // Check if we need to navigate to the target platform
-                if (!string.IsNullOrEmpty(platform.Url) && webView.CoreWebView2.Source != platform.Url)
+                // Only navigate when the WebView is on a different site — an already
+                // loaded page of the same platform is injected into directly
+                if (!string.IsNullOrEmpty(platform.Url) && !IsSameSite(webView.CoreWebView2.Source, platform.Url))
                 {
-                    webView.CoreWebView2.Navigate(platform.Url);
                     UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", platform.Name));
-                    // Wait for navigation to complete
-                    var navTcs = new TaskCompletionSource<bool>();
-                    void handler(object s, CoreWebView2NavigationCompletedEventArgs args) { navTcs.TrySetResult(args.IsSuccess); }
-                    webView.CoreWebView2.NavigationCompleted += handler;
-                    try
-                    {
-                        await navTcs.Task;
-                    }
-                    finally
-                    {
-                        webView.CoreWebView2.NavigationCompleted -= handler;
-                    }
+                    await NavigateAndWaitAsync(platform.Url);
                 }
             }
             else
@@ -542,16 +542,214 @@ namespace AIHelper.Views
                 cmbPlatforms.SelectionChanged += CmbPlatforms_SelectionChanged;
             }
 
+            // The document navigation being complete does not mean the SPA is usable yet —
+            // wait until the input element actually exists and stopped being re-created.
+            UpdateStatus(LanguageManager.Instance["Main_Status_WaitingPage"]);
+            var ready = await _pageInjector.WaitPageReadyAsync(webView, platform.InputSelector);
+            if (!ready.Success)
+            {
+                Logger.LogError($"Page not ready before injection ({platform.Name}): {ready.Reason}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", ready.Message));
+                return;
+            }
+
+            // Starting a new chat can reload the whole page, which would wipe the prompt,
+            // so it happens as its own step with its own wait.
+            if (!await StartNewChatAndWaitAsync(platform)) return;
+
             bool autoSubmit = _settings?.AutoSubmit ?? true;
             string statusMsg = !string.IsNullOrEmpty(actionName)
                 ? LanguageManager.Instance.GetString("Main_Status_Executing", actionName)
                 : (autoSubmit ? LanguageManager.Instance["Main_Status_Submitting"] : LanguageManager.Instance["Main_Status_Injecting"]);
             UpdateStatus(statusMsg);
 
-            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, platform?.NewChatSelector, autoSubmit);
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, autoSubmit);
+            if (!result.Success)
+            {
+                Logger.LogError($"Injection failed ({platform.Name}): {result.Reason}");
+            }
             UpdateStatus(result.Success
                 ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message)
                 : LanguageManager.Instance.GetString("Main_Status_Failed", result.Message));
+        }
+
+        /// <summary>
+        /// True when the WebView is already on the platform's site. Only the host is
+        /// compared, because these sites are SPAs that rewrite the path as soon as a
+        /// conversation exists ("/new" → "/chat/&lt;id&gt;", "/" → "/a/chat/s/&lt;id&gt;").
+        /// Comparing the full URL would make every action reload the whole page for
+        /// nothing — starting a fresh conversation is <see cref="StartNewChatAndWaitAsync"/>'s job.
+        /// </summary>
+        private static bool IsSameSite(string currentUrl, string platformUrl)
+        {
+            if (string.IsNullOrEmpty(currentUrl) || string.IsNullOrEmpty(platformUrl)) return false;
+            if (string.Equals(currentUrl.TrimEnd('/'), platformUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!Uri.TryCreate(currentUrl, UriKind.Absolute, out var current) ||
+                !Uri.TryCreate(platformUrl, UriKind.Absolute, out var target))
+            {
+                return false;
+            }
+
+            // about:blank and the like have no host — never treat those as "already there"
+            if (string.IsNullOrEmpty(current.Host) || string.IsNullOrEmpty(target.Host)) return false;
+
+            return string.Equals(StripWww(current.Host), StripWww(target.Host), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string StripWww(string host)
+        {
+            return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host.Substring(4) : host;
+        }
+
+        /// <summary>
+        /// Navigates and waits until the navigation completed and the page stopped
+        /// navigating (client-side redirects) for <see cref="NavigationQuietMs"/>.
+        /// Returns false on timeout or a failed navigation; callers keep going anyway
+        /// because the readiness probe is the real gate.
+        /// </summary>
+        private async Task<bool> NavigateAndWaitAsync(string url, int timeoutMs = NavigationTimeoutMs)
+        {
+            var core = webView?.CoreWebView2;
+            if (core == null || string.IsNullOrEmpty(url)) return false;
+
+            var navTcs = new TaskCompletionSource<bool>();
+            DateTime lastNavStart = DateTime.UtcNow;
+            bool lastSuccess = false;
+
+            void onStarting(object s, CoreWebView2NavigationStartingEventArgs args) { lastNavStart = DateTime.UtcNow; }
+            void onCompleted(object s, CoreWebView2NavigationCompletedEventArgs args)
+            {
+                lastSuccess = args.IsSuccess;
+                navTcs.TrySetResult(args.IsSuccess);
+            }
+
+            // Subscribe before navigating so a fast completion cannot be missed
+            core.NavigationStarting += onStarting;
+            core.NavigationCompleted += onCompleted;
+            try
+            {
+                core.Navigate(url);
+
+                if (await Task.WhenAny(navTcs.Task, Task.Delay(timeoutMs)) != navTcs.Task)
+                {
+                    Logger.LogError($"Navigation to {url} timed out after {timeoutMs}ms");
+                    return false;
+                }
+
+                // A redirect right after loading aborts the first navigation and starts
+                // another one; wait until nothing new has started for a moment.
+                var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+                while (DateTime.UtcNow < deadline &&
+                       (DateTime.UtcNow - lastNavStart).TotalMilliseconds < NavigationQuietMs)
+                {
+                    await Task.Delay(100);
+                }
+
+                return lastSuccess;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Navigation to {url} failed", ex);
+                return false;
+            }
+            finally
+            {
+                core.NavigationStarting -= onStarting;
+                core.NavigationCompleted -= onCompleted;
+            }
+        }
+
+        /// <summary>
+        /// Clicks the platform's new chat button, then waits out whatever it triggered:
+        /// some platforms reload the page, which would discard a prompt injected too early.
+        /// Returns false only when the page did not come back in a usable state.
+        /// </summary>
+        private async Task<bool> StartNewChatAndWaitAsync(AiPlatform platform)
+        {
+            var core = webView?.CoreWebView2;
+            if (core == null) return false;
+
+            string token = Guid.NewGuid().ToString("N");
+            bool navStarted = false;
+            DateTime lastNavStart = DateTime.MinValue;
+            var navCompletedTcs = new TaskCompletionSource<bool>();
+
+            void onStarting(object s, CoreWebView2NavigationStartingEventArgs args)
+            {
+                navStarted = true;
+                lastNavStart = DateTime.UtcNow;
+            }
+            void onCompleted(object s, CoreWebView2NavigationCompletedEventArgs args) { navCompletedTcs.TrySetResult(args.IsSuccess); }
+
+            core.NavigationStarting += onStarting;
+            core.NavigationCompleted += onCompleted;
+            try
+            {
+                bool clicked = await _pageInjector.StartNewChatAsync(webView, platform.NewChatSelector, token);
+                if (!clicked)
+                {
+                    // Either there is no new chat button, or the click already destroyed the
+                    // script context before it could answer. The marker tells the two apart:
+                    // it only survives as long as the original document does.
+                    string marker = await _pageInjector.GetPageTokenAsync(webView);
+                    if (!navStarted && marker == token)
+                    {
+                        // Nothing happened, the current page is still the one to inject into
+                        return true;
+                    }
+                }
+
+                UpdateStatus(LanguageManager.Instance["Main_Status_NewChat"]);
+
+                // Watch for a reload caused by the click
+                var observeDeadline = DateTime.UtcNow.AddMilliseconds(NewChatObserveMs);
+                while (DateTime.UtcNow < observeDeadline && !navStarted)
+                {
+                    await Task.Delay(100);
+                }
+
+                if (!navStarted)
+                {
+                    // Backstop for document swaps that raise no navigation event:
+                    // the marker only survives inside the original document.
+                    string current = await _pageInjector.GetPageTokenAsync(webView);
+                    navStarted = current != token;
+                }
+
+                if (navStarted)
+                {
+                    await Task.WhenAny(navCompletedTcs.Task, Task.Delay(NavigationTimeoutMs));
+
+                    var deadline = DateTime.UtcNow.AddMilliseconds(NavigationTimeoutMs);
+                    while (DateTime.UtcNow < deadline &&
+                           (DateTime.UtcNow - lastNavStart).TotalMilliseconds < NavigationQuietMs)
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("New chat handling failed", ex);
+            }
+            finally
+            {
+                core.NavigationStarting -= onStarting;
+                core.NavigationCompleted -= onCompleted;
+            }
+
+            // The DOM was rebuilt (either by the reload or by the SPA) — wait for it again
+            UpdateStatus(LanguageManager.Instance["Main_Status_WaitingPage"]);
+            var ready = await _pageInjector.WaitPageReadyAsync(webView, platform.InputSelector);
+            if (!ready.Success)
+            {
+                Logger.LogError($"Page not ready after new chat ({platform.Name}): {ready.Reason}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", ready.Message));
+                return false;
+            }
+            return true;
         }
 
         private async void ExecutePrompt(string prompt)
@@ -577,7 +775,7 @@ namespace AIHelper.Views
                 }
                 else if (await EnsureWebViewReadyAsync() && !string.IsNullOrEmpty(platform.Url))
                 {
-                    if (webView.CoreWebView2.Source != platform.Url)
+                    if (!IsSameSite(webView.CoreWebView2.Source, platform.Url))
                     {
                         webView.CoreWebView2.Navigate(platform.Url);
                         UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", platform.Name));

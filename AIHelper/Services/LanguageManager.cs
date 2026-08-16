@@ -175,6 +175,8 @@ namespace AIHelper.Services
             { "Main_Status_NavigatingTo", "正在导航到 {0}..." },
             { "Main_Status_PageLoadSuccess", "页面加载完成" },
             { "Main_Status_PageLoadFailed", "页面加载失败: {0}" },
+            { "Main_Status_WaitingPage", "正在等待页面就绪..." },
+            { "Main_Status_NewChat", "正在新建会话..." },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 内容" },
@@ -303,6 +305,8 @@ namespace AIHelper.Services
             { "Inject_InjectSuccess", "注入成功" },
             { "Inject_NotLoggedIn", "请先登录 AI 平台" },
             { "Inject_InputNotFound", "无法找到输入框，页面可能已更新" },
+            { "Inject_PageNotReady", "页面未就绪（加载超时），请重试" },
+            { "Inject_TextLost", "注入的内容被页面清除，请重试" },
             { "Inject_Failed", "注入失败" },
 
             // Selection Toolbar
@@ -382,6 +386,8 @@ namespace AIHelper.Services
             { "Main_Status_NavigatingTo", "Navigating to {0}..." },
             { "Main_Status_PageLoadSuccess", "Page loaded successfully" },
             { "Main_Status_PageLoadFailed", "Page load failed: {0}" },
+            { "Main_Status_WaitingPage", "Waiting for the page to be ready..." },
+            { "Main_Status_NewChat", "Starting a new chat..." },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 Content" },
@@ -510,6 +516,8 @@ namespace AIHelper.Services
             { "Inject_InjectSuccess", "Injected successfully" },
             { "Inject_NotLoggedIn", "Please log in to the AI platform first" },
             { "Inject_InputNotFound", "Input box not found, page structure may have changed" },
+            { "Inject_PageNotReady", "Page is not ready (load timed out), please retry" },
+            { "Inject_TextLost", "The injected text was cleared by the page, please retry" },
             { "Inject_Failed", "Injection failed" },
 
             // Selection Toolbar
