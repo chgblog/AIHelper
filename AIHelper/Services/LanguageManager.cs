@@ -159,6 +159,8 @@ namespace AIHelper.Services
 
             // MainWindow
             { "Main_Settings", "⚙ 设置" },
+            { "Main_UpdateAvailable", "有更新" },
+            { "Main_UpdateAvailable_Tip", "发现新版本 {0}（当前版本 {1}），点击打开下载页面" },
             { "Main_Status_Ready", "就绪" },
             { "Main_Status_WaitingBrowser", "正在等待浏览器组件就绪..." },
             { "Main_Status_BrowserInitFailed", "浏览器组件初始化失败: {0}" },
@@ -236,8 +238,6 @@ namespace AIHelper.Services
             { "Settings_About_OpenUrlError", "无法打开链接: {0}" },
             { "Settings_About_AutoCheckUpdate", "自动检测新版本" },
             { "Settings_About_AutoCheckUpdateTip", "启动程序 1 分钟后在后台检测 GitHub Release 是否有新版本" },
-            { "Update_NewVersionTitle", "发现新版本" },
-            { "Update_NewVersionMessage", "发现新版本 {0}（当前版本 {1}），是否打开下载页面？" },
 
             // PlatformEditWindow
             { "PlatformEdit_Title_Edit", "编辑平台" },
@@ -370,6 +370,8 @@ namespace AIHelper.Services
 
             // MainWindow
             { "Main_Settings", "⚙ Settings" },
+            { "Main_UpdateAvailable", "Update" },
+            { "Main_UpdateAvailable_Tip", "New version {0} is available (current: {1}). Click to open the download page." },
             { "Main_Status_Ready", "Ready" },
             { "Main_Status_WaitingBrowser", "Waiting for browser component..." },
             { "Main_Status_BrowserInitFailed", "Browser initialization failed: {0}" },
@@ -447,8 +449,6 @@ namespace AIHelper.Services
             { "Settings_About_OpenUrlError", "Cannot open link: {0}" },
             { "Settings_About_AutoCheckUpdate", "Auto-check for updates" },
             { "Settings_About_AutoCheckUpdateTip", "Check for new versions on GitHub Releases 1 minute after app startup" },
-            { "Update_NewVersionTitle", "New Version Available" },
-            { "Update_NewVersionMessage", "New version {0} is available (current: {1}). Open download page?" },
 
             // PlatformEditWindow
             { "PlatformEdit_Title_Edit", "Edit Platform" },

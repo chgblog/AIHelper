@@ -37,6 +37,7 @@ namespace AIHelper.Views
         private SettingsWindow _currentSettingsWindow;
         private WebView2 webView;
         private bool _currentWebViewUsesProxy;
+        private UpdateCheckService.UpdateInfo _availableUpdate;
 
         public bool IsExiting { get; set; } = false;
         public bool IsClosed { get; private set; } = false;
@@ -62,6 +63,11 @@ namespace AIHelper.Views
 
                 TextSelectionService.Instance.TextSelected += TextSelectionService_TextSelected;
                 UpdateTextSelectionServiceState();
+
+                // 新版本提示（后台检测完成后可能早于/晚于本窗口创建）
+                UpdateCheckService.UpdateAvailable += UpdateCheckService_UpdateAvailable;
+                LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
+                ShowUpdateIndicator(UpdateCheckService.AvailableUpdate);
 
                 var helper = new System.Windows.Interop.WindowInteropHelper(this);
                 var source = System.Windows.Interop.HwndSource.FromHwnd(helper.Handle);
@@ -803,6 +809,40 @@ namespace AIHelper.Views
             ShowSettings();
         }
 
+        private void UpdateCheckService_UpdateAvailable(object sender, UpdateCheckService.UpdateInfo info)
+        {
+            Dispatcher.Invoke(() => ShowUpdateIndicator(info));
+        }
+
+        private void LanguageManager_LanguageChanged(object sender, EventArgs e)
+        {
+            // 提示文案带版本号，无法通过绑定自动刷新
+            ShowUpdateIndicator(_availableUpdate);
+        }
+
+        /// <summary>
+        /// 显示/隐藏标题栏的新版本提示
+        /// </summary>
+        private void ShowUpdateIndicator(UpdateCheckService.UpdateInfo info)
+        {
+            _availableUpdate = info;
+
+            if (info == null)
+            {
+                btnUpdate.Visibility = Visibility.Collapsed;
+                btnUpdate.ToolTip = null;
+                return;
+            }
+
+            btnUpdate.ToolTip = LanguageManager.Instance.GetString("Main_UpdateAvailable_Tip", info.LatestVersion, info.CurrentVersion);
+            btnUpdate.Visibility = Visibility.Visible;
+        }
+
+        private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateCheckService.OpenUpdatePage(_availableUpdate?.UpdateUrl);
+        }
+
         public async void ShowSettings(int initialTabIndex = 0)
         {
             try
@@ -885,6 +925,9 @@ namespace AIHelper.Views
         protected override void OnClosed(EventArgs e)
         {
             IsClosed = true;
+            // 静态事件会持有窗口引用，窗口可能被重建，必须解绑
+            UpdateCheckService.UpdateAvailable -= UpdateCheckService_UpdateAvailable;
+            LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
             base.OnClosed(e);
         }
 

@@ -19,8 +19,58 @@ namespace AIHelper.Services
     public static class UpdateCheckService
     {
         private const string GitHubApiUrl = "https://api.github.com/repos/chgblog/AIHelper/releases/latest";
+        private const string DefaultUpdateUrl = "https://github.com/chgblog/AIHelper/releases";
         private const int DelayMinutes = 1;
         private const int TimeoutSeconds = 30;
+
+        /// <summary>
+        /// 检测到的新版本信息
+        /// </summary>
+        public class UpdateInfo
+        {
+            public string LatestVersion { get; set; }
+            public string CurrentVersion { get; set; }
+            public string UpdateUrl { get; set; }
+        }
+
+        /// <summary>
+        /// 已检测到的新版本；无新版本时为 null。
+        /// 供检测完成后才创建的窗口读取初始状态。
+        /// </summary>
+        public static UpdateInfo AvailableUpdate { get; private set; }
+
+        /// <summary>
+        /// 检测到新版本时触发（在 UI 线程）
+        /// </summary>
+        public static event EventHandler<UpdateInfo> UpdateAvailable;
+
+        /// <summary>
+        /// 在默认浏览器中打开更新页面
+        /// </summary>
+        public static void OpenUpdatePage(string updateUrl = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(updateUrl))
+                {
+                    updateUrl = AvailableUpdate?.UpdateUrl;
+                }
+                if (string.IsNullOrWhiteSpace(updateUrl))
+                {
+                    updateUrl = DefaultUpdateUrl;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = updateUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("UpdateCheckService: Failed to open update page", ex);
+            }
+        }
 
         /// <summary>
         /// 启动延迟检测（非阻塞，后台执行）
@@ -127,41 +177,30 @@ namespace AIHelper.Services
                     return;
                 }
 
-                // 有新版本，在 UI 线程提示用户
-                string remoteVersionStr = remoteVersion.ToString();
-                string currentVersionStr = currentVersion.ToString();
+                // 有新版本，不再弹窗，仅记录状态并通知界面显示标题栏提示
+                string updateUrl = settings.UpdateUrl;
+                if (string.IsNullOrWhiteSpace(updateUrl))
+                {
+                    updateUrl = DefaultUpdateUrl;
+                }
+
+                var info = new UpdateInfo
+                {
+                    LatestVersion = remoteVersion.ToString(),
+                    CurrentVersion = currentVersion.ToString(),
+                    UpdateUrl = updateUrl
+                };
 
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     try
                     {
-                        string title = LanguageManager.Instance["Update_NewVersionTitle"];
-                        string message = LanguageManager.Instance.GetString("Update_NewVersionMessage", remoteVersionStr, currentVersionStr);
-
-                        var result = MessageBox.Show(
-                            message,
-                            title,
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Information);
-
-                        if (result == MessageBoxResult.Yes)
-                        {
-                            string updateUrl = settings.UpdateUrl;
-                            if (string.IsNullOrWhiteSpace(updateUrl))
-                            {
-                                updateUrl = "https://github.com/chgblog/AIHelper/releases";
-                            }
-
-                            Process.Start(new ProcessStartInfo
-                            {
-                                FileName = updateUrl,
-                                UseShellExecute = true
-                            });
-                        }
+                        AvailableUpdate = info;
+                        UpdateAvailable?.Invoke(null, info);
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"UpdateCheckService: Error showing update dialog: {ex.Message}");
+                        Debug.WriteLine($"UpdateCheckService: Error notifying update availability: {ex.Message}");
                     }
                 });
             }

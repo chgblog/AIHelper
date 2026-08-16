@@ -25,20 +25,32 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                
-                <TextBlock Grid.Column="0" Text="AIHelper" Foreground="#7c3aed" FontWeight="Bold" 
+
+                <TextBlock Grid.Column="0" Text="AIHelper" Foreground="#7c3aed" FontWeight="Bold"
                            VerticalAlignment="Center" Margin="15,0,0,0"/>
-                
-                <ComboBox x:Name="cmbPlatforms" Grid.Column="1" Width="200" HorizontalAlignment="Left" 
+
+                <ComboBox x:Name="cmbPlatforms" Grid.Column="1" Width="200" HorizontalAlignment="Left"
                           Margin="20,0,0,0" VerticalAlignment="Center" SelectionChanged="CmbPlatforms_SelectionChanged"
                           DisplayMemberPath="Name" />
-                          
-                <Button x:Name="btnSettings" Grid.Column="2" Content="{Binding [Main_Settings], Source={x:Static services:LanguageManager.Instance}}" Padding="8,0" 
-                        Click="BtnSettings_Click" Style="{StaticResource TitleBarButtonStyle}" 
+
+                <!-- 新版本提示：检测到更新后才显示，点击打开更新页 -->
+                <Button x:Name="btnUpdate" Grid.Column="2" Visibility="Collapsed" Padding="8,0"
+                        Click="BtnUpdate_Click" Style="{StaticResource TitleBarButtonStyle}"
+                        Margin="0,0,6,0" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" Fill="#e5484d" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding [Main_UpdateAvailable], Source={x:Static services:LanguageManager.Instance}}"
+                                   Foreground="#ffffff" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnSettings" Grid.Column="3" Content="{Binding [Main_Settings], Source={x:Static services:LanguageManager.Instance}}" Padding="8,0"
+                        Click="BtnSettings_Click" Style="{StaticResource TitleBarButtonStyle}"
                         Margin="0,0,10,0"/>
-                        
-                <StackPanel Grid.Column="3" Orientation="Horizontal">
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
                     <Button Content="—" Width="45" Click="BtnMinimize_Click" 
                             Style="{StaticResource TitleBarButtonStyle}"/>
                     <Button Content="✕" Width="45" Click="BtnClose_Click" 
