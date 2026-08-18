@@ -1,3 +1,5 @@
+
+
 # AIHelper
 
 **English** | [中文](README_ZH.md)
@@ -168,7 +170,7 @@ AIHelper/
 
 ### 3. Single-File Packaging (Single EXE)
 
-This project integrates **Costura.Fody** to merge all dependency DLLs and `injector.js` static resources into a single standalone `.exe` file:
+This project integrates **Costura.Fody** to merge all dependency DLLs and the embedded JavaScript resources (`injector.js` and `element-picker.js`) into a single standalone `.exe` file:
 
 - **Build via command line**:
   ```bash
@@ -230,4 +232,3 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
 ## 📄 License
 
 Released under the [GNU General Public License v3.0](LICENSE).
-
