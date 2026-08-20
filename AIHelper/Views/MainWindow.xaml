@@ -9,13 +9,89 @@
         Title="{Binding [AppName], Source={x:Static services:LanguageManager.Instance}}" Height="600" Width="800" Icon="/icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="QuickActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#252538"/>
+            <Setter Property="Foreground" Value="#d0d0e0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3a3a5e"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3a3a5e"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#7c3aed"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#7c3aed"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#7c3aed"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PopupActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#252538"/>
+            <Setter Property="Foreground" Value="#e0e0e0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3a3a5e"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="3,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3a3a5e"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#7c3aed"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#7c3aed"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#7c3aed"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Border x:Name="mainBorder" Background="#1a1a2e" CornerRadius="8" BorderBrush="#3a3a5e" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="30"/>
+                <RowDefinition Height="34"/>
             </Grid.RowDefinitions>
 
             <!-- Custom Title Bar -->
@@ -76,12 +152,43 @@
             <!-- WebView2 Container -->
             <Grid x:Name="webViewContainer" Grid.Row="2"/>
 
-            <!-- Status Bar -->
-            <StatusBar Grid.Row="3" Background="#161622" Foreground="#a0a0b0">
-                <StatusBarItem>
-                    <TextBlock x:Name="txtStatus" Text="{Binding [Main_Status_Ready], Source={x:Static services:LanguageManager.Instance}}"/>
-                </StatusBarItem>
-            </StatusBar>
+            <!-- Bottom Taskbar (Status & Quick Actions) -->
+            <Grid Grid.Row="3" Background="#161622">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="txtStatus" Grid.Column="0" 
+                           Text="{Binding [Main_Status_Ready], Source={x:Static services:LanguageManager.Instance}}"
+                           Foreground="#a0a0b0" VerticalAlignment="Center" Margin="12,0,8,0"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <StackPanel x:Name="pnlQuickActions" Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                <!-- More Actions Floating Popup -->
+                <Popup x:Name="popupMoreActions" AllowsTransparency="True" StaysOpen="False"
+                       Placement="Top" PopupAnimation="Fade" VerticalOffset="-4">
+                    <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" 
+                            CornerRadius="8" Padding="10" MaxWidth="500" MaxHeight="320">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" Opacity="0.5" BlurRadius="12" ShadowDepth="3"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="{Binding [Main_QuickActions_AllTitle], Source={x:Static services:LanguageManager.Instance}}" 
+                                       Foreground="#a0a0b0" FontSize="12" FontWeight="SemiBold" Margin="2,0,0,8"/>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <UniformGrid x:Name="pnlPopupActions" Columns="5"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Popup>
+            </Grid>
         </Grid>
     </Border>
 </Window>

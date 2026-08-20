@@ -183,6 +183,8 @@ namespace AIHelper.Services
             { "Main_Status_PageLoadFailed", "页面加载失败: {0}" },
             { "Main_Status_WaitingPage", "正在等待页面就绪..." },
             { "Main_Status_NewChat", "正在新建会话..." },
+            { "Main_QuickActions_More", "更多 ▾" },
+            { "Main_QuickActions_AllTitle", "更多操作" },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 内容" },
@@ -399,6 +401,8 @@ namespace AIHelper.Services
             { "Main_Status_PageLoadFailed", "Page load failed: {0}" },
             { "Main_Status_WaitingPage", "Waiting for the page to be ready..." },
             { "Main_Status_NewChat", "Starting a new chat..." },
+            { "Main_QuickActions_More", "More ▾" },
+            { "Main_QuickActions_AllTitle", "More Actions" },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 Content" },

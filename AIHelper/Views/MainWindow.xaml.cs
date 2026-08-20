@@ -137,6 +137,7 @@ namespace AIHelper.Views
                 }
 
                 LoadPlatforms();
+                LoadQuickActions();
 
                 await initTask;
             }
@@ -580,6 +581,140 @@ namespace AIHelper.Views
             await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
         }
 
+        private const int MaxQuickActionsOnBar = 5;
+
+        private void LoadQuickActions()
+        {
+            if (pnlQuickActions == null || pnlPopupActions == null) return;
+
+            pnlQuickActions.Children.Clear();
+            pnlPopupActions.Children.Clear();
+
+            if (_settings?.Actions == null || _settings.Actions.Count == 0)
+            {
+                if (popupMoreActions != null) popupMoreActions.IsOpen = false;
+                return;
+            }
+
+            var sortedActions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
+            bool hasMore = sortedActions.Count > MaxQuickActionsOnBar;
+            var barActions = hasMore ? sortedActions.Take(MaxQuickActionsOnBar) : sortedActions;
+
+            // 1. Add top actions to bottom taskbar
+            foreach (var action in barActions)
+            {
+                var btn = new Button
+                {
+                    Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
+                    Tag = action,
+                    ToolTip = action.Prompt,
+                    Style = (Style)FindResource("QuickActionButtonStyle")
+                };
+                btn.Click += QuickActionButton_Click;
+                pnlQuickActions.Children.Add(btn);
+            }
+
+            // 2. Add "More" button if more than 5 actions
+            if (hasMore)
+            {
+                string moreText = LanguageManager.Instance["Main_QuickActions_More"];
+                if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
+
+                var moreBtn = new Button
+                {
+                    Content = moreText,
+                    ToolTip = LanguageManager.Instance["Main_QuickActions_AllTitle"],
+                    Style = (Style)FindResource("QuickActionButtonStyle")
+                };
+
+                moreBtn.Click += (s, e) =>
+                {
+                    popupMoreActions.PlacementTarget = moreBtn;
+                    popupMoreActions.IsOpen = !popupMoreActions.IsOpen;
+                };
+
+                pnlQuickActions.Children.Add(moreBtn);
+
+                // 3. Populate remaining actions (after the first 5) into floating popup
+                var popupActions = sortedActions.Skip(MaxQuickActionsOnBar).ToList();
+                pnlPopupActions.Columns = Math.Min(5, Math.Max(1, popupActions.Count));
+
+                foreach (var action in popupActions)
+                {
+                    var popupBtn = new Button
+                    {
+                        Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
+                        Tag = action,
+                        ToolTip = action.Prompt,
+                        Style = (Style)FindResource("PopupActionButtonStyle")
+                    };
+                    popupBtn.Click += (s, e) =>
+                    {
+                        popupMoreActions.IsOpen = false;
+                        QuickActionButton_Click(popupBtn, e);
+                    };
+                    pnlPopupActions.Children.Add(popupBtn);
+                }
+            }
+        }
+
+        private async void QuickActionButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is ActionItem action)
+            {
+                await QuickInjectActionAsync(action);
+            }
+        }
+
+        /// <summary>
+        /// 快速注入提示词到当前平台输入框：不新建会话、只注入提示词、去除 {content} 占位符、不自动提交
+        /// </summary>
+        private async Task QuickInjectActionAsync(ActionItem action)
+        {
+            if (action == null) return;
+
+            ShowAndActivate();
+
+            if (!await EnsureWebViewReadyAsync()) return;
+
+            var platform = _settings?.GetActivePlatform();
+            if (platform == null)
+            {
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", "No platform"));
+                return;
+            }
+
+            // 只注入提示词，去除 {content}
+            string prompt = (action.Prompt ?? "").Replace("{content}", "");
+
+            UpdateStatus(LanguageManager.Instance["Main_Status_WaitingPage"]);
+            var ready = await _pageInjector.WaitPageReadyAsync(webView, platform.InputSelector);
+            if (!ready.Success)
+            {
+                Logger.LogError($"Page not ready before quick injection ({platform.Name}): {ready.Reason}");
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", ready.Message));
+                return;
+            }
+
+            UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Executing", action.Name));
+
+            // 不新开会话，直接注入到当前输入框，autoSubmit 为 false
+            var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform.InputSelector, platform.SubmitSelector, autoSubmit: false);
+            if (!result.Success)
+            {
+                Logger.LogError($"Quick injection failed ({platform.Name}): {result.Reason}");
+            }
+            else
+            {
+                webView?.Focus();
+                Keyboard.Focus(webView);
+            }
+
+            UpdateStatus(result.Success
+                ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message)
+                : LanguageManager.Instance.GetString("Main_Status_Failed", result.Message));
+        }
+
         /// <summary>
         /// Gets the platform to use for the given action.
         /// If the action has a specified PlatformId, returns that platform;
@@ -664,6 +799,11 @@ namespace AIHelper.Views
             if (!result.Success)
             {
                 Logger.LogError($"Injection failed ({platform.Name}): {result.Reason}");
+            }
+            else if (!autoSubmit)
+            {
+                webView?.Focus();
+                Keyboard.Focus(webView);
             }
             UpdateStatus(result.Success
                 ? LanguageManager.Instance.GetString("Main_Status_Success", result.Message)
@@ -1003,6 +1143,7 @@ namespace AIHelper.Views
             // 提示文案带版本号，无法通过绑定自动刷新
             ShowUpdateIndicator(_availableUpdate);
             UpdateMaximizeRestoreState();
+            LoadQuickActions();
         }
 
         /// <summary>
@@ -1052,6 +1193,7 @@ namespace AIHelper.Views
                     RegisterHotkeys();
                     UpdateTextSelectionServiceState();
                     LoadPlatforms();
+                    LoadQuickActions();
 
                     ((App)Application.Current)?.UpdateTrayMenu();
 
@@ -1083,6 +1225,7 @@ namespace AIHelper.Views
         {
             _settings = SettingsService.Instance.Load();
             UpdateTextSelectionServiceState();
+            LoadQuickActions();
             ((App)Application.Current)?.UpdateTrayMenu();
         }
 

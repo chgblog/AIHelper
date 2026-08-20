@@ -18,6 +18,41 @@
         return false;
     }
 
+    function setCursorToEnd(el) {
+        if (!el) return;
+        try {
+            el.focus();
+            const tag = (el.tagName || '').toLowerCase();
+            if (tag === 'textarea' || tag === 'input') {
+                const len = (el.value || '').length;
+                el.setSelectionRange(len, len);
+                el.scrollTop = el.scrollHeight;
+            } else {
+                // ContentEditable
+                const selection = window.getSelection();
+                if (selection) {
+                    const range = document.createRange();
+                    let lastNode = el;
+                    while (lastNode.lastChild) {
+                        lastNode = lastNode.lastChild;
+                    }
+                    if (lastNode && lastNode.nodeType === 3) { // TEXT_NODE
+                        range.setStart(lastNode, lastNode.textContent.length);
+                        range.setEnd(lastNode, lastNode.textContent.length);
+                    } else {
+                        range.selectNodeContents(el);
+                        range.collapse(false);
+                    }
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+                el.scrollTop = el.scrollHeight;
+            }
+        } catch (e) {
+            console.error("setCursorToEnd error:", e);
+        }
+    }
+
     function doInjectText(inputEl, text) {
         if (!inputEl) return;
         inputEl.focus();
@@ -49,6 +84,8 @@
                     data: text
                 }));
             } catch (e) {}
+
+            setCursorToEnd(inputEl);
         } else {
             // ContentEditable
             document.execCommand('selectAll', false, null);
@@ -57,6 +94,7 @@
                 inputEl.textContent = text;
             }
             inputEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            setCursorToEnd(inputEl);
         }
     }
 
@@ -286,7 +324,7 @@
                     }
                 }
 
-                // 4. Auto-submit
+                // 4. Auto-submit or focus to end
                 if (autoSubmit) {
                     await sleep(200);
                     try {
@@ -294,8 +332,24 @@
                     } catch (e) {
                         console.error("Auto submit error:", e);
                     }
+                } else {
+                    // When not submitting (e.g. prompt injected from status bar), focus and move cursor to end
+                    setCursorToEnd(currentInput);
                 }
 
+                return { success: true, reason: "SUCCESS" };
+            } catch (err) {
+                return { success: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Focuses the input element and places cursor at the end
+        focusToEnd: function(inputSelector) {
+            try {
+                const platform = detectPlatform();
+                const inputEl = findInput(platform, inputSelector);
+                if (!inputEl) return { success: false, reason: "INPUT_NOT_FOUND" };
+                setCursorToEnd(inputEl);
                 return { success: true, reason: "SUCCESS" };
             } catch (err) {
                 return { success: false, reason: "EXCEPTION", message: err.message };
