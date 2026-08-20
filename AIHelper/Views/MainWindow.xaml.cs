@@ -4,10 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using AIHelper.Models;
 using AIHelper.Services;
 using Microsoft.Web.WebView2.Core;
@@ -17,6 +19,51 @@ namespace AIHelper.Views
 {
     public partial class MainWindow : Window
     {
+        private const int WM_GETMINMAXINFO = 0x0024;
+        private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int x;
+            public int y;
+            public POINT(int x, int y) { this.x = x; this.y = y; }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private class MONITORINFO
+        {
+            public int cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+            public RECT rcMonitor = new RECT();
+            public RECT rcWork = new RECT();
+            public int dwFlags = 0;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int left;
+            public int top;
+            public int right;
+            public int bottom;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr handle, uint flags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, MONITORINFO lpmi);
+
         // Max time to wait for a top-level navigation to complete
         private const int NavigationTimeoutMs = 30000;
         // A page is considered settled when no new navigation starts within this window
@@ -47,6 +94,7 @@ namespace AIHelper.Views
         {
             InitializeComponent();
             this.SourceInitialized += MainWindow_SourceInitialized;
+            this.StateChanged += MainWindow_StateChanged;
         }
 
         private async void MainWindow_SourceInitialized(object sender, EventArgs e)
@@ -106,7 +154,31 @@ namespace AIHelper.Views
                 Dispatcher.Invoke(() => ShowAndActivate());
                 handled = true;
             }
+            else if (msg == WM_GETMINMAXINFO)
+            {
+                WmGetMinMaxInfo(hwnd, lParam);
+                handled = true;
+            }
             return IntPtr.Zero;
+        }
+
+        private static void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+        {
+            var mmi = (MINMAXINFO)Marshal.PtrToStructure(lParam, typeof(MINMAXINFO));
+            IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor != IntPtr.Zero)
+            {
+                MONITORINFO monitorInfo = new MONITORINFO();
+                GetMonitorInfo(monitor, monitorInfo);
+                RECT rcWorkArea = monitorInfo.rcWork;
+                RECT rcMonitorArea = monitorInfo.rcMonitor;
+
+                mmi.ptMaxPosition.x = Math.Abs(rcWorkArea.left - rcMonitorArea.left);
+                mmi.ptMaxPosition.y = Math.Abs(rcWorkArea.top - rcMonitorArea.top);
+                mmi.ptMaxSize.x = Math.Abs(rcWorkArea.right - rcWorkArea.left);
+                mmi.ptMaxSize.y = Math.Abs(rcWorkArea.bottom - rcWorkArea.top);
+            }
+            Marshal.StructureToPtr(mmi, lParam, true);
         }
 
         private void UpdateTextSelectionServiceState()
@@ -466,7 +538,10 @@ namespace AIHelper.Views
         public void ShowAndActivate()
         {
             this.Show();
-            this.WindowState = WindowState.Normal;
+            if (this.WindowState == WindowState.Minimized)
+            {
+                this.WindowState = WindowState.Normal;
+            }
             this.Activate();
             this.Topmost = true;
             this.Topmost = false;
@@ -814,10 +889,103 @@ namespace AIHelper.Views
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_PageLoadFailed", e.WebErrorStatus));
         }
 
+        private Point _dragStartPoint;
+        private bool _isPotentialDrag;
+
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ClickCount == 2)
+            {
+                _isPotentialDrag = false;
+                ToggleMaximize();
+                return;
+            }
+
             if (e.ButtonState == MouseButtonState.Pressed)
-                this.DragMove();
+            {
+                if (this.WindowState == WindowState.Maximized)
+                {
+                    _isPotentialDrag = true;
+                    _dragStartPoint = e.GetPosition(this);
+                }
+                else
+                {
+                    this.DragMove();
+                }
+            }
+        }
+
+        private void TitleBar_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_isPotentialDrag && e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point currentPoint = e.GetPosition(this);
+                Vector diff = _dragStartPoint - currentPoint;
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _isPotentialDrag = false;
+
+                    var screenPos = PointToScreen(currentPoint);
+                    double percentX = currentPoint.X / this.ActualWidth;
+
+                    this.WindowState = WindowState.Normal;
+                    this.Left = screenPos.X - (this.RestoreBounds.Width * percentX);
+                    this.Top = screenPos.Y - _dragStartPoint.Y;
+
+                    this.DragMove();
+                }
+            }
+        }
+
+        private void TitleBar_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _isPotentialDrag = false;
+        }
+
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMaximize();
+        }
+
+        private void ToggleMaximize()
+        {
+            this.WindowState = this.WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            UpdateMaximizeRestoreState();
+        }
+
+        private void UpdateMaximizeRestoreState()
+        {
+            if (this.WindowState == WindowState.Maximized)
+            {
+                if (pathMaximize != null)
+                    pathMaximize.Data = Geometry.Parse("M 2.5,0.5 L 9.5,0.5 L 9.5,7.5 L 7.5,7.5 M 2.5,2.5 L 2.5,0.5 M 0.5,2.5 L 7.5,2.5 L 7.5,9.5 L 0.5,9.5 Z");
+                if (btnMaximize != null)
+                    btnMaximize.ToolTip = LanguageManager.Instance["Main_Restore"];
+                if (mainBorder != null)
+                {
+                    mainBorder.CornerRadius = new CornerRadius(0);
+                    mainBorder.BorderThickness = new Thickness(0);
+                }
+            }
+            else if (this.WindowState == WindowState.Normal)
+            {
+                if (pathMaximize != null)
+                    pathMaximize.Data = Geometry.Parse("M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z");
+                if (btnMaximize != null)
+                    btnMaximize.ToolTip = LanguageManager.Instance["Main_Maximize"];
+                if (mainBorder != null)
+                {
+                    mainBorder.CornerRadius = new CornerRadius(8);
+                    mainBorder.BorderThickness = new Thickness(1);
+                }
+            }
         }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -834,6 +1002,7 @@ namespace AIHelper.Views
         {
             // 提示文案带版本号，无法通过绑定自动刷新
             ShowUpdateIndicator(_availableUpdate);
+            UpdateMaximizeRestoreState();
         }
 
         /// <summary>
@@ -941,6 +1110,7 @@ namespace AIHelper.Views
         protected override void OnClosed(EventArgs e)
         {
             IsClosed = true;
+            this.StateChanged -= MainWindow_StateChanged;
             // 静态事件会持有窗口引用，窗口可能被重建，必须解绑
             UpdateCheckService.UpdateAvailable -= UpdateCheckService_UpdateAvailable;
             LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;

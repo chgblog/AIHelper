@@ -158,6 +158,10 @@ namespace AIHelper.Services
             { "None", "无" },
 
             // MainWindow
+            { "Main_Minimize", "最小化" },
+            { "Main_Maximize", "最大化" },
+            { "Main_Restore", "向下还原" },
+            { "Main_Close", "关闭" },
             { "Main_Settings", "⚙ 设置" },
             { "Main_UpdateAvailable", "有更新" },
             { "Main_UpdateAvailable_Tip", "发现新版本 {0}（当前版本 {1}），点击打开下载页面" },
@@ -370,6 +374,10 @@ namespace AIHelper.Services
             { "None", "None" },
 
             // MainWindow
+            { "Main_Minimize", "Minimize" },
+            { "Main_Maximize", "Maximize" },
+            { "Main_Restore", "Restore" },
+            { "Main_Close", "Close" },
             { "Main_Settings", "⚙ Settings" },
             { "Main_UpdateAvailable", "Update" },
             { "Main_UpdateAvailable_Tip", "New version {0} is available (current: {1}). Click to open the download page." },

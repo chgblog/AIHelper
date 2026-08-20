@@ -9,7 +9,7 @@
         Title="{Binding [AppName], Source={x:Static services:LanguageManager.Instance}}" Height="600" Width="800" Icon="/icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
-    <Border Background="#1a1a2e" CornerRadius="8" BorderBrush="#3a3a5e" BorderThickness="1">
+    <Border x:Name="mainBorder" Background="#1a1a2e" CornerRadius="8" BorderBrush="#3a3a5e" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
@@ -19,7 +19,8 @@
             </Grid.RowDefinitions>
 
             <!-- Custom Title Bar -->
-            <Grid Grid.Row="0" Background="#161622" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Grid Grid.Row="0" Background="#161622" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                  MouseMove="TitleBar_MouseMove" MouseLeftButtonUp="TitleBar_MouseLeftButtonUp">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -52,8 +53,18 @@
 
                 <StackPanel Grid.Column="4" Orientation="Horizontal">
                     <Button Content="—" Width="45" Click="BtnMinimize_Click" 
+                            ToolTip="{Binding [Main_Minimize], Source={x:Static services:LanguageManager.Instance}}"
                             Style="{StaticResource TitleBarButtonStyle}"/>
+                    <Button x:Name="btnMaximize" Width="45" Click="BtnMaximize_Click" 
+                            ToolTip="{Binding [Main_Maximize], Source={x:Static services:LanguageManager.Instance}}"
+                            Style="{StaticResource TitleBarButtonStyle}">
+                        <Path x:Name="pathMaximize" Width="10" Height="10" 
+                              Data="M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z" 
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                              StrokeThickness="1" SnapsToDevicePixels="True"/>
+                    </Button>
                     <Button Content="✕" Width="45" Click="BtnClose_Click" 
+                            ToolTip="{Binding [Main_Close], Source={x:Static services:LanguageManager.Instance}}"
                             Style="{StaticResource TitleBarCloseButtonStyle}"/>
                 </StackPanel>
             </Grid>
