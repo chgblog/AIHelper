@@ -1,14 +1,15 @@
-﻿// Copyright (C) 2026 chgblog
+// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Automation;
-using System.Windows.Automation.Text;
+using Interop.UIAutomationClient;
 
 namespace AIHelper.Services
 {
@@ -23,6 +24,21 @@ namespace AIHelper.Services
         /// 获取服务单例
         /// </summary>
         public static TextSelectionService Instance => _instance.Value;
+
+        private static readonly Lazy<IUIAutomation> _automation = new Lazy<IUIAutomation>(CreateAutomationInstance);
+        private const int UIA_TextPatternId = 10014;
+
+        private static IUIAutomation CreateAutomationInstance()
+        {
+            try
+            {
+                return new CUIAutomation8();
+            }
+            catch
+            {
+                return new CUIAutomation();
+            }
+        }
 
         /// <summary>
         /// 划词成功时触发。参数: selectedText, screenPosition (鼠标位置)
@@ -465,21 +481,31 @@ namespace AIHelper.Services
         }
 
         /// <summary>
-        /// 使用 UI Automation 获取选中的文本
+        /// 使用原生 COM IUIAutomation 获取选中的文本
         /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
         private string GetSelectedTextViaUIAutomation(Point mousePos)
         {
+            IUIAutomationElement element = null;
             try
             {
+                var automation = _automation.Value;
+                if (automation == null) return null;
+
                 // 1. 优先尝试从鼠标所在的物理屏幕位置获取 AutomationElement
-                AutomationElement element = null;
+                tagPOINT pt = new tagPOINT { x = (int)mousePos.X, y = (int)mousePos.Y };
                 try
                 {
-                    element = AutomationElement.FromPoint(new System.Windows.Point(mousePos.X, mousePos.Y));
+                    element = automation.ElementFromPoint(pt);
+                }
+                catch (COMException ex)
+                {
+                    Logger.LogWarning($"TextSelectionService: ElementFromPoint COMException (0x{ex.ErrorCode:X8}): {ex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning($"TextSelectionService: UIAutomation FromPoint failed at ({mousePos.X},{mousePos.Y}). {ex.GetType().Name}: {ex.Message}");
+                    Logger.LogWarning($"TextSelectionService: ElementFromPoint failed at ({mousePos.X},{mousePos.Y}). {ex.GetType().Name}: {ex.Message}");
                 }
 
                 if (element != null)
@@ -492,10 +518,11 @@ namespace AIHelper.Services
                 }
 
                 // 2. 若根据 Point 未能提取选中文本，尝试从系统全局焦点元素获取
+                IUIAutomationElement focusedElement = null;
                 try
                 {
-                    AutomationElement focusedElement = AutomationElement.FocusedElement;
-                    if (focusedElement != null && focusedElement != element)
+                    focusedElement = automation.GetFocusedElement();
+                    if (focusedElement != null)
                     {
                         string text = ExtractSelectedTextFromElement(focusedElement);
                         if (!string.IsNullOrWhiteSpace(text))
@@ -504,58 +531,129 @@ namespace AIHelper.Services
                         }
                     }
                 }
+                catch (COMException ex)
+                {
+                    Logger.LogWarning($"TextSelectionService: GetFocusedElement COMException (0x{ex.ErrorCode:X8}): {ex.Message}");
+                }
                 catch (Exception ex)
                 {
                     Logger.LogWarning($"TextSelectionService: UIAutomation FocusedElement failed. {ex.GetType().Name}: {ex.Message}");
+                }
+                finally
+                {
+                    if (focusedElement != null)
+                    {
+                        try { Marshal.ReleaseComObject(focusedElement); } catch { }
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError("TextSelectionService: GetSelectedTextViaUIAutomation failed.", ex);
             }
+            finally
+            {
+                if (element != null)
+                {
+                    try { Marshal.ReleaseComObject(element); } catch { }
+                }
+            }
 
             return null;
         }
 
         /// <summary>
-        /// 从 AutomationElement 中尝试提取 TextPattern 选中的文本
+        /// 从 IUIAutomationElement 中尝试提取 TextPattern 选中的文本
         /// </summary>
-        private string ExtractSelectedTextFromElement(AutomationElement element)
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private string ExtractSelectedTextFromElement(IUIAutomationElement element)
         {
             if (element == null) return null;
 
+            IUIAutomationTextPattern textPattern = null;
+            IUIAutomationTextRangeArray selectionRanges = null;
+
             try
             {
-                // 尝试获取 TextPattern
-                if (element.TryGetCurrentPattern(TextPattern.Pattern, out object patternObj))
+                object patternObj = null;
+                try
                 {
-                    TextPattern textPattern = patternObj as TextPattern;
-                    if (textPattern != null)
+                    patternObj = element.GetCurrentPattern(UIA_TextPatternId);
+                }
+                catch (COMException ex)
+                {
+                    Logger.LogWarning($"TextSelectionService: GetCurrentPattern COMException (0x{ex.ErrorCode:X8}): {ex.Message}");
+                    return null;
+                }
+
+                textPattern = patternObj as IUIAutomationTextPattern;
+                if (textPattern == null) return null;
+
+                try
+                {
+                    selectionRanges = textPattern.GetSelection();
+                }
+                catch (COMException ex)
+                {
+                    Logger.LogWarning($"TextSelectionService: TextPattern.GetSelection COMException (0x{ex.ErrorCode:X8}): {ex.Message}");
+                    return null;
+                }
+
+                if (selectionRanges != null && selectionRanges.Length > 0)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    int count = selectionRanges.Length;
+
+                    for (int i = 0; i < count; i++)
                     {
-                        TextPatternRange[] selectionRanges = textPattern.GetSelection();
-                        if (selectionRanges != null && selectionRanges.Length > 0)
+                        IUIAutomationTextRange range = null;
+                        try
                         {
-                            StringBuilder sb = new StringBuilder();
-                            foreach (var range in selectionRanges)
+                            range = selectionRanges.GetElement(i);
+                            if (range != null)
                             {
-                                string rangeText = range.GetText(-1);
+                                // 限制单次获取最多 10000 字符，避免传入 -1 导致 Chromium 内部缓冲区异常
+                                string rangeText = range.GetText(10000);
                                 if (!string.IsNullOrEmpty(rangeText))
                                 {
                                     sb.Append(rangeText);
                                 }
                             }
-
-                            if (sb.Length > 0)
+                        }
+                        catch (COMException ex)
+                        {
+                            Logger.LogWarning($"TextSelectionService: Range.GetText COMException (0x{ex.ErrorCode:X8}): {ex.Message}");
+                        }
+                        finally
+                        {
+                            if (range != null)
                             {
-                                return sb.ToString();
+                                try { Marshal.ReleaseComObject(range); } catch { }
                             }
                         }
+                    }
+
+                    if (sb.Length > 0)
+                    {
+                        return sb.ToString();
                     }
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogWarning($"TextSelectionService: ExtractSelectedTextFromElement failed. {ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                if (selectionRanges != null)
+                {
+                    try { Marshal.ReleaseComObject(selectionRanges); } catch { }
+                }
+                if (textPattern != null)
+                {
+                    try { Marshal.ReleaseComObject(textPattern); } catch { }
+                }
             }
 
             return null;

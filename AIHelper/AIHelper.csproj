@@ -11,7 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <Title>AIHelper</Title>
     <Authors>chgblog</Authors>
-    <Version>0.7.1</Version>
+    <Version>0.7.2</Version>
     <Company>chgblog</Company>
     <Product>AIHelper</Product>
     <PackageProjectUrl>https://github.com/chgblog/AIHelper</PackageProjectUrl>
@@ -27,6 +27,7 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
     <PackageReference Include="Newtonsoft.Json" Version="13.*" />
     <PackageReference Include="Costura.Fody" Version="5.*" PrivateAssets="all" />
+    <PackageReference Include="Interop.UIAutomationClient" Version="10.*" />
   </ItemGroup>
 
   <ItemGroup>
