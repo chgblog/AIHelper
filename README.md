@@ -191,6 +191,22 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
 
 ---
 
+## Verify GitHub Actions
+
+Verify that the downloaded file is automatically compiled and packaged from source code by GitHub Actions.
+
+- **Verify the file hash (Windows PowerShell):**
+```
+Get-FileHash .\AIHelper.zip -Algorithm SHA256
+```
+
+- **Verify the official GitHub build attestation (using GitHub CLI):**
+```
+gh attestation verify AIHelper.zip --repo chgblog/AIHelperClient
+```
+
+---
+
 ## 🔗 Community
 
 - **[linux.do](https://linux.do)** - A community you always feel like visiting.
