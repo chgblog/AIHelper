@@ -14,14 +14,14 @@ namespace AIHelper.Models
         public string PanelHotkeyKey { get; set; } = "Space";
 
         /// <summary>
-        /// 打开主界面快捷键修饰键（默认 Ctrl+Alt）
+        /// 打开主界面快捷键修饰键（默认 Shift）
         /// </summary>
-        public string MainWindowHotkeyModifiers { get; set; } = "Ctrl+Alt";
+        public string MainWindowHotkeyModifiers { get; set; } = "Shift";
 
         /// <summary>
-        /// 打开主界面快捷键主键（默认 1）
+        /// 打开主界面快捷键主键（默认 Space）
         /// </summary>
-        public string MainWindowHotkeyKey { get; set; } = "D1";
+        public string MainWindowHotkeyKey { get; set; } = "Space";
 
         public List<ActionItem> Actions { get; set; } = new List<ActionItem>();
         public bool IsFirstRun { get; set; } = true;

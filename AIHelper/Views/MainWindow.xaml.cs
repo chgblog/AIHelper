@@ -64,6 +64,14 @@ namespace AIHelper.Views
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern bool GetMonitorInfo(IntPtr hMonitor, MONITORINFO lpmi);
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+        private const uint GA_ROOT = 2;
+
         // Max time to wait for a top-level navigation to complete
         private const int NavigationTimeoutMs = 30000;
         // A page is considered settled when no new navigation starts within this window
@@ -561,12 +569,80 @@ namespace AIHelper.Views
             }
             else if (id == _mainWindowHotkeyId)
             {
-                ShowAndActivate();
+                ToggleMainWindow();
             }
             else if (_hotkeyActionMap.TryGetValue(id, out var action))
             {
                 ExecuteAction(action);
             }
+        }
+
+        /// <summary>
+        /// 循环切换主界面显示与隐藏：未处于前台激活状态时打开并激活，已处于前台激活状态时关闭（隐藏到托盘）
+        /// </summary>
+        public void ToggleMainWindow()
+        {
+            if (IsMainWindowActive())
+            {
+                if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
+                {
+                    _currentSettingsWindow.Close();
+                }
+                if (actionPanel != null && actionPanel.Visibility == Visibility.Visible)
+                {
+                    actionPanel.Visibility = Visibility.Collapsed;
+                }
+                if (popupMoreActions != null)
+                {
+                    popupMoreActions.IsOpen = false;
+                }
+                this.Hide();
+            }
+            else
+            {
+                ShowAndActivate();
+            }
+        }
+
+        private bool IsMainWindowActive()
+        {
+            if (!this.IsVisible || this.WindowState == WindowState.Minimized)
+            {
+                return false;
+            }
+
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            IntPtr mainHwnd = helper.Handle;
+            if (mainHwnd == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            IntPtr foregroundHwnd = GetForegroundWindow();
+            if (foregroundHwnd == mainHwnd)
+            {
+                return true;
+            }
+
+            if (foregroundHwnd != IntPtr.Zero)
+            {
+                IntPtr rootHwnd = GetAncestor(foregroundHwnd, GA_ROOT);
+                if (rootHwnd == mainHwnd)
+                {
+                    return true;
+                }
+            }
+
+            if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
+            {
+                var settingsHelper = new System.Windows.Interop.WindowInteropHelper(_currentSettingsWindow);
+                if (settingsHelper.Handle != IntPtr.Zero && (foregroundHwnd == settingsHelper.Handle || GetAncestor(foregroundHwnd, GA_ROOT) == settingsHelper.Handle))
+                {
+                    return true;
+                }
+            }
+
+            return this.IsActive;
         }
 
         public void ShowAndActivate()

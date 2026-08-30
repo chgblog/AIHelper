@@ -52,7 +52,7 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 
 - **🚀 Global Hotkeys & Action Panel**
   - Press the global hotkey (default `Ctrl+Alt+Space`) to bring up the quick action panel.
-  - Press the open-main-window hotkey (default `Ctrl+Alt+1`) to wake up and activate the main window at any time.
+  - Press the open-main-window hotkey (default `Shift+Space`) to toggle the main window (press once to show/activate, press again to hide).
   - Select or copy text, then press a hotkey (e.g., `Ctrl+Alt+T`) to send it directly to AI for processing.
   - Supports **custom action ordering** and standalone dialog editing in settings.
 

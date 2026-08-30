@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
@@ -12,7 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <Title>AIHelper</Title>
     <Authors>chgblog</Authors>
-    <Version>0.6.8</Version>
+    <Version>0.6.9</Version>
     <Company>chgblog</Company>
     <Product>AIHelper</Product>
     <PackageProjectUrl>https://github.com/chgblog/AIHelper</PackageProjectUrl>
@@ -34,5 +33,4 @@
     <EmbeddedResource Include="Assets\injector.js" />
     <EmbeddedResource Include="Assets\element-picker.js" />
   </ItemGroup>
-
 </Project>
