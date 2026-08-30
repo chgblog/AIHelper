@@ -191,6 +191,20 @@ AIHelper/
 
 ---
 
+## 验证来自 Github Action 打包
+
+验证下载文件由 Github Action 通过源码自动编译打包。
+
+- **校验文件哈希（Windows PowerShell）：**
+```
+Get-FileHash .\AIHelper.zip -Algorithm SHA256
+```
+
+- **验证 GitHub 官方构建存证（使用 GitHub CLI）：**
+```
+gh attestation verify AIHelper.zip --repo chgblog/AIHelper
+```
+
 ## 🔗 友情链接 
 
 - **[linux.do](https://linux.do)** - 没事儿就想去逛逛的社区
