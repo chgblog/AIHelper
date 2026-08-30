@@ -202,7 +202,7 @@ Get-FileHash .\AIHelper.zip -Algorithm SHA256
 
 - **Verify the official GitHub build attestation (using GitHub CLI):**
 ```
-gh attestation verify AIHelper.zip --repo chgblog/AIHelperClient
+gh attestation verify AIHelper.zip --repo chgblog/AIHelper
 ```
 
 ---
