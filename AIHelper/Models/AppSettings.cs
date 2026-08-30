@@ -50,9 +50,9 @@ namespace AIHelper.Models
         public bool EnableSelectionToolbar { get; set; } = true;
 
         /// <summary>
-        /// 是否使用剪贴板增强弹出工具条
+        /// 划词工具条是否增加复制按钮 (0: 不开启 [默认], 1: 开启且在第一个, 2: 开启且在最后一个)
         /// </summary>
-        public bool EnableClipboardEnhancementToolbar { get; set; } = false;
+        public int SelectionToolbarCopyMode { get; set; } = 0;
 
         /// <summary>
         /// 划词弹出工具条应用范围模式 (0: 全部应用 [默认], 1: 指定应用, 2: 排除应用)

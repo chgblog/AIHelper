@@ -29,9 +29,15 @@ namespace AIHelper.Services
         /// </summary>
         public event Action<string, Point> TextSelected;
 
+        /// <summary>
+        /// 请求关闭工具条时触发（如用户点击鼠标右键）
+        /// </summary>
+        public event Action DismissRequested;
+
         private const int WH_MOUSE_LL = 14;
         private const int WM_LBUTTONDOWN = 0x0201;
         private const int WM_LBUTTONUP = 0x0202;
+        private const int WM_RBUTTONDOWN = 0x0204;
 
         private IntPtr _hookId = IntPtr.Zero;
         private Win32Api.LowLevelMouseProc _proc;
@@ -112,7 +118,16 @@ namespace AIHelper.Services
         {
             if (nCode >= 0 && IsEnabled)
             {
-                if (wParam == (IntPtr)WM_LBUTTONDOWN)
+                if (wParam == (IntPtr)WM_RBUTTONDOWN)
+                {
+                    _isMouseDown = false;
+                    _debounceCts?.Cancel();
+                    Application.Current?.Dispatcher.InvokeAsync(() =>
+                    {
+                        DismissRequested?.Invoke();
+                    });
+                }
+                else if (wParam == (IntPtr)WM_LBUTTONDOWN)
                 {
                     _isMouseDown = true;
                     Win32Api.MSLLHOOKSTRUCT hookStruct = (Win32Api.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.MSLLHOOKSTRUCT));

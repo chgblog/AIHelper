@@ -111,6 +111,7 @@ namespace AIHelper.Views
                 _selectionToolbar.ActionRequested += SelectionToolbar_ActionRequested;
 
                 TextSelectionService.Instance.TextSelected += TextSelectionService_TextSelected;
+                TextSelectionService.Instance.DismissRequested += TextSelectionService_DismissRequested;
                 UpdateTextSelectionServiceState();
 
                 // 新版本提示（后台检测完成后可能早于/晚于本窗口创建）
@@ -185,7 +186,7 @@ namespace AIHelper.Views
         private void UpdateTextSelectionServiceState()
         {
             TextSelectionService.Instance.IsEnabled = _settings?.EnableSelectionToolbar ?? false;
-            TextSelectionService.Instance.EnableClipboardEnhancement = _settings?.EnableClipboardEnhancementToolbar ?? false;
+            TextSelectionService.Instance.EnableClipboardEnhancement = false;
             TextSelectionService.Instance.AppScopeMode = _settings?.SelectionAppScopeMode ?? 0;
             TextSelectionService.Instance.AppScopeApps = _settings?.SelectionAppScopeApps ?? "";
 
@@ -203,11 +204,21 @@ namespace AIHelper.Views
         {
             Dispatcher.Invoke(() =>
             {
-                if (_settings?.Actions != null && _settings.Actions.Count > 0)
+                int copyMode = _settings?.SelectionToolbarCopyMode ?? 0;
+                bool hasActions = _settings?.Actions != null && _settings.Actions.Count > 0;
+                if (hasActions || copyMode > 0)
                 {
                     int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
-                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds);
+                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds, copyMode);
                 }
+            });
+        }
+
+        private void TextSelectionService_DismissRequested()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _selectionToolbar?.HideToolbar();
             });
         }
 

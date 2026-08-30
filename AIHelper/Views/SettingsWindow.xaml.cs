@@ -46,7 +46,10 @@ namespace AIHelper.Views
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
             chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
-            chkEnableClipboardEnhancementToolbar.IsChecked = _settings.EnableClipboardEnhancementToolbar;
+            int copyMode = _settings.SelectionToolbarCopyMode;
+            if (copyMode == 1) cbiCopyFirst.IsSelected = true;
+            else if (copyMode == 2) cbiCopyLast.IsSelected = true;
+            else cbiCopyDisabled.IsSelected = true;
             chkAutoCheckUpdate.IsChecked = _settings.AutoCheckUpdate;
 
             int mode = _settings.SelectionAppScopeMode;
@@ -154,7 +157,10 @@ namespace AIHelper.Views
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
-            _settings.EnableClipboardEnhancementToolbar = chkEnableClipboardEnhancementToolbar.IsChecked == true;
+            int copyMode = 0;
+            if (cbiCopyFirst.IsSelected) copyMode = 1;
+            else if (cbiCopyLast.IsSelected) copyMode = 2;
+            _settings.SelectionToolbarCopyMode = copyMode;
             _settings.AutoCheckUpdate = chkAutoCheckUpdate.IsChecked == true;
 
             if (int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int autoHideSec) && autoHideSec > 0)
@@ -212,8 +218,10 @@ namespace AIHelper.Views
         private void UpdateSelectionToolbarControlStates()
         {
             bool isSelectionEnabled = chkEnableSelectionToolbar.IsChecked == true;
-            if (chkEnableClipboardEnhancementToolbar != null)
-                chkEnableClipboardEnhancementToolbar.IsEnabled = isSelectionEnabled;
+            if (tbSelectionToolbarCopy != null)
+                tbSelectionToolbarCopy.IsEnabled = isSelectionEnabled;
+            if (cmbSelectionToolbarCopy != null)
+                cmbSelectionToolbarCopy.IsEnabled = isSelectionEnabled;
 
             if (rbScopeAll != null) rbScopeAll.IsEnabled = isSelectionEnabled;
             if (rbScopeInclude != null) rbScopeInclude.IsEnabled = isSelectionEnabled;

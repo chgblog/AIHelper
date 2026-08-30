@@ -22,6 +22,7 @@ namespace AIHelper.Views
         private Point _currentScreenPos;
         private bool _isExpanded;
         private int _autoHideSeconds = 3;
+        private int _copyMode = 0;
         private const int MaxInitialActions = 5;
 
         public event Action<ActionItem, string> ActionRequested;
@@ -42,13 +43,15 @@ namespace AIHelper.Views
         /// <param name="screenPos">鼠标屏幕坐标</param>
         /// <param name="actions">可用操作列表</param>
         /// <param name="autoHideSeconds">自动消失秒数</param>
-        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3)
+        /// <param name="copyMode">复制按钮模式 (0: 不开启, 1: 开启且在第一个, 2: 开启且在最后一个)</param>
+        public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3, int copyMode = 0)
         {
             _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
             _selectedText = text;
             _actions = actions?.OrderBy(a => a.SortOrder).ToList();
             _currentScreenPos = screenPos;
             _isExpanded = false;
+            _copyMode = copyMode;
 
             BuildButtons();
             PositionWindow(_currentScreenPos);
@@ -64,66 +67,118 @@ namespace AIHelper.Views
         /// </summary>
         public void HideToolbar()
         {
+            if (this.Visibility != Visibility.Visible) return;
             StopAutoHideTimer();
             PlayHideAnimation(() => this.Hide());
+        }
+
+        private void Window_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            HideToolbar();
+            e.Handled = true;
         }
 
         private void BuildButtons()
         {
             buttonPanel.Children.Clear();
-            if (_actions == null || _actions.Count == 0) return;
+            bool hasActions = _actions != null && _actions.Count > 0;
+            if (!hasActions && _copyMode == 0) return;
 
             bool isFirst = true;
-            bool hasMore = _actions.Count > MaxInitialActions && !_isExpanded;
-            var displayActions = hasMore ? _actions.Take(MaxInitialActions) : _actions;
 
-            foreach (var action in displayActions)
+            void AddSeparator()
             {
                 if (!isFirst)
                 {
                     var sep = new Rectangle { Style = (Style)FindResource("SeparatorStyle") };
                     buttonPanel.Children.Add(sep);
                 }
+            }
+
+            Button CreateCopyButton()
+            {
+                string copyText = LanguageManager.Instance["SelectionToolbar_Copy"];
+                if (string.IsNullOrEmpty(copyText)) copyText = "复制";
 
                 var btn = new Button
                 {
-                    Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
-                    Tag = action,
+                    Content = "📋 " + copyText,
                     Style = (Style)FindResource("ToolbarButtonStyle")
                 };
 
                 btn.Click += (s, e) => {
-                    ActionRequested?.Invoke(action, _selectedText);
+                    ClipboardService.SetText(_selectedText);
                     HideToolbar();
                 };
 
-                buttonPanel.Children.Add(btn);
+                return btn;
+            }
+
+            // 1. Copy at first position
+            if (_copyMode == 1)
+            {
+                buttonPanel.Children.Add(CreateCopyButton());
                 isFirst = false;
             }
 
-            if (hasMore)
+            // 2. Action buttons
+            if (hasActions)
             {
-                var sep = new Rectangle { Style = (Style)FindResource("SeparatorStyle") };
-                buttonPanel.Children.Add(sep);
+                bool hasMore = _actions.Count > MaxInitialActions && !_isExpanded;
+                var displayActions = hasMore ? _actions.Take(MaxInitialActions) : _actions;
 
-                string moreText = LanguageManager.Instance["SelectionToolbar_More"];
-                if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
-
-                var moreBtn = new Button
+                foreach (var action in displayActions)
                 {
-                    Content = moreText,
-                    Style = (Style)FindResource("ToolbarButtonStyle")
-                };
+                    AddSeparator();
 
-                moreBtn.Click += (s, e) => {
-                    _isExpanded = true;
-                    BuildButtons();
-                    PositionWindow(_currentScreenPos);
-                    _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
-                    StartAutoHideTimer();
-                };
+                    var btn = new Button
+                    {
+                        Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
+                        Tag = action,
+                        Style = (Style)FindResource("ToolbarButtonStyle")
+                    };
 
-                buttonPanel.Children.Add(moreBtn);
+                    btn.Click += (s, e) => {
+                        ActionRequested?.Invoke(action, _selectedText);
+                        HideToolbar();
+                    };
+
+                    buttonPanel.Children.Add(btn);
+                    isFirst = false;
+                }
+
+                if (hasMore)
+                {
+                    AddSeparator();
+
+                    string moreText = LanguageManager.Instance["SelectionToolbar_More"];
+                    if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
+
+                    var moreBtn = new Button
+                    {
+                        Content = moreText,
+                        Style = (Style)FindResource("ToolbarButtonStyle")
+                    };
+
+                    moreBtn.Click += (s, e) => {
+                        _isExpanded = true;
+                        BuildButtons();
+                        PositionWindow(_currentScreenPos);
+                        _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                        StartAutoHideTimer();
+                    };
+
+                    buttonPanel.Children.Add(moreBtn);
+                    isFirst = false;
+                }
+            }
+
+            // 3. Copy at last position
+            if (_copyMode == 2)
+            {
+                AddSeparator();
+                buttonPanel.Children.Add(CreateCopyButton());
+                isFirst = false;
             }
         }
 

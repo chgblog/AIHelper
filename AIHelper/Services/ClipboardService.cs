@@ -47,5 +47,40 @@ namespace AIHelper.Services
             }
             return string.Empty;
         }
+
+        /// <summary>
+        /// Sets text to clipboard with retry mechanism
+        /// </summary>
+        public static bool SetText(string text)
+        {
+            if (text == null) return false;
+
+            int maxRetries = 5;
+            int delayMs = 50;
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    Clipboard.SetDataObject(text, true);
+                    return true;
+                }
+                catch (COMException)
+                {
+                    if (i == maxRetries - 1)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Failed to set clipboard after max retries.");
+                        return false;
+                    }
+                    Thread.Sleep(delayMs);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error setting clipboard: {ex.Message}");
+                    return false;
+                }
+            }
+            return false;
+        }
     }
 }

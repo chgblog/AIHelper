@@ -66,8 +66,14 @@
                             <CheckBox x:Name="chkEnableSelectionToolbar" Content="{Binding [Settings_General_EnableSelectionToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center" Click="ChkEnableSelectionToolbar_Click"/>
                             <TextBlock Text="{Binding [Settings_General_SelectionToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,10" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
 
-                            <CheckBox x:Name="chkEnableClipboardEnhancementToolbar" Content="{Binding [Settings_General_EnableClipboardEnhancementToolbar], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="20,5,0,0" VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{Binding [Settings_General_ClipboardEnhancementToolbarTip], Source={x:Static services:LanguageManager.Instance}}" Margin="40,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="20,5,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="tbSelectionToolbarCopy" Text="{Binding [Settings_General_SelectionToolbarCopy], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox x:Name="cmbSelectionToolbarCopy" Width="180" HorizontalAlignment="Left" Background="#1a1a2e" Foreground="#e0e0e0">
+                                    <ComboBoxItem x:Name="cbiCopyDisabled" Content="{Binding [Settings_General_SelectionToolbarCopy_Disabled], Source={x:Static services:LanguageManager.Instance}}" Tag="0"/>
+                                    <ComboBoxItem x:Name="cbiCopyFirst" Content="{Binding [Settings_General_SelectionToolbarCopy_First], Source={x:Static services:LanguageManager.Instance}}" Tag="1"/>
+                                    <ComboBoxItem x:Name="cbiCopyLast" Content="{Binding [Settings_General_SelectionToolbarCopy_Last], Source={x:Static services:LanguageManager.Instance}}" Tag="2"/>
+                                </ComboBox>
+                            </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="20,10,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding [Settings_General_SelectionToolbarAutoHide], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>

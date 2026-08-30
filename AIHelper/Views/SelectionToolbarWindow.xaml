@@ -12,6 +12,7 @@
         ShowActivated="False"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
+        PreviewMouseRightButtonDown="Window_PreviewMouseRightButtonDown"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="ClearType"
         RenderOptions.ClearTypeHint="Enabled"
