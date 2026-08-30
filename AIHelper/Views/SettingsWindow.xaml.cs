@@ -106,8 +106,11 @@ namespace AIHelper.Views
 
             dgPlatforms.ItemsSource = _settings.Platforms;
             dgActions.ItemsSource = _settings.Actions;
-            txtPanelHotkey.Text = FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
-            txtMainWindowHotkey.Text = FormatHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
+            txtPanelHotkey.Text = HotkeyService.FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+            txtMainWindowHotkey.Text = HotkeyService.FormatHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
+
+            ValidatePanelHotkeyConflict();
+            ValidateMainWindowHotkeyConflict();
 
             // Set up platform name converter for actions DataGrid
             UpdateActionPlatformColumnBinding();
@@ -137,6 +140,17 @@ namespace AIHelper.Views
 
         private bool SaveSettings()
         {
+            // Validate all hotkey conflicts before saving
+            var conflicts = CheckAllHotkeyConflicts();
+            if (conflicts.Count > 0)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Hotkey_Conflict_SaveError", string.Join("\n", conflicts)),
+                    LanguageManager.Instance["Notice"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
 
             if (_settings.Actions != null)
             {
@@ -432,7 +446,7 @@ namespace AIHelper.Views
                 Icon = "📋"
             };
 
-            var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"], _settings.Platforms);
+            var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"], _settings.Platforms, _settings);
             editWindow.Owner = this;
             if (editWindow.ShowDialog() == true)
             {
@@ -441,6 +455,8 @@ namespace AIHelper.Views
                 dgActions.ItemsSource = null;
                 dgActions.ItemsSource = _settings.Actions;
                 dgActions.SelectedItem = newAction;
+                ValidatePanelHotkeyConflict();
+                ValidateMainWindowHotkeyConflict();
             }
         }
 
@@ -461,7 +477,7 @@ namespace AIHelper.Views
                     PlatformId = selectedAction.PlatformId
                 };
 
-                var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"], _settings.Platforms);
+                var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"], _settings.Platforms, _settings);
                 editWindow.Owner = this;
                 if (editWindow.ShowDialog() == true)
                 {
@@ -477,6 +493,8 @@ namespace AIHelper.Views
                     dgActions.ItemsSource = null;
                     dgActions.ItemsSource = _settings.Actions;
                     dgActions.SelectedItem = selectedAction;
+                    ValidatePanelHotkeyConflict();
+                    ValidateMainWindowHotkeyConflict();
                 }
             }
             else
@@ -496,6 +514,8 @@ namespace AIHelper.Views
                 }
                 dgActions.ItemsSource = null;
                 dgActions.ItemsSource = _settings.Actions;
+                ValidatePanelHotkeyConflict();
+                ValidateMainWindowHotkeyConflict();
             }
         }
 
@@ -659,7 +679,9 @@ namespace AIHelper.Views
 
             _settings.PanelHotkeyModifiers = modifiers;
             _settings.PanelHotkeyKey = keyStr;
-            txtPanelHotkey.Text = FormatHotkey(modifiers, keyStr);
+            txtPanelHotkey.Text = HotkeyService.FormatHotkey(modifiers, keyStr);
+            ValidatePanelHotkeyConflict();
+            ValidateMainWindowHotkeyConflict();
         }
 
         private void TxtMainWindowHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -675,7 +697,130 @@ namespace AIHelper.Views
 
             _settings.MainWindowHotkeyModifiers = modifiers;
             _settings.MainWindowHotkeyKey = keyStr;
-            txtMainWindowHotkey.Text = FormatHotkey(modifiers, keyStr);
+            txtMainWindowHotkey.Text = HotkeyService.FormatHotkey(modifiers, keyStr);
+            ValidateMainWindowHotkeyConflict();
+            ValidatePanelHotkeyConflict();
+        }
+
+        private void ValidatePanelHotkeyConflict()
+        {
+            if (tbPanelHotkeyConflict == null) return;
+
+            if (string.IsNullOrWhiteSpace(_settings?.PanelHotkeyKey))
+            {
+                tbPanelHotkeyConflict.Text = "";
+                tbPanelHotkeyConflict.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var conflict = HotkeyService.CheckInternalConflict(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey, "Panel", null, _settings);
+            if (conflict.HasConflict)
+            {
+                tbPanelHotkeyConflict.Text = conflict.ErrorMessage;
+                tbPanelHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!HotkeyService.Instance.TestGlobalHotkeyAvailability(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey, out string globalErr))
+            {
+                tbPanelHotkeyConflict.Text = globalErr ?? LanguageManager.Instance["Hotkey_Conflict_System"];
+                tbPanelHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            tbPanelHotkeyConflict.Text = "";
+            tbPanelHotkeyConflict.Visibility = Visibility.Collapsed;
+        }
+
+        private void ValidateMainWindowHotkeyConflict()
+        {
+            if (tbMainWindowHotkeyConflict == null) return;
+
+            if (string.IsNullOrWhiteSpace(_settings?.MainWindowHotkeyKey))
+            {
+                tbMainWindowHotkeyConflict.Text = "";
+                tbMainWindowHotkeyConflict.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var conflict = HotkeyService.CheckInternalConflict(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey, "MainWindow", null, _settings);
+            if (conflict.HasConflict)
+            {
+                tbMainWindowHotkeyConflict.Text = conflict.ErrorMessage;
+                tbMainWindowHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!HotkeyService.Instance.TestGlobalHotkeyAvailability(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey, out string globalErr))
+            {
+                tbMainWindowHotkeyConflict.Text = globalErr ?? LanguageManager.Instance["Hotkey_Conflict_System"];
+                tbMainWindowHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            tbMainWindowHotkeyConflict.Text = "";
+            tbMainWindowHotkeyConflict.Visibility = Visibility.Collapsed;
+        }
+
+        private List<string> CheckAllHotkeyConflicts()
+        {
+            var conflicts = new List<string>();
+
+            // 1. Panel vs MainWindow
+            if (!string.IsNullOrWhiteSpace(_settings.PanelHotkeyKey) && !string.IsNullOrWhiteSpace(_settings.MainWindowHotkeyKey))
+            {
+                if (HotkeyService.AreHotkeysEqual(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey, _settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey))
+                {
+                    conflicts.Add($"• 【{LanguageManager.Instance["Settings_Hotkey_PanelKey"].TrimEnd(':')}】与【{LanguageManager.Instance["Settings_Hotkey_MainWindowKey"].TrimEnd(':')}】({HotkeyService.FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey)})");
+                }
+            }
+
+            // 2. Panel vs Actions
+            if (!string.IsNullOrWhiteSpace(_settings.PanelHotkeyKey) && _settings.Actions != null)
+            {
+                foreach (var action in _settings.Actions)
+                {
+                    if (!string.IsNullOrWhiteSpace(action.HotkeyKey) && HotkeyService.AreHotkeysEqual(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey, action.HotkeyModifiers, action.HotkeyKey))
+                    {
+                        conflicts.Add($"• 【{LanguageManager.Instance["Settings_Hotkey_PanelKey"].TrimEnd(':')}】与动作【{action.Name}】({HotkeyService.FormatHotkey(action.HotkeyModifiers, action.HotkeyKey)})");
+                    }
+                }
+            }
+
+            // 3. MainWindow vs Actions
+            if (!string.IsNullOrWhiteSpace(_settings.MainWindowHotkeyKey) && _settings.Actions != null)
+            {
+                foreach (var action in _settings.Actions)
+                {
+                    if (!string.IsNullOrWhiteSpace(action.HotkeyKey) && HotkeyService.AreHotkeysEqual(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey, action.HotkeyModifiers, action.HotkeyKey))
+                    {
+                        conflicts.Add($"• 【{LanguageManager.Instance["Settings_Hotkey_MainWindowKey"].TrimEnd(':')}】与动作【{action.Name}】({HotkeyService.FormatHotkey(action.HotkeyModifiers, action.HotkeyKey)})");
+                    }
+                }
+            }
+
+            // 4. Actions vs Actions
+            if (_settings.Actions != null)
+            {
+                for (int i = 0; i < _settings.Actions.Count; i++)
+                {
+                    var a1 = _settings.Actions[i];
+                    if (string.IsNullOrWhiteSpace(a1.HotkeyKey)) continue;
+
+                    for (int j = i + 1; j < _settings.Actions.Count; j++)
+                    {
+                        var a2 = _settings.Actions[j];
+                        if (string.IsNullOrWhiteSpace(a2.HotkeyKey)) continue;
+
+                        if (HotkeyService.AreHotkeysEqual(a1.HotkeyModifiers, a1.HotkeyKey, a2.HotkeyModifiers, a2.HotkeyKey))
+                        {
+                            conflicts.Add($"• 动作【{a1.Name}】与动作【{a2.Name}】({HotkeyService.FormatHotkey(a1.HotkeyModifiers, a1.HotkeyKey)})");
+                        }
+                    }
+                }
+            }
+
+            return conflicts;
         }
 
         private string GetModifiersString()
@@ -685,26 +830,6 @@ namespace AIHelper.Views
             if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt)) parts.Add("Alt");
             if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) parts.Add("Shift");
             return string.Join("+", parts);
-        }
-
-        private string FormatHotkey(string modifiers, string key)
-        {
-            if (string.IsNullOrEmpty(key)) return LanguageManager.Instance["None"];
-            string keyText = FormatKeyName(key);
-            if (string.IsNullOrEmpty(modifiers)) return keyText;
-            return modifiers.Replace("+", " + ") + " + " + keyText;
-        }
-
-        /// <summary>
-        /// 将 WPF Key 枚举名转换为更易读的显示文本（如 D1 -> 1，NumPad1 -> Num 1）
-        /// </summary>
-        private string FormatKeyName(string key)
-        {
-            if (key.Length == 2 && key[0] == 'D' && char.IsDigit(key[1]))
-                return key.Substring(1);
-            if (key.StartsWith("NumPad") && key.Length > 6)
-                return "Num " + key.Substring(6);
-            return key;
         }
     }
 }

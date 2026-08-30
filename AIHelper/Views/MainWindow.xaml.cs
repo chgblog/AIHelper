@@ -237,19 +237,30 @@ namespace AIHelper.Views
             _panelHotkeyId = -1;
             _mainWindowHotkeyId = -1;
 
+            var failedHotkeys = new List<string>();
+
             // Register Panel Hotkey
-            _panelHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
-            if (_panelHotkeyId < 0)
+            if (!string.IsNullOrEmpty(_settings?.PanelHotkeyKey))
             {
-                Logger.LogError($"Failed to register main panel hotkey: {_settings.PanelHotkeyModifiers}+{_settings.PanelHotkeyKey}");
+                _panelHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+                if (_panelHotkeyId < 0)
+                {
+                    string name = LanguageManager.Instance["Settings_Hotkey_PanelKey"].TrimEnd(':');
+                    string formatted = HotkeyService.FormatHotkey(_settings.PanelHotkeyModifiers, _settings.PanelHotkeyKey);
+                    failedHotkeys.Add($"{name} ({formatted})");
+                    Logger.LogError($"Failed to register main panel hotkey: {_settings.PanelHotkeyModifiers}+{_settings.PanelHotkeyKey}");
+                }
             }
 
             // Register Main Window Hotkey (打开主界面)
-            if (!string.IsNullOrEmpty(_settings.MainWindowHotkeyKey))
+            if (!string.IsNullOrEmpty(_settings?.MainWindowHotkeyKey))
             {
                 _mainWindowHotkeyId = HotkeyService.Instance.RegisterHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
                 if (_mainWindowHotkeyId < 0)
                 {
+                    string name = LanguageManager.Instance["Settings_Hotkey_MainWindowKey"].TrimEnd(':');
+                    string formatted = HotkeyService.FormatHotkey(_settings.MainWindowHotkeyModifiers, _settings.MainWindowHotkeyKey);
+                    failedHotkeys.Add($"{name} ({formatted})");
                     Logger.LogError($"Failed to register main window hotkey: {_settings.MainWindowHotkeyModifiers}+{_settings.MainWindowHotkeyKey}");
                 }
             }
@@ -266,8 +277,19 @@ namespace AIHelper.Views
                         {
                             _hotkeyActionMap[id] = action;
                         }
+                        else
+                        {
+                            string formatted = HotkeyService.FormatHotkey(action.HotkeyModifiers, action.HotkeyKey);
+                            failedHotkeys.Add($"{action.Name} ({formatted})");
+                        }
                     }
                 }
+            }
+
+            if (failedHotkeys.Count > 0)
+            {
+                string failedMsg = string.Join(", ", failedHotkeys);
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_HotkeyFailed", failedMsg));
             }
         }
 

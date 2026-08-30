@@ -37,17 +37,20 @@
         <TextBox x:Name="txtSortOrder" Grid.Row="1" Grid.Column="1" Margin="0,0,0,12" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"/>
 
         <!-- 快捷键 -->
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [ActionEdit_Hotkey], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12" Foreground="#e0e0e0"/>
-        <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="txtHotkey" Grid.Column="0" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" 
-                     PreviewKeyDown="TxtHotkey_PreviewKeyDown" IsReadOnly="True" Margin="0,0,8,0"/>
-            <Button Grid.Column="1" Content="{Binding [ActionEdit_ClearHotkey], Source={x:Static services:LanguageManager.Instance}}" Click="BtnClearHotkey_Click" 
-                    Width="60" Padding="5,3" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0"/>
-        </Grid>
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [ActionEdit_Hotkey], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Top" Margin="0,4,10,12" Foreground="#e0e0e0"/>
+        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="txtHotkey" Grid.Column="0" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" 
+                         PreviewKeyDown="TxtHotkey_PreviewKeyDown" IsReadOnly="True" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="{Binding [ActionEdit_ClearHotkey], Source={x:Static services:LanguageManager.Instance}}" Click="BtnClearHotkey_Click" 
+                        Width="60" Padding="5,3" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0"/>
+            </Grid>
+            <TextBlock x:Name="tbHotkeyConflict" Margin="0,4,0,0" Foreground="#ff6b6b" FontSize="12" Visibility="Collapsed" TextWrapping="Wrap"/>
+        </StackPanel>
 
         <!-- 使用平台 -->
         <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [ActionEdit_Platform], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12" Foreground="#e0e0e0"/>

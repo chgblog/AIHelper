@@ -13,6 +13,7 @@ namespace AIHelper.Views
     public partial class ActionEditWindow : Window
     {
         private readonly ActionItem _action;
+        private readonly AppSettings _currentSettings;
         private string _hotkeyModifiers = "";
         private string _hotkeyKey = "";
         private List<PlatformOption> _platformOptions;
@@ -27,7 +28,7 @@ namespace AIHelper.Views
             public override string ToString() => Name;
         }
 
-        public ActionEditWindow(ActionItem action, string title = null, List<AiPlatform> platforms = null)
+        public ActionEditWindow(ActionItem action, string title = null, List<AiPlatform> platforms = null, AppSettings currentSettings = null)
         {
             InitializeComponent();
             if (!string.IsNullOrEmpty(title))
@@ -40,6 +41,7 @@ namespace AIHelper.Views
             }
 
             _action = action ?? throw new ArgumentNullException(nameof(action));
+            _currentSettings = currentSettings;
 
             // Load current values
             txtName.Text = _action.Name ?? "";
@@ -47,11 +49,13 @@ namespace AIHelper.Views
             txtSortOrder.Text = _action.SortOrder.ToString();
             _hotkeyModifiers = _action.HotkeyModifiers ?? "";
             _hotkeyKey = _action.HotkeyKey ?? "";
-            txtHotkey.Text = FormatHotkey(_hotkeyModifiers, _hotkeyKey);
+            txtHotkey.Text = HotkeyService.FormatHotkey(_hotkeyModifiers, _hotkeyKey);
             txtPrompt.Text = _action.Prompt ?? "";
 
             // Initialize platform ComboBox
             InitializePlatformComboBox(platforms, _action.PlatformId);
+
+            ValidateHotkeyConflict();
         }
 
         private void InitializePlatformComboBox(List<AiPlatform> platforms, string selectedPlatformId)
@@ -91,7 +95,8 @@ namespace AIHelper.Views
 
             _hotkeyModifiers = GetModifiersString();
             _hotkeyKey = key.ToString();
-            txtHotkey.Text = FormatHotkey(_hotkeyModifiers, _hotkeyKey);
+            txtHotkey.Text = HotkeyService.FormatHotkey(_hotkeyModifiers, _hotkeyKey);
+            ValidateHotkeyConflict();
         }
 
         private void BtnClearHotkey_Click(object sender, RoutedEventArgs e)
@@ -99,6 +104,39 @@ namespace AIHelper.Views
             _hotkeyModifiers = "";
             _hotkeyKey = "";
             txtHotkey.Text = LanguageManager.Instance["None"];
+            ValidateHotkeyConflict();
+        }
+
+        private void ValidateHotkeyConflict()
+        {
+            if (tbHotkeyConflict == null) return;
+
+            if (string.IsNullOrWhiteSpace(_hotkeyKey))
+            {
+                tbHotkeyConflict.Text = "";
+                tbHotkeyConflict.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // 1. Check internal conflict
+            var conflict = HotkeyService.CheckInternalConflict(_hotkeyModifiers, _hotkeyKey, "Action", _action?.Id, _currentSettings);
+            if (conflict.HasConflict)
+            {
+                tbHotkeyConflict.Text = conflict.ErrorMessage;
+                tbHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // 2. Check global probe availability
+            if (!HotkeyService.Instance.TestGlobalHotkeyAvailability(_hotkeyModifiers, _hotkeyKey, out string globalErr))
+            {
+                tbHotkeyConflict.Text = globalErr ?? LanguageManager.Instance["Hotkey_Conflict_System"];
+                tbHotkeyConflict.Visibility = Visibility.Visible;
+                return;
+            }
+
+            tbHotkeyConflict.Text = "";
+            tbHotkeyConflict.Visibility = Visibility.Collapsed;
         }
 
         private string GetModifiersString()
@@ -110,13 +148,6 @@ namespace AIHelper.Views
             return string.Join("+", parts);
         }
 
-        private string FormatHotkey(string modifiers, string key)
-        {
-            if (string.IsNullOrEmpty(key)) return LanguageManager.Instance["None"];
-            if (string.IsNullOrEmpty(modifiers)) return key;
-            return modifiers.Replace("+", " + ") + " + " + key;
-        }
-
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             string name = txtName.Text?.Trim();
@@ -124,6 +155,17 @@ namespace AIHelper.Views
             {
                 MessageBox.Show(LanguageManager.Instance["ActionEdit_EmptyNameWarn"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
+            }
+
+            // Validate internal conflict before saving
+            if (!string.IsNullOrWhiteSpace(_hotkeyKey))
+            {
+                var conflict = HotkeyService.CheckInternalConflict(_hotkeyModifiers, _hotkeyKey, "Action", _action?.Id, _currentSettings);
+                if (conflict.HasConflict)
+                {
+                    MessageBox.Show(conflict.ErrorMessage, LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
             }
 
             _action.Name = name;
