@@ -1,0 +1,91 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '输入发布版本号 (例如 v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release_notes:
+        description: '输入本次更新说明 (留空则读取 Tag 注释或自动生成)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Tag Message
+        id: tag_info
+        shell: pwsh
+        run: |
+          $customNotes = "${{ inputs.release_notes }}"
+          if ($customNotes -ne "") {
+            # 优先使用网页手动输入的更新说明
+            $notes = $customNotes
+          } else {
+            # 读取当前 Tag 的附注说明
+            $notes = (git tag -l --format='%(contents)' $env:GITHUB_REF_NAME).Trim()
+          }
+          # 将结果存入环境变量供后续步骤调用
+          $notes | Out-File -FilePath release_body.txt -Encoding utf8
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup MSBuild and NuGet
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Restore NuGet Packages
+        run: nuget restore AIHelper/AIHelper.csproj
+
+      - name: Build with Deterministic Flags
+        run: |
+          dotnet build AIHelper/AIHelper.csproj -c Release /p:Deterministic=true /p:ContinuousIntegrationBuild=true
+
+      - name: Create Zip Package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path AIHelper/bin/Release/* -DestinationPath AIHelper.zip
+
+      - name: Generate SHA256 Checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash AIHelper.zip -Algorithm SHA256).Hash
+          "$hash *AIHelper.zip" | Out-File -Encoding ascii SHA256SUMS.txt
+
+      - name: Generate GitHub Artifact Attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: AIHelper.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || inputs.tag_name != ''
+        with:
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
+          body_path: release_body.txt
+          generate_release_notes: true
+          files: |
+            AIHelper.zip
+            SHA256SUMS.txt
