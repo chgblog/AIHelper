@@ -4,8 +4,7 @@
 
 AIHelper – Your Global AI Productivity Engine for Windows.
 
-Stop copying, pasting, and switching tabs. AIHelper seamlessly embeds leading LLMs (ChatGPT, Claude, Gemini, DeepSeek, Qwen) directly into your workflow. With a selection-triggered toolbar, global hotkeys, and smart 
-web injection, instantly translate, explain, summarize, polish, or grammar-check any text. Lightweight, unobtrusive, and always ready — making AI a native part of your desktop experience.
+Stop copying, pasting, and switching tabs. AIHelper seamlessly embeds leading LLMs (ChatGPT, Claude, Gemini, DeepSeek, Qwen, etc.) directly into your workflow. With a selection-triggered floating toolbar, global hotkeys, and smart web injection, instantly translate, explain, summarize, polish, or grammar-check any text. Lightweight, unobtrusive, and always ready — making AI a native part of your desktop experience.
 
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white)
 ![Lightweight](https://img.shields.io/badge/Lightweight-<1MB-brightgreen?style=flat-square)
@@ -47,35 +46,40 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 
 - **✨ Text Selection AI Assistant Toolbar**
   - Select text in any application using your mouse, and a minimal floating AI toolbar will automatically appear next to your cursor.
-  - One-click prompt execution directly from the floating toolbar without pressing hotkeys.
-  - Easily toggle text selection monitoring on/off via the system tray menu or settings window, with smart position adjustments and animations.
+  - One-click prompt execution directly from the floating toolbar without pressing keyboard shortcuts.
+  - **Intuitive Interactions & Customization**: Right-click anywhere on the toolbar to immediately dismiss it; optional "Copy" button (configurable: disabled, first position, or last position); customizable auto-hide countdown and anti-overlap positioning.
+  - **Target Application Scope**: Filter by "All Applications", "Include Applications", or "Exclude Applications" with a visual process picker dialog.
 
 - **🚀 Global Hotkeys & Action Panel**
   - Press the global hotkey (default `Ctrl+Alt+Space`) to bring up the quick action panel.
-  - Press the open-main-window hotkey (default `Shift+Space`) to toggle the main window (press once to show/activate, press again to hide).
+  - Press the open-main-window hotkey (default `Shift+Space`) to toggle the main window (press to activate/bring to front, press again to hide with cycle toggle support).
   - Select or copy text, then press a hotkey (e.g., `Ctrl+Alt+T`) to send it directly to AI for processing.
-  - Supports **custom action ordering** and standalone dialog editing in settings.
+  - **🛡️ Real-Time Hotkey Conflict Detection**: Real-time validation when setting hotkeys against panel hotkey, main window hotkey, action shortcuts, or system/third-party occupied hotkeys to prevent failures.
+  - Supports **custom action ordering** (Move Up / Move Down) and standalone dialog editing in settings.
 
-- **🌐 Multi AI Platform Integration & Precise Element Selector**
+- **🌐 Multi-AI Platform Integration, Per-Platform Proxy & Action Routing**
   - Built-in preset support for 7 major AI platforms: **DeepSeek**, **Claude**, **Gemini**, **ChatGPT**, **Qwen**, **Zhipu**, and **Kimi**.
-  - Easily add, edit, or delete custom AI platforms with single-click radio button activation.
+  - **🔀 Action-Specific Platform Routing**: Each prompt action can be independently bound to a specific AI platform (e.g., DeepSeek for Translation, Claude for Polishing, or use Default active platform) for specialized multi-model workflows.
+  - **🌐 Per-Platform Independent Proxy**: Each platform can independently toggle whether to route through the configured network proxy or connect directly.
   - **🎯 Visual DOM Element Picker**: Customize CSS selectors for "New Chat", "Input Box", and "Submit Button". Built-in WebView2 element picker allows clicking elements directly on live webpages to inspect and retrieve CSS selectors effortlessly.
   - **🔄 Automatic New Chat**: Supports configuring a "New Chat" selector to automatically click and initiate a fresh conversation before sending prompts.
 
 - **⚡ Intelligent DOM Script Injection & Auto-Submit Control**
   - Built-in `injector.js` script that automatically identifies and locates text input fields on major AI platforms.
-  - Auto-fills prompt templates and selected text, with configurable **Auto Submit** toggle (auto send vs. manual confirmation).
+  - Robust retry, load-waiting, and injection mechanisms across platform switches, ensuring stable prompt injection and configurable **Auto Submit** toggle (auto send vs. manual confirmation).
 
-- **🛠️ Highly Customizable Prompt Actions**
-  - Preset common actions: **Translate**, **Explain**, **Summarize**, **Polish**, **Grammar Check**.
-  - Users can freely modify prompt templates, add/edit/delete actions, reorder actions, and assign custom hotkeys.
+- **🖥️ Main Window Quick Actions & Modern UX**
+  - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution without selecting text.
+  - **Window Maximize & Restore**: Maximize/restore window controls and double-click title bar support.
+
+- **📦 Configuration Management & Backup / Restore**
+  - One-click export and backup of all platform, action, hotkey, and preference configurations to a JSON file, with easy restore and quick access to the config directory.
+
+- **🔔 Automatic Update Check & Non-Intrusive Notifications**
+  - Background auto-check for new GitHub releases; subtle "Update" badge and tip displayed next to the Settings button in the main window title bar without disruptive modal popups.
 
 - **🌐 Multi-Language Interface (I18n)**
-  - Built-in Language Manager supporting dynamic switching between **Simplified Chinese** and **English**.
-
-- **🔧 Network Proxy & Update Configuration**
-  - Supports custom HTTP / HTTPS / SOCKS network proxy settings for reliable connectivity.
-  - Supports configuring project homepage and update check URLs.
+  - Built-in Language Manager supporting dynamic switching between **Simplified Chinese** and **English**, auto-adapting to local time zone.
 
 - **💻 Modern & Lightweight UI with System Tray**
   - Built with WPF and Microsoft WebView2 for a smooth web browsing and interaction experience.
@@ -88,14 +92,16 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 
 | Hotkey | Action | Prompt Description |
 | :--- | :--- | :--- |
-| `Ctrl + Alt + Space` | Show/Hide Action Panel | Opens the action list panel |
+| `Shift + Space` | Show/Hide Main Window | Cycle toggles the main window visibility |
+| `Ctrl + Alt + Space` | Show/Hide Action Panel | Opens the quick action list panel |
 | `Ctrl + Alt + T` | Translate | Translates selected text to Chinese |
 | `Ctrl + Alt + E` | Explain | Provides a detailed explanation of the selected text |
 | `Ctrl + Alt + S` | Summarize | Extracts a core summary from the selected text |
 | `Ctrl + Alt + R` | Polish | Polishes the selected text for fluency and professionalism |
 | `Ctrl + Alt + G` | Grammar Check | Checks for grammatical errors and suggests corrections |
+| `Ctrl + Alt + O` | Summary (Summarize) | Summarizes the selected text |
 
-> *Note: All hotkeys can be reconfigured in the application's Settings window.*
+> *Note: All hotkeys can be reconfigured in the application's Settings window with real-time conflict detection.*
 
 ---
 
@@ -120,28 +126,34 @@ AIHelper/
     ├── Assets/
     │   ├── injector.js         # JS script for web page automation injection
     │   └── element-picker.js   # JS script for visual DOM element picking
+    ├── Converters/             # XAML data converters
+    │   ├── BoolToVisibilityConverter.cs
+    │   └── PlatformIdToNameConverter.cs
     ├── Models/
-    │   ├── ActionItem.cs       # Action item data model (with selection & ordering)
-    │   ├── AiPlatform.cs       # AI platform data model (with New Chat & selectors)
+    │   ├── ActionItem.cs       # Action item data model (with platform binding/ordering)
+    │   ├── AiPlatform.cs       # AI platform data model (with independent proxy/selectors)
+    │   ├── AppItem.cs          # Application data model (for selection app scope filtering)
     │   └── AppSettings.cs      # App settings & defaults (proxy, language, text selection)
     ├── Services/
+    │   ├── AppInfoService.cs   # App information & version service
     │   ├── AutoStartService.cs # Auto-start service
     │   ├── ClipboardService.cs # Clipboard access & key simulation service
-    │   ├── HotkeyService.cs    # Global hotkey listener (Win32 API)
+    │   ├── HotkeyService.cs    # Global hotkey listener & conflict detection (Win32 API)
     │   ├── LanguageManager.cs  # Multi-language / I18n dynamic switching service
     │   ├── Logger.cs           # Logging service
     │   ├── PageInjector.cs     # Web JS script injection & execution service
-    │   ├── SettingsService.cs  # Local JSON config loading & persistence
-    │   └── TextSelectionService.cs # Text selection & floating toolbar listener service
-    ├── Views/
-    │   ├── ActionEditWindow.xaml   # Standalone action editing dialog
-    │   ├── ActionPanelControl.xaml # Quick action floating panel view
-    │   ├── ElementPickerWindow.xaml# Visual DOM element picker window
-    │   ├── MainWindow.xaml         # Main window (with WebView2 control)
-    │   ├── PlatformEditWindow.xaml # Platform editing & selector configuration window
-    │   ├── SelectionToolbarWindow.xaml # Text selection AI floating toolbar window
-    │   └── SettingsWindow.xaml     # Settings window (platform/action/selection/proxy/language)
-    └── Converters/             # XAML data converters
+    │   ├── SettingsService.cs  # Local JSON config loading, persistence & backup/restore
+    │   ├── TextSelectionService.cs # Text selection & floating toolbar listener service
+    │   └── UpdateCheckService.cs   # GitHub Release update detection service
+    └── Views/
+        ├── ActionEditWindow.xaml   # Standalone action editing dialog (with platform binding)
+        ├── ActionPanelControl.xaml # Quick action floating panel view
+        ├── AppSelectionWindow.xaml # Visual application process picker dialog
+        ├── ElementPickerWindow.xaml# Visual DOM element picker window
+        ├── MainWindow.xaml         # Main window (with WebView2 control & status action bar)
+        ├── PlatformEditWindow.xaml # Platform editing & selector configuration window (with proxy)
+        ├── SelectionToolbarWindow.xaml # Text selection AI floating toolbar window
+        └── SettingsWindow.xaml     # Settings window (platform/action/selection/proxy/language)
 ```
 
 ---
@@ -171,54 +183,11 @@ AIHelper/
 This project integrates **Costura.Fody** to merge all dependency DLLs and `injector.js` static resources into a single standalone `.exe` file:
 
 - **Build via command line**:
-  ```bash
-  dotnet build AIHelper/AIHelper.csproj -c Release
-  ```
+   ```bash
+   dotnet build AIHelper/AIHelper.csproj -c Release
+   ```
 - **Output**:
-  The packaged single file is located at `AIHelper/bin/Release/net48/AIHelper.exe`. You can copy `AIHelper.exe` (along with `AIHelper.exe.config`) to any location and run it independently — no additional DLLs or `Assets/` directory required.
-
----
-
-## 📖 Usage Guide
-
-1. **Text Selection AI Helper**:
-   - Select text in any app, and the floating AI toolbar will automatically pop up near your cursor. Click any action icon to execute instantly.
-   - Toggle text selection monitoring anytime via the system tray context menu or under "Settings -> Selection Settings".
-2. **Configure & Manage AI Platforms**:
-   - On first launch, the settings window opens automatically with built-in presets for DeepSeek, Claude, Gemini, ChatGPT, Qwen, Zhipu, Kimi, etc.
-   - Click "Add" or "Edit" to modify platform URLs, "New Chat" selectors, input boxes, and submit button selectors. Click "🎯 Pick" to visually capture elements on live webpages.
-   - Optionally toggle whether to auto-trigger a "New Chat" before sending prompts.
-3. **Text Selection & Hotkey Processing**:
-   - **Copy** or **select** text in any application (browser, Word, code editor, etc.).
-   - Press the assigned hotkey (e.g., `Ctrl+Alt+T`) to wake up AIHelper, switch to the active AI platform, inject the prompt, and submit.
-4. **Action Panel & Action Reordering**:
-   - Press `Ctrl+Alt+Space` to bring up the quick action panel.
-   - Press `Ctrl+Alt+1` to open the main window directly; both hotkeys can be customized in "Settings -> Other Settings".
-   - In "Settings -> Action Management", customized ordering (Move Up / Move Down) and standalone dialog editing (`ActionEditWindow`) are supported.
-5. **Proxy & Language Settings**:
-   - Switch UI language between English and Chinese, and configure HTTP/HTTPS/SOCKS proxy settings in the settings window.
-
----
-
-## 📝 Changelog
-
-### > v0.3.5 Updates Summary
-
-- **✨ Text Selection AI Toolbar**
-  - Added text selection listener service; floating AI toolbar automatically pops up upon text selection for one-click processing.
-  - Optimized selection sensitivity, anti-overlap positioning, popup smoothness, and tray menu toggle.
-- **🌐 Multi-Language Interface (I18n)**
-  - Added seamless dynamic switching between Simplified Chinese and English.
-- **🔄 Platform "New Chat" Automation**
-  - Added "New Chat Selector" configuration to automatically open a fresh chat session before executing prompts.
-- **⚡ Auto-Submit Control**
-  - Added "Auto Submit" toggle in settings for automatic prompt submission or manual Enter confirmation.
-- **⚙️ Action Management & Custom Ordering**
-  - Added custom action ordering (Move Up / Move Down) in settings and refactored action editing into a standalone `ActionEditWindow` dialog.
-- **🌐 Network Proxy & Update Configuration**
-  - Added HTTP / HTTPS / SOCKS proxy support; added project homepage and update check URL settings.
-- **📌 System Tray Menu Enhancements**
-  - Added "Open Settings" and "Enable/Disable Selection Toolbar" toggle options to the system tray context menu.
+   The packaged single file is located at `AIHelper/bin/Release/net48/AIHelper.exe`. You can copy `AIHelper.exe` (along with `AIHelper.exe.config`) to any location and run it independently — no additional DLLs or `Assets/` directory required.
 
 ---
 
@@ -226,8 +195,6 @@ This project integrates **Costura.Fody** to merge all dependency DLLs and `injec
 
 - **[linux.do](https://linux.do)** - A community you always feel like visiting.
 
-
 ## 📄 License
 
 Released under the [GNU General Public License v3.0](LICENSE).
-
