@@ -1,4 +1,4 @@
-// Copyright (C) 2026 chgblog
+﻿// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Diagnostics;
@@ -99,18 +99,28 @@ namespace AIHelper
         {
             this.DispatcherUnhandledException += (s, e) =>
             {
-                Logger.LogCrash("DispatcherUnhandledException", e.Exception);
+                Logger.LogCrash($"DispatcherUnhandledException (Thread={Thread.CurrentThread.ManagedThreadId})", e.Exception);
                 MessageBox.Show($"程序遇到未处理的异常：\n{e.Exception.Message}\n\n详细日志已保存至:\n{Logger.GetLogFolderPath()}", "AI助手 错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 e.Handled = true;
             };
 
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                if (e.ExceptionObject is Exception ex)
+                // 进程即将被终止，先落盘日志再弹窗，避免弹窗阻塞导致什么都没记下来
+                var ex = e.ExceptionObject as Exception;
+                Logger.LogCrash($"AppDomain.UnhandledException (IsTerminating={e.IsTerminating}, Thread={Thread.CurrentThread.ManagedThreadId})", ex);
+
+                if (ex == null)
                 {
-                    Logger.LogCrash("AppDomain.UnhandledException", ex);
+                    Logger.LogCrash("AppDomain.UnhandledException (non-Exception object)", new Exception(e.ExceptionObject?.ToString() ?? "null"));
+                    return;
+                }
+
+                try
+                {
                     MessageBox.Show($"程序遇到严重内部错误：\n{ex.Message}\n\n详细日志已保存至:\n{Logger.GetLogFolderPath()}", "AI助手 致命错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+                catch { }
             };
 
             TaskScheduler.UnobservedTaskException += (s, e) =>

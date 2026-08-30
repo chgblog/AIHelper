@@ -1,4 +1,4 @@
-// Copyright (C) 2026 chgblog
+﻿// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
@@ -212,12 +212,19 @@ namespace AIHelper.Views
         {
             Dispatcher.Invoke(() =>
             {
-                int copyMode = _settings?.SelectionToolbarCopyMode ?? 0;
-                bool hasActions = _settings?.Actions != null && _settings.Actions.Count > 0;
-                if (hasActions || copyMode > 0)
+                try
                 {
-                    int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
-                    _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds, copyMode);
+                    int copyMode = _settings?.SelectionToolbarCopyMode ?? 0;
+                    bool hasActions = _settings?.Actions != null && _settings.Actions.Count > 0;
+                    if (hasActions || copyMode > 0)
+                    {
+                        int autoHideSeconds = _settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
+                        _selectionToolbar?.ShowAt(selectedText, screenPos, _settings.Actions, autoHideSeconds, copyMode);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Error in TextSelectionService_TextSelected", ex);
                 }
             });
         }
@@ -226,16 +233,33 @@ namespace AIHelper.Views
         {
             Dispatcher.Invoke(() =>
             {
-                _selectionToolbar?.HideToolbar();
+                try
+                {
+                    _selectionToolbar?.HideToolbar();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Error in TextSelectionService_DismissRequested", ex);
+                }
             });
         }
 
         private async void SelectionToolbar_ActionRequested(ActionItem action, string text)
         {
-            ShowAndActivate();
-            string prompt = action.Prompt.Replace("{content}", text);
-            var platform = GetPlatformForAction(action);
-            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+            // async void：这里不兜住异常就会直接冒泡到 Dispatcher
+            try
+            {
+                if (action == null) return;
+
+                ShowAndActivate();
+                string prompt = (action.Prompt ?? "{content}").Replace("{content}", text ?? string.Empty);
+                var platform = GetPlatformForAction(action);
+                await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error in SelectionToolbar_ActionRequested (action={action?.Name})", ex);
+            }
         }
 
         private void RegisterHotkeys()

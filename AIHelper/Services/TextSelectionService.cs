@@ -1,4 +1,4 @@
-// Copyright (C) 2026 chgblog
+﻿// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Diagnostics;
@@ -85,10 +85,23 @@ namespace AIHelper.Services
         /// </summary>
         public void Install()
         {
-            if (_hookId == IntPtr.Zero)
+            if (_hookId != IntPtr.Zero) return;
+
+            try
             {
                 _hookId = SetHook(_proc);
-                Debug.WriteLine("TextSelectionService: Hook installed.");
+                if (_hookId == IntPtr.Zero)
+                {
+                    Logger.LogError($"TextSelectionService: SetWindowsHookEx failed. Win32Error={Marshal.GetLastWin32Error()}");
+                }
+                else
+                {
+                    Logger.LogInfo("TextSelectionService: Hook installed.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Failed to install mouse hook.", ex);
             }
         }
 
@@ -97,11 +110,20 @@ namespace AIHelper.Services
         /// </summary>
         public void Uninstall()
         {
-            if (_hookId != IntPtr.Zero)
+            if (_hookId == IntPtr.Zero) return;
+
+            try
             {
                 Win32Api.UnhookWindowsHookEx(_hookId);
+                Logger.LogInfo("TextSelectionService: Hook uninstalled.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Failed to uninstall mouse hook.", ex);
+            }
+            finally
+            {
                 _hookId = IntPtr.Zero;
-                Debug.WriteLine("TextSelectionService: Hook uninstalled.");
             }
         }
 
@@ -114,17 +136,43 @@ namespace AIHelper.Services
             }
         }
 
+        /// <summary>
+        /// 低级鼠标钩子回调。该方法由系统从非托管代码直接调用，
+        /// 任何逃逸出去的异常都会穿过 user32 的调用栈直接终止进程，
+        /// 因此这里必须捕获所有异常，绝不能向外抛出。
+        /// </summary>
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            try
+            {
+                HandleMouseEvent(nCode, wParam, lParam);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Unhandled exception in mouse hook callback.", ex);
+            }
+
+            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
+        private void HandleMouseEvent(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0 && IsEnabled)
             {
                 if (wParam == (IntPtr)WM_RBUTTONDOWN)
                 {
                     _isMouseDown = false;
-                    _debounceCts?.Cancel();
+                    CancelPendingDebounce();
                     Application.Current?.Dispatcher.InvokeAsync(() =>
                     {
-                        DismissRequested?.Invoke();
+                        try
+                        {
+                            DismissRequested?.Invoke();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("TextSelectionService: DismissRequested handler threw.", ex);
+                        }
                     });
                 }
                 else if (wParam == (IntPtr)WM_LBUTTONDOWN)
@@ -134,7 +182,7 @@ namespace AIHelper.Services
                     _mouseDownPos = new Point(hookStruct.pt.x, hookStruct.pt.y);
                     
                     // 取消之前的等待
-                    _debounceCts?.Cancel();
+                    CancelPendingDebounce();
                 }
                 else if (wParam == (IntPtr)WM_LBUTTONUP && _isMouseDown)
                 {
@@ -170,16 +218,23 @@ namespace AIHelper.Services
 
                         if (processId != (uint)_currentProcessId && IsProcessInScope(processId))
                         {
-                            _debounceCts?.Cancel();
+                            CancelPendingDebounce();
                             _debounceCts = new CancellationTokenSource();
                             var token = _debounceCts.Token;
                             int delayMs = isMultiClickSelection ? 150 : 250;
 
                             Task.Delay(delayMs, token).ContinueWith(t =>
                             {
-                                if (!t.IsCanceled)
+                                try
                                 {
-                                    ProcessSelectionAsync(mouseUpPos, token);
+                                    if (!t.IsCanceled)
+                                    {
+                                        ProcessSelectionAsync(mouseUpPos, token);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.LogError("TextSelectionService: Failed to start selection worker.", ex);
                                 }
                             }, TaskScheduler.Default);
                         }
@@ -190,16 +245,39 @@ namespace AIHelper.Services
                     }
                 }
             }
-            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
+        /// <summary>
+        /// 取消上一次待处理的划词请求。CancellationTokenSource 已被释放时 Cancel 会抛
+        /// ObjectDisposedException，而调用方处在钩子回调里，所以这里必须吞掉异常。
+        /// </summary>
+        private void CancelPendingDebounce()
+        {
+            try
+            {
+                _debounceCts?.Cancel();
+            }
+            catch (ObjectDisposedException) { }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Failed to cancel pending selection.", ex);
+            }
         }
 
         private void ProcessSelectionAsync(Point mousePos, CancellationToken token)
         {
+            // Clipboard（WPF）只能在 STA 线程访问；而 UI Automation 客户端按微软文档必须
+            // 运行在 MTA —— STA 下没有消息泵，COM 回调会挂死甚至连累调用方，
+            // 所以按本次实际要走的分支选择套间模型。
+            bool useClipboardFallback = EnableClipboardEnhancement;
+
             var thread = new Thread(() =>
             {
                 try
                 {
                     if (token.IsCancellationRequested) return;
+
+                    Logger.LogDebug($"TextSelectionService: Processing selection at ({mousePos.X},{mousePos.Y}) in '{GetForegroundProcessName()}'.");
 
                     // 1. 优先尝试通过 UI Automation 获取选中的文本 (无键盘按键与剪贴板污染)
                     string uiAutomationText = GetSelectedTextViaUIAutomation(mousePos);
@@ -208,21 +286,15 @@ namespace AIHelper.Services
                         string trimmed = uiAutomationText.Trim();
                         if (trimmed.Length > 0)
                         {
-                            Debug.WriteLine($"TextSelectionService: Selected text via UI Automation ({trimmed.Length} chars).");
-                            Application.Current?.Dispatcher.InvokeAsync(() =>
-                            {
-                                if (!token.IsCancellationRequested)
-                                {
-                                    TextSelected?.Invoke(trimmed, mousePos);
-                                }
-                            });
+                            Logger.LogDebug($"TextSelectionService: Selected text via UI Automation ({trimmed.Length} chars).");
+                            RaiseTextSelected(trimmed, mousePos, token);
                             return;
                         }
                     }
 
                     if (!EnableClipboardEnhancement)
                     {
-                        Debug.WriteLine("TextSelectionService: UI Automation yielded no text and Clipboard Enhancement is disabled. Skipping fallback.");
+                        Logger.LogDebug("TextSelectionService: UI Automation yielded no text and Clipboard Enhancement is disabled. Skipping fallback.");
                         return;
                     }
 
@@ -324,26 +396,72 @@ namespace AIHelper.Services
                         string trimmed = selectedText.Trim();
                         if (trimmed.Length > 0)
                         {
-                            Debug.WriteLine($"TextSelectionService: Selected text via Clipboard: {trimmed.Length} chars.");
-                            Application.Current?.Dispatcher.InvokeAsync(() =>
-                            {
-                                if (!token.IsCancellationRequested)
-                                {
-                                    TextSelected?.Invoke(trimmed, mousePos);
-                                }
-                            });
+                            Logger.LogDebug($"TextSelectionService: Selected text via Clipboard ({trimmed.Length} chars).");
+                            RaiseTextSelected(trimmed, mousePos, token);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"TextSelectionService Error: {ex}");
+                    Logger.LogError("TextSelectionService: Selection worker failed.", ex);
                 }
             });
 
-            thread.SetApartmentState(ApartmentState.STA);
+            thread.Name = "AIHelper.TextSelection";
+            thread.SetApartmentState(useClipboardFallback ? ApartmentState.STA : ApartmentState.MTA);
             thread.IsBackground = true;
             thread.Start();
+        }
+
+        /// <summary>
+        /// 取前台窗口的进程名，仅用于日志定位是哪个宿主程序导致的异常
+        /// </summary>
+        private static string GetForegroundProcessName()
+        {
+            try
+            {
+                IntPtr hwnd = Win32Api.GetForegroundWindow();
+                if (hwnd == IntPtr.Zero) return "?";
+
+                Win32Api.GetWindowThreadProcessId(hwnd, out uint pid);
+                using (var proc = Process.GetProcessById((int)pid))
+                {
+                    return proc.ProcessName;
+                }
+            }
+            catch
+            {
+                return "?";
+            }
+        }
+
+        /// <summary>
+        /// 把划词结果切回 UI 线程。订阅方（工具条）抛出的异常在这里就地记录，
+        /// 不让它冒泡到 Dispatcher 造成整个程序退出。
+        /// </summary>
+        private void RaiseTextSelected(string text, Point mousePos, CancellationToken token)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted)
+            {
+                Logger.LogWarning("TextSelectionService: Dispatcher unavailable, dropping selection.");
+                return;
+            }
+
+            dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        TextSelected?.Invoke(text, mousePos);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("TextSelectionService: TextSelected handler threw.", ex);
+                }
+            });
         }
 
         /// <summary>
@@ -361,7 +479,7 @@ namespace AIHelper.Services
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"TextSelectionService UIAutomation FromPoint error: {ex.Message}");
+                    Logger.LogWarning($"TextSelectionService: UIAutomation FromPoint failed at ({mousePos.X},{mousePos.Y}). {ex.GetType().Name}: {ex.Message}");
                 }
 
                 if (element != null)
@@ -388,12 +506,12 @@ namespace AIHelper.Services
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"TextSelectionService UIAutomation FocusedElement error: {ex.Message}");
+                    Logger.LogWarning($"TextSelectionService: UIAutomation FocusedElement failed. {ex.GetType().Name}: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"TextSelectionService GetSelectedTextViaUIAutomation error: {ex.Message}");
+                Logger.LogError("TextSelectionService: GetSelectedTextViaUIAutomation failed.", ex);
             }
 
             return null;
@@ -437,7 +555,7 @@ namespace AIHelper.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"TextSelectionService ExtractSelectedTextFromElement error: {ex.Message}");
+                Logger.LogWarning($"TextSelectionService: ExtractSelectedTextFromElement failed. {ex.GetType().Name}: {ex.Message}");
             }
 
             return null;
@@ -580,12 +698,23 @@ namespace AIHelper.Services
 
         public void Dispose()
         {
-            if (!_isDisposed)
+            if (_isDisposed) return;
+
+            _isDisposed = true;
+            IsEnabled = false;
+
+            try
             {
                 Uninstall();
-                _debounceCts?.Cancel();
-                _debounceCts?.Dispose();
-                _isDisposed = true;
+
+                var cts = _debounceCts;
+                _debounceCts = null;
+                cts?.Cancel();
+                cts?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Dispose failed.", ex);
             }
         }
     }

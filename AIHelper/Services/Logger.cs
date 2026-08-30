@@ -1,4 +1,4 @@
-// Copyright (C) 2026 chgblog
+﻿// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.IO;
@@ -14,6 +14,7 @@ namespace AIHelper.Services
         private static readonly string LogDirectory;
         private static readonly string AppLogPath;
         private static readonly string CrashLogPath;
+        private const long MaxLogBytes = 2 * 1024 * 1024;
 
         static Logger()
         {
@@ -38,6 +39,15 @@ namespace AIHelper.Services
         public static void LogInfo(string message)
         {
             WriteLog(AppLogPath, "INFO", message);
+        }
+
+        /// <summary>
+        /// 诊断级日志。与 Debug.WriteLine 不同，Release 版本同样会写入 app.log，
+        /// 用于排查划词等只能在用户机器上复现的问题。
+        /// </summary>
+        public static void LogDebug(string message)
+        {
+            WriteLog(AppLogPath, "DEBUG", message);
         }
 
         public static void LogWarning(string message)
@@ -81,6 +91,29 @@ namespace AIHelper.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to write log: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 日志超过 MaxLogBytes 时滚动为 .1 备份，避免长期运行写爆磁盘
+        /// </summary>
+        private static void RollIfTooLarge(string filePath)
+        {
+            try
+            {
+                var info = new FileInfo(filePath);
+                if (!info.Exists || info.Length < MaxLogBytes) return;
+
+                string backupPath = filePath + ".1";
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+                File.Move(filePath, backupPath);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to roll log: {ex.Message}");
             }
         }
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 chgblog
+﻿// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,17 @@ namespace AIHelper.Views
 
             _autoHideTimer = new DispatcherTimer();
             _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
-            _autoHideTimer.Tick += (s, e) => HideToolbar();
+            _autoHideTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    HideToolbar();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("SelectionToolbarWindow: Auto hide failed.", ex);
+                }
+            };
         }
 
         /// <summary>
@@ -46,20 +56,27 @@ namespace AIHelper.Views
         /// <param name="copyMode">复制按钮模式 (0: 不开启, 1: 开启且在第一个, 2: 开启且在最后一个)</param>
         public void ShowAt(string text, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3, int copyMode = 0)
         {
-            _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
-            _selectedText = text;
-            _actions = actions?.OrderBy(a => a.SortOrder).ToList();
-            _currentScreenPos = screenPos;
-            _isExpanded = false;
-            _copyMode = copyMode;
+            try
+            {
+                _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
+                _selectedText = text;
+                _actions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList();
+                _currentScreenPos = screenPos;
+                _isExpanded = false;
+                _copyMode = copyMode;
 
-            BuildButtons();
-            PositionWindow(_currentScreenPos);
-            
-            this.Show();
-            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
-            StartAutoHideTimer();
-            PlayShowAnimation();
+                BuildButtons();
+                PositionWindow(_currentScreenPos);
+
+                this.Show();
+                _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                StartAutoHideTimer();
+                PlayShowAnimation();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SelectionToolbarWindow: ShowAt failed.", ex);
+            }
         }
 
         /// <summary>
@@ -107,7 +124,14 @@ namespace AIHelper.Views
                 };
 
                 btn.Click += (s, e) => {
-                    ClipboardService.SetText(_selectedText);
+                    try
+                    {
+                        ClipboardService.SetText(_selectedText);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("SelectionToolbarWindow: Copy failed.", ex);
+                    }
                     HideToolbar();
                 };
 
@@ -139,7 +163,14 @@ namespace AIHelper.Views
                     };
 
                     btn.Click += (s, e) => {
-                        ActionRequested?.Invoke(action, _selectedText);
+                        try
+                        {
+                            ActionRequested?.Invoke(action, _selectedText);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError($"SelectionToolbarWindow: ActionRequested failed (action={action?.Name}).", ex);
+                        }
                         HideToolbar();
                     };
 
@@ -161,11 +192,18 @@ namespace AIHelper.Views
                     };
 
                     moreBtn.Click += (s, e) => {
-                        _isExpanded = true;
-                        BuildButtons();
-                        PositionWindow(_currentScreenPos);
-                        _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
-                        StartAutoHideTimer();
+                        try
+                        {
+                            _isExpanded = true;
+                            BuildButtons();
+                            PositionWindow(_currentScreenPos);
+                            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                            StartAutoHideTimer();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("SelectionToolbarWindow: Expand failed.", ex);
+                        }
                     };
 
                     buttonPanel.Children.Add(moreBtn);
