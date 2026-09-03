@@ -40,6 +40,37 @@ namespace AIHelper.Services
         public string reason { get; set; }
     }
 
+    internal class FocusResult
+    {
+        public bool focused { get; set; }
+        public string reason { get; set; }
+    }
+
+    public class PasteWatchStartResult
+    {
+        public bool started { get; set; }
+        public string token { get; set; }
+        public string reason { get; set; }
+    }
+
+    internal class PasteWatchResult
+    {
+        public bool pasted { get; set; }
+        public string reason { get; set; }
+    }
+
+    internal class SubmitReadyResult
+    {
+        public bool ready { get; set; }
+        public string reason { get; set; }
+    }
+
+    internal class SubmitResult
+    {
+        public bool success { get; set; }
+        public string reason { get; set; }
+    }
+
     /// <summary>
     /// Service for injecting scripts and text into WebView2 pages
     /// </summary>
@@ -148,6 +179,189 @@ namespace AIHelper.Services
             {
                 // The page is navigating away — treat it as "marker gone"
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Puts the caret inside the platform input element. Must run right before a
+        /// simulated Ctrl+V, otherwise the keystroke reaches the document instead of
+        /// the composer and the clipboard payload is discarded.
+        /// </summary>
+        public async Task<bool> FocusInputAsync(WebView2 webView, string inputSelector = null)
+        {
+            if (webView == null || webView.CoreWebView2 == null) return false;
+
+            string injectorScript = LoadInjectorScript();
+            if (string.IsNullOrEmpty(injectorScript)) return false;
+
+            try
+            {
+                string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
+                string rawJson = await EvalAsync(webView,
+                    $"{injectorScript}\n return window.AiHelperInjector.focusInput({jsonInputSelector});");
+
+                var result = string.IsNullOrEmpty(rawJson) ? null : JsonConvert.DeserializeObject<FocusResult>(rawJson);
+                if (result == null || !result.focused)
+                {
+                    Logger.LogWarning($"FocusInput did not take effect: {result?.reason ?? "NO_RESULT"}");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("FocusInput failed", ex);
+                return false;
+            }
+        }
+
+        public async Task<PasteWatchStartResult> BeginPasteWatchAsync(WebView2 webView, string inputSelector = null)
+        {
+            if (webView == null || webView.CoreWebView2 == null)
+            {
+                return new PasteWatchStartResult { started = false, reason = "WEBVIEW_NOT_READY" };
+            }
+
+            string injectorScript = LoadInjectorScript();
+            if (string.IsNullOrEmpty(injectorScript))
+            {
+                return new PasteWatchStartResult { started = false, reason = "SCRIPT_NOT_FOUND" };
+            }
+
+            try
+            {
+                string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
+                string rawJson = await EvalAsync(webView,
+                    $"{injectorScript}\n return window.AiHelperInjector.beginPasteWatch({jsonInputSelector});");
+
+                return string.IsNullOrEmpty(rawJson)
+                    ? new PasteWatchStartResult { started = false, reason = "NO_RESULT" }
+                    : JsonConvert.DeserializeObject<PasteWatchStartResult>(rawJson) ?? new PasteWatchStartResult { started = false, reason = "FORMAT_ERROR" };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("BeginPasteWatch failed", ex);
+                return new PasteWatchStartResult { started = false, reason = "EXCEPTION" };
+            }
+        }
+
+        public async Task<InjectionResult> WaitForPasteAsync(WebView2 webView, string token, int timeoutMs = 5000)
+        {
+            if (webView == null || webView.CoreWebView2 == null)
+            {
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
+            }
+
+            string injectorScript = LoadInjectorScript();
+            if (string.IsNullOrEmpty(injectorScript))
+            {
+                return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = LanguageManager.Instance["Inject_ScriptNotFound"] };
+            }
+
+            try
+            {
+                string jsonToken = JsonConvert.SerializeObject(token ?? string.Empty);
+                string rawJson = await RunJobAsync(webView, injectorScript, "waitForPaste",
+                    $"{jsonToken}, {timeoutMs}", timeoutMs + JobGraceMs);
+
+                var result = string.IsNullOrEmpty(rawJson) ? null : JsonConvert.DeserializeObject<PasteWatchResult>(rawJson);
+                if (result == null)
+                {
+                    return new InjectionResult { Success = false, Reason = "TIMEOUT", Message = LanguageManager.Instance["Inject_Failed"] };
+                }
+
+                return new InjectionResult
+                {
+                    Success = result.pasted,
+                    Reason = result.reason ?? "UNKNOWN",
+                    Message = result.pasted ? LanguageManager.Instance["Main_Status_PasteSuccess"] : LanguageManager.Instance["Inject_Failed"]
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("WaitForPaste failed", ex);
+                return new InjectionResult { Success = false, Reason = "EXCEPTION", Message = LanguageManager.Instance.GetString("Inject_Exception", ex.Message) };
+            }
+        }
+
+        public async Task<InjectionResult> WaitForSubmitReadyAsync(WebView2 webView, string inputSelector = null, string submitSelector = null, int timeoutMs = 300000)
+        {
+            if (webView == null || webView.CoreWebView2 == null)
+            {
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
+            }
+
+            string injectorScript = LoadInjectorScript();
+            if (string.IsNullOrEmpty(injectorScript))
+            {
+                return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = LanguageManager.Instance["Inject_ScriptNotFound"] };
+            }
+
+            try
+            {
+                string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
+                string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
+                string rawJson = await RunJobAsync(webView, injectorScript, "waitForSubmitReady",
+                    $"{jsonInputSelector}, {jsonSubmitSelector}, {timeoutMs}", timeoutMs + JobGraceMs);
+
+                var result = string.IsNullOrEmpty(rawJson) ? null : JsonConvert.DeserializeObject<SubmitReadyResult>(rawJson);
+                if (result == null)
+                {
+                    return new InjectionResult { Success = false, Reason = "TIMEOUT", Message = LanguageManager.Instance["Inject_Failed"] };
+                }
+
+                return new InjectionResult
+                {
+                    Success = result.ready,
+                    Reason = result.reason ?? "UNKNOWN",
+                    Message = result.ready ? LanguageManager.Instance["Main_Status_UploadReady"] : LanguageManager.Instance["Inject_Failed"]
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("WaitForSubmitReady failed", ex);
+                return new InjectionResult { Success = false, Reason = "EXCEPTION", Message = LanguageManager.Instance.GetString("Inject_Exception", ex.Message) };
+            }
+        }
+
+        public async Task<InjectionResult> SubmitAsync(WebView2 webView, string inputSelector = null, string submitSelector = null)
+        {
+            if (webView == null || webView.CoreWebView2 == null)
+            {
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
+            }
+
+            string injectorScript = LoadInjectorScript();
+            if (string.IsNullOrEmpty(injectorScript))
+            {
+                return new InjectionResult { Success = false, Reason = "SCRIPT_NOT_FOUND", Message = LanguageManager.Instance["Inject_ScriptNotFound"] };
+            }
+
+            try
+            {
+                string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
+                string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
+                string rawJson = await EvalAsync(webView,
+                    $"{injectorScript}\n return window.AiHelperInjector.submit({jsonInputSelector}, {jsonSubmitSelector});");
+
+                var result = string.IsNullOrEmpty(rawJson) ? null : JsonConvert.DeserializeObject<SubmitResult>(rawJson);
+                if (result == null)
+                {
+                    // Fallback: if the script executed without throwing, treat it as sent.
+                    return new InjectionResult { Success = true, Reason = "CLICKED", Message = LanguageManager.Instance["Inject_SendSuccess"] };
+                }
+
+                return new InjectionResult
+                {
+                    Success = result.success,
+                    Reason = result.reason ?? "UNKNOWN",
+                    Message = result.success ? LanguageManager.Instance["Inject_SendSuccess"] : LanguageManager.Instance["Inject_Failed"]
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SubmitAsync failed", ex);
+                return new InjectionResult { Success = false, Reason = "EXCEPTION", Message = LanguageManager.Instance.GetString("Inject_Exception", ex.Message) };
             }
         }
 

@@ -68,6 +68,9 @@ namespace AIHelper.Views
         private static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
         private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
         private const uint GA_ROOT = 2;
@@ -699,10 +702,10 @@ namespace AIHelper.Views
         private async void ExecuteAction(ActionItem action)
         {
             ShowAndActivate();
-            string content = ClipboardService.GetText();
-            string prompt = action.Prompt.Replace("{content}", content);
+            var clipboard = ClipboardService.GetSnapshot();
+            var plan = HotkeyActionPlanner.Build(action.Prompt, clipboard);
             var platform = GetPlatformForAction(action);
-            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+            await EnsurePlatformAndExecuteAsync(platform, plan.PromptText, action.Name, clipboard);
         }
 
         private async void ActionPanel_ActionSubmitted(ActionItem action, string text)
@@ -864,10 +867,38 @@ namespace AIHelper.Views
         }
 
         /// <summary>
+        /// Gets the caret into the page input so a simulated Ctrl+V is delivered there.
+        /// SendInput targets the foreground window, so the app window must be in front,
+        /// the WebView2 must own Win32 focus, and the DOM element must be focused.
+        /// </summary>
+        private async Task<bool> FocusInputForPasteAsync(AiPlatform platform)
+        {
+            ShowAndActivate();
+
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            if (helper.Handle != IntPtr.Zero)
+            {
+                SetForegroundWindow(helper.Handle);
+            }
+
+            webView?.Focus();
+            Keyboard.Focus(webView);
+            // Give WebView2 a moment to hand Win32 focus to the browser child window
+            await Task.Delay(200);
+
+            bool focused = await _pageInjector.FocusInputAsync(webView, platform?.InputSelector);
+            if (focused)
+            {
+                await Task.Delay(100);
+            }
+            return focused;
+        }
+
+        /// <summary>
         /// Ensures the WebView2 is on the correct platform and executes the prompt.
         /// Handles platform switching including proxy reinitializtion if needed.
         /// </summary>
-        private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null)
+        private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null, ClipboardSnapshot clipboard = null)
         {
             if (platform == null)
             {
@@ -923,6 +954,99 @@ namespace AIHelper.Views
             if (!await StartNewChatAndWaitAsync(platform)) return;
 
             bool autoSubmit = _settings?.AutoSubmit ?? true;
+            bool shouldPasteClipboard = HotkeyActionPlanner.IsAttachmentClipboard(clipboard);
+
+            if (shouldPasteClipboard)
+            {
+                // 附件（图片/文件）流程与纯文本不同：先把焦点放进输入框并模拟 Ctrl+V，
+                // 等附件真正进入输入框后再注入提示词，最后等上传完成才发送。
+                UpdateStatus(LanguageManager.Instance["Main_Status_Pasting"]);
+
+                if (!await FocusInputForPasteAsync(platform))
+                {
+                    Logger.LogError($"Could not focus the input before paste ({platform.Name})");
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", LanguageManager.Instance["Inject_InputNotFound"]));
+                    return;
+                }
+
+                var watch = await _pageInjector.BeginPasteWatchAsync(webView, platform.InputSelector);
+                bool pasteSucceeded = false;
+
+                if (watch != null && watch.started && !string.IsNullOrEmpty(watch.token))
+                {
+                    if (!KeyboardInputService.SendCtrlV())
+                    {
+                        Logger.LogError($"Ctrl+V could not be injected ({platform.Name})");
+                    }
+
+                    var pasteResult = await _pageInjector.WaitForPasteAsync(webView, watch.token, 5000);
+                    pasteSucceeded = pasteResult.Success;
+                    if (pasteSucceeded)
+                    {
+                        UpdateStatus(LanguageManager.Instance["Main_Status_PasteSuccess"]);
+                    }
+                    else
+                    {
+                        Logger.LogError($"Clipboard paste was not detected ({platform.Name}): {pasteResult.Reason}");
+                    }
+                }
+                else
+                {
+                    Logger.LogError($"Paste watch could not start ({platform.Name}): {watch?.reason ?? "NO_RESULT"}");
+                }
+
+                if (!HotkeyActionPlanner.ShouldProceedAfterPaste(clipboard, pasteSucceeded))
+                {
+                    Logger.LogError($"Clipboard paste did not reach the input ({platform.Name})");
+                    UpdateStatus(LanguageManager.Instance["Inject_Failed"]);
+                    return;
+                }
+
+                // 附件已在输入框中，再补上提示词（不提交）
+                if (!string.IsNullOrWhiteSpace(prompt))
+                {
+                    var injected = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform?.InputSelector, platform?.SubmitSelector, autoSubmit: false);
+                    if (!injected.Success)
+                    {
+                        Logger.LogError($"Clipboard prompt injection failed ({platform.Name}): {injected.Reason}");
+                        UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", injected.Message));
+                        return;
+                    }
+                }
+
+                UpdateStatus(LanguageManager.Instance["Main_Status_WaitingUpload"]);
+                var uploadReady = await _pageInjector.WaitForSubmitReadyAsync(webView, platform.InputSelector, platform.SubmitSelector, 300000);
+                if (!uploadReady.Success)
+                {
+                    if (uploadReady.Reason == "TIMEOUT")
+                    {
+                        Logger.LogWarning($"Upload wait timed out ({platform.Name}); clipboard may be unsupported.");
+                        UpdateStatus(LanguageManager.Instance[HotkeyActionPlanner.GetUploadTimeoutStatusKey(clipboard)]);
+                    }
+                    else
+                    {
+                        Logger.LogError($"Upload wait failed ({platform.Name}): {uploadReady.Reason}");
+                        UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", uploadReady.Message));
+                    }
+                    return;
+                }
+
+                if (autoSubmit)
+                {
+                    UpdateStatus(LanguageManager.Instance["Main_Status_Submitting"]);
+                    var submitResult = await _pageInjector.SubmitAsync(webView, platform.InputSelector, platform.SubmitSelector);
+                    if (!submitResult.Success)
+                    {
+                        Logger.LogError($"Submit after upload failed ({platform.Name}): {submitResult.Reason}");
+                        UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", submitResult.Message));
+                        return;
+                    }
+                }
+
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Success", autoSubmit ? LanguageManager.Instance["Inject_SendSuccess"] : LanguageManager.Instance["Inject_InjectSuccess"]));
+                return;
+            }
+
             string statusMsg = !string.IsNullOrEmpty(actionName)
                 ? LanguageManager.Instance.GetString("Main_Status_Executing", actionName)
                 : (autoSubmit ? LanguageManager.Instance["Main_Status_Submitting"] : LanguageManager.Instance["Main_Status_Injecting"]);

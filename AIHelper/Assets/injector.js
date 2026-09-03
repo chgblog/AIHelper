@@ -106,6 +106,22 @@
         return el.textContent || '';
     }
 
+    // Rough count of attachment chips/thumbnails currently shown by the composer.
+    // Used only as a delta: a growing count after Ctrl+V means the paste landed even
+    // when the page consumed the paste event before the watcher could see it.
+    function countAttachments() {
+        try {
+            const nodes = document.querySelectorAll(
+                'img[src^="blob:"], img[src^="data:image"], ' +
+                '[data-testid*="file" i], [data-testid*="attach" i], ' +
+                '[class*="attachment" i], [class*="thumbnail" i], ' +
+                '[aria-label*="remove" i], [aria-label*="删除" i]');
+            return nodes ? nodes.length : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
     function detectPlatform() {
         const url = window.location.href;
         if (url.includes("claude.ai")) return "claude";
@@ -172,6 +188,96 @@
                   document.querySelector('a[aria-label*="新对话"]');
         }
         return btn || null;
+    }
+
+    function findSubmitButton(platform, inputEl, submitSelector) {
+        let container = inputEl ? inputEl.closest('form') : null;
+        if (!container && inputEl) {
+            let parent = inputEl.parentElement;
+            for (let i = 0; i < 6; i++) {
+                if (!parent || parent === document.body) break;
+                if (parent.querySelector('button, [role="button"], div[class*="button"]')) {
+                    container = parent;
+                    break;
+                }
+                parent = parent.parentElement;
+            }
+        }
+        if (!container) container = (inputEl && inputEl.parentElement) || document.body;
+
+        let submitBtn = null;
+
+        if (submitSelector) {
+            try {
+                submitBtn = document.querySelector(submitSelector);
+            } catch(e) {}
+        }
+
+        if (!submitBtn || submitBtn.offsetWidth === 0) {
+            if (platform === "deepseek") {
+                submitBtn = container.querySelector('#chat-input-send-button') ||
+                            container.querySelector('div[class*="send-button"]') ||
+                            container.querySelector('div[class*="sendButton"]') ||
+                            container.querySelector('div[class*="_send_button"]');
+            } else if (platform === "claude") {
+                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
+                            container.querySelector('button[aria-label*="发送"]');
+            } else if (platform === "gemini") {
+                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
+                            container.querySelector('button[aria-label*="发送"]') ||
+                            container.querySelector('.send-button');
+            }
+        }
+
+        if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {
+            submitBtn = container.querySelector('button[type="submit"]') ||
+                        container.querySelector('button[aria-label*="Send"]') ||
+                        container.querySelector('button[aria-label*="发送"]') ||
+                        container.querySelector('div[role="button"][aria-label*="Send"]') ||
+                        container.querySelector('div[role="button"][aria-label*="发送"]');
+        }
+
+        if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {
+            const candidates = Array.from(container.querySelectorAll('button, div[role="button"], div, a'))
+                .filter(el => {
+                    if (inputEl && el.contains(inputEl)) return false;
+                    if (isFileUploadElement(el)) return false;
+                    if (!el.querySelector('svg')) return false;
+
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0) return false;
+                    if (rect.width > 120 || rect.height > 120) return false;
+
+                    const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                    const cls = (el.className || '').toString().toLowerCase();
+                    if (aria.includes('menu') || aria.includes('sidebar') || aria.includes('history') ||
+                        cls.includes('menu') || cls.includes('sidebar')) {
+                        return false;
+                    }
+                    return true;
+                });
+
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+                submitBtn = candidates[0];
+            }
+        }
+
+        return submitBtn || null;
+    }
+
+    function isButtonReady(btn) {
+        if (!btn || !isUsable(btn) || isFileUploadElement(btn)) return false;
+        if (btn.disabled) return false;
+        const ariaDisabled = (btn.getAttribute('aria-disabled') || '').toLowerCase();
+        if (ariaDisabled === 'true') return false;
+        const dataDisabled = (btn.getAttribute('data-disabled') || '').toLowerCase();
+        if (dataDisabled === 'true') return false;
+        try {
+            const style = window.getComputedStyle(btn);
+            if (style && (style.pointerEvents === 'none' || style.visibility === 'hidden')) return false;
+        } catch (e) {}
+        return true;
     }
 
     // Deliberately style based rather than geometry based: the host window can be
@@ -285,6 +391,163 @@
             }
         },
 
+        /// Focuses the input element so a simulated Ctrl+V lands inside it.
+        /// Without this the paste goes to whatever the page focused last (often
+        /// document.body) and Chromium drops the clipboard payload.
+        focusInput: function(inputSelector) {
+            try {
+                const platform = detectPlatform();
+                const inputEl = findInput(platform, inputSelector);
+                if (!inputEl) return { focused: false, reason: "INPUT_NOT_FOUND" };
+
+                setCursorToEnd(inputEl);
+                const active = document.activeElement;
+                const ok = active === inputEl || (inputEl.contains && inputEl.contains(active));
+                return { focused: !!ok, reason: ok ? "FOCUSED" : "FOCUS_REFUSED" };
+            } catch (err) {
+                return { focused: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Arms a watcher before the host simulates Ctrl+V, and focuses the input on
+        /// the way in. An image/file paste changes no text, so the paste event itself
+        /// is the primary signal; attachment nodes appearing is the fallback for pages
+        /// that swallow the event before it reaches the input.
+        beginPasteWatch: function(inputSelector) {
+            try {
+                const platform = detectPlatform();
+                const inputEl = findInput(platform, inputSelector);
+                if (!inputEl) return { started: false, reason: "INPUT_NOT_FOUND" };
+
+                if (window.__aiHelperPasteWatch && typeof window.__aiHelperPasteWatch.cleanup === 'function') {
+                    try { window.__aiHelperPasteWatch.cleanup(); } catch (e) {}
+                }
+
+                setCursorToEnd(inputEl);
+
+                const initialText = readText(inputEl);
+                const initialAttachments = countAttachments();
+                const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+                const watch = {
+                    token: token,
+                    pasted: false,
+                    reason: "WAITING",
+                    initialText: initialText,
+                    cleanup: null
+                };
+
+                const markPasted = (reason) => {
+                    if (watch.pasted) return;
+                    watch.pasted = true;
+                    watch.reason = reason || "PASTED";
+                };
+
+                const onPaste = () => markPasted("PASTE_EVENT");
+                const onInput = (e) => {
+                    if (e && e.inputType === 'insertFromPaste') {
+                        markPasted("INPUT_EVENT");
+                        return;
+                    }
+                    if (!watch.pasted && readText(inputEl) !== initialText) {
+                        markPasted("TEXT_CHANGED");
+                    }
+                };
+                const onChange = () => {
+                    if (!watch.pasted && readText(inputEl) !== initialText) {
+                        markPasted("CHANGE_EVENT");
+                    }
+                };
+
+                // The paste event is captured on document as well: several platforms
+                // handle it on an ancestor and stop it before the input sees it.
+                document.addEventListener('paste', onPaste, true);
+                inputEl.addEventListener('paste', onPaste, true);
+                inputEl.addEventListener('input', onInput, true);
+                inputEl.addEventListener('change', onChange, true);
+
+                const attachmentTimer = setInterval(() => {
+                    if (watch.pasted) return;
+                    if (countAttachments() > initialAttachments) {
+                        markPasted("ATTACHMENT_ADDED");
+                    }
+                }, 200);
+
+                watch.cleanup = () => {
+                    try { clearInterval(attachmentTimer); } catch (e) {}
+                    try { document.removeEventListener('paste', onPaste, true); } catch (e) {}
+                    try { inputEl.removeEventListener('paste', onPaste, true); } catch (e) {}
+                    try { inputEl.removeEventListener('input', onInput, true); } catch (e) {}
+                    try { inputEl.removeEventListener('change', onChange, true); } catch (e) {}
+                };
+
+                window.__aiHelperPasteWatch = watch;
+                return { started: true, token: token, reason: "STARTED" };
+            } catch (err) {
+                return { started: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        waitForPaste: async function(token, timeoutMs) {
+            const release = () => {
+                const w = window.__aiHelperPasteWatch;
+                if (w && w.token === token && typeof w.cleanup === 'function') {
+                    try { w.cleanup(); } catch (e) {}
+                }
+            };
+
+            try {
+                const deadline = Date.now() + (timeoutMs || 5000);
+                const myRun = window.__aiHelperRunId;
+
+                while (Date.now() < deadline) {
+                    if (window.__aiHelperRunId !== myRun) return { pasted: false, reason: "SUPERSEDED" };
+                    const watch = window.__aiHelperPasteWatch;
+                    if (!watch || watch.token !== token) return { pasted: false, reason: "LOST" };
+                    if (watch.pasted) {
+                        release();
+                        return { pasted: true, reason: watch.reason || "PASTED" };
+                    }
+                    await sleep(120);
+                }
+                release();
+                return { pasted: false, reason: "TIMEOUT" };
+            } catch (err) {
+                release();
+                return { pasted: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        waitForSubmitReady: async function(inputSelector, submitSelector, timeoutMs) {
+            try {
+                const deadline = Date.now() + (timeoutMs || 300000);
+                const platform = detectPlatform();
+                const myRun = window.__aiHelperRunId;
+
+                while (Date.now() < deadline) {
+                    if (window.__aiHelperRunId !== myRun) return { ready: false, reason: "SUPERSEDED" };
+                    const loginReason = checkLogin(platform);
+                    if (loginReason) return { ready: false, reason: loginReason };
+
+                    const inputEl = findInput(platform, inputSelector);
+                    if (!inputEl) {
+                        await sleep(250);
+                        continue;
+                    }
+
+                    const submitBtn = findSubmitButton(platform, inputEl, submitSelector);
+                    if (isButtonReady(submitBtn)) {
+                        return { ready: true, reason: "READY" };
+                    }
+
+                    await sleep(250);
+                }
+
+                return { ready: false, reason: "TIMEOUT" };
+            } catch (err) {
+                return { ready: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
         /// Injects the prompt and optionally submits it. New chat handling happens
         /// before this call (see startNewChat), so the page is already settled here.
         inject: async function(text, autoSubmit, inputSelector, submitSelector) {
@@ -328,7 +591,7 @@
                 if (autoSubmit) {
                     await sleep(200);
                     try {
-                        window.AiHelperInjector.submit(currentInput, platform, submitSelector);
+                        window.AiHelperInjector.submit(inputSelector, submitSelector);
                     } catch (e) {
                         console.error("Auto submit error:", e);
                     }
@@ -356,92 +619,22 @@
             }
         },
 
-        submit: function(inputEl, platform, submitSelector) {
-            if (!inputEl) return;
+        submit: function(inputSelector, submitSelector) {
+            const platform = detectPlatform();
+            const inputEl = findInput(platform, inputSelector);
+            if (!inputEl) return { success: false, reason: "INPUT_NOT_FOUND" };
 
-            // Find input container box
-            let container = inputEl.closest('form');
-            if (!container) {
-                let parent = inputEl.parentElement;
-                for (let i = 0; i < 6; i++) {
-                    if (!parent || parent === document.body) break;
-                    if (parent.querySelector('button, [role="button"], div[class*="button"]')) {
-                        container = parent;
-                        break;
-                    }
-                    parent = parent.parentElement;
-                }
-            }
-            if (!container) container = inputEl.parentElement || document.body;
-
-            // Try custom submit selector first
-            let submitBtn = null;
-
-            if (submitSelector) {
-                try {
-                    submitBtn = document.querySelector(submitSelector);
-                } catch(e) {}
-            }
-
-            // Fallback to platform-specific selectors
-            if (!submitBtn || submitBtn.offsetWidth === 0) {
-                if (platform === "deepseek") {
-                    submitBtn = container.querySelector('#chat-input-send-button') ||
-                                container.querySelector('div[class*="send-button"]') ||
-                                container.querySelector('div[class*="sendButton"]') ||
-                                container.querySelector('div[class*="_send_button"]');
-                } else if (platform === "claude") {
-                    submitBtn = container.querySelector('button[aria-label*="Send"]') ||
-                                container.querySelector('button[aria-label*="发送"]');
-                } else if (platform === "gemini") {
-                    submitBtn = container.querySelector('button[aria-label*="Send"]') ||
-                                container.querySelector('button[aria-label*="发送"]') ||
-                                container.querySelector('.send-button');
-                }
-            }
-
-            if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {
-                submitBtn = container.querySelector('button[type="submit"]') ||
-                            container.querySelector('button[aria-label*="Send"]') ||
-                            container.querySelector('button[aria-label*="发送"]') ||
-                            container.querySelector('div[role="button"][aria-label*="Send"]') ||
-                            container.querySelector('div[role="button"][aria-label*="发送"]');
-            }
-
-            // Fallback strategy: Find all SVG-containing elements inside container, exclude file uploads, and pick the rightmost one
-            if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {
-                const candidates = Array.from(container.querySelectorAll('button, div[role="button"], div, a'))
-                    .filter(el => {
-                        if (el.contains(inputEl)) return false;
-                        if (isFileUploadElement(el)) return false;
-                        if (!el.querySelector('svg')) return false;
-
-                        const rect = el.getBoundingClientRect();
-                        if (rect.width === 0 || rect.height === 0) return false;
-                        if (rect.width > 120 || rect.height > 120) return false;
-
-                        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
-                        const cls = (el.className || '').toString().toLowerCase();
-                        if (aria.includes('menu') || aria.includes('sidebar') || aria.includes('history') ||
-                            cls.includes('menu') || cls.includes('sidebar')) {
-                            return false;
-                        }
-                        return true;
-                    });
-
-                if (candidates.length > 0) {
-                    candidates.sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
-                    submitBtn = candidates[0];
-                }
-            }
-
-            if (submitBtn && !isFileUploadElement(submitBtn)) {
+            const submitBtn = findSubmitButton(platform, inputEl, submitSelector);
+            if (submitBtn && isButtonReady(submitBtn)) {
                 submitBtn.click();
                 const svg = submitBtn.querySelector('svg');
                 if (svg) {
                     svg.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                 }
+                return { success: true, reason: "CLICKED" };
             }
+
+            return { success: false, reason: "SUBMIT_NOT_READY" };
         }
     };
 })();
