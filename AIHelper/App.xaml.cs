@@ -61,6 +61,18 @@ namespace AIHelper
                     Shutdown(0);
                     return;
                 }
+                if (e.Args.Any(a => string.Equals(a, "--register-win11-menu", StringComparison.OrdinalIgnoreCase)))
+                {
+                    FileContextMenuService.RegisterWin11Menu(enable: true);
+                    Shutdown(0);
+                    return;
+                }
+                if (e.Args.Any(a => string.Equals(a, "--unregister-win11-menu", StringComparison.OrdinalIgnoreCase)))
+                {
+                    FileContextMenuService.RegisterWin11Menu(enable: false);
+                    Shutdown(0);
+                    return;
+                }
             }
 
             bool createdNew;

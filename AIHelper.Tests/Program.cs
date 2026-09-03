@@ -15,6 +15,7 @@ namespace AIHelper.Tests
             Run("context menu supported extensions", TestContextMenuSupportedExtensions);
             Run("cli extract file argument", TestCliExtractFileArg);
             Run("context menu registration lifecycle in HKCU", TestContextMenuRegistrationLifecycle);
+            Run("windows 11 detection helper", TestWindows11Detection);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -137,6 +138,13 @@ namespace AIHelper.Tests
             {
                 FileContextMenuService.SetContextMenuEnabled(false);
             }
+        }
+
+        private static void TestWindows11Detection()
+        {
+            // On this system (Windows 11 Build 26200), IsWindows11OrGreater should return true
+            bool isWin11 = FileContextMenuService.IsWindows11OrGreater();
+            AssertTrue(isWin11, "IsWindows11OrGreater should return true on Windows 11");
         }
 
         private static void AssertTrue(bool condition, string message)

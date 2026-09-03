@@ -172,6 +172,140 @@ namespace AIHelper.Services
             return anySuccess;
         }
 
+        /// <summary>
+        /// Checks if the operating system is Windows 11 or greater (build >= 22000).
+        /// </summary>
+        public static bool IsWindows11OrGreater()
+        {
+            try
+            {
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                {
+                    if (key != null)
+                    {
+                        var buildObj = key.GetValue("CurrentBuild") ?? key.GetValue("CurrentBuildNumber");
+                        if (buildObj != null && int.TryParse(buildObj.ToString(), out int buildNumber))
+                        {
+                            return buildNumber >= 22000;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Failed to check Windows build number: {ex.Message}");
+            }
+            return Environment.OSVersion.Version.Major >= 10 && Environment.OSVersion.Version.Build >= 22000;
+        }
+
+        /// <summary>
+        /// Registers or unregisters the Windows 11 modern context menu via MSIX Sparse Package.
+        /// Only executed when explicitly requested via --register-win11-menu or dedicated scripts.
+        /// </summary>
+        public static bool RegisterWin11Menu(bool enable)
+        {
+            try
+            {
+                // Always ensure traditional registry keys are aligned
+                RegisterDirect(machineWide: false, enable: enable);
+
+                if (enable)
+                {
+                    string manifestPath = FindAppxManifestPath();
+                    if (string.IsNullOrEmpty(manifestPath) || !File.Exists(manifestPath))
+                    {
+                        Logger.LogWarning("AppxManifest.xml not found. Cannot register Win11 sparse package.");
+                        return false;
+                    }
+
+                    string appDir = Path.GetDirectoryName(GetExePath());
+                    string script = $"Add-AppxPackage -Path '{manifestPath}' -Register -ExternalLocation '{appDir}'";
+                    bool success = RunPowerShellCommand(script);
+                    if (success)
+                    {
+                        NotifyShell();
+                        Logger.LogInfo("Win11 sparse package registered successfully.");
+                    }
+                    return success;
+                }
+                else
+                {
+                    string script = "Get-AppxPackage *AIHelper* | Remove-AppxPackage";
+                    bool success = RunPowerShellCommand(script);
+                    NotifyShell();
+                    Logger.LogInfo("Win11 sparse package unregistered.");
+                    return success;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"RegisterWin11Menu failed: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        private static string FindAppxManifestPath()
+        {
+            string exeDir = Path.GetDirectoryName(GetExePath());
+            string[] candidates = new[]
+            {
+                Path.Combine(exeDir, "AppxManifest.xml"),
+                Path.Combine(exeDir, "packaging", "windows11", "AppxManifest.xml"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packaging", "windows11", "AppxManifest.xml"),
+                Path.Combine(Directory.GetCurrentDirectory(), "packaging", "windows11", "AppxManifest.xml"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\packaging\windows11\AppxManifest.xml")
+            };
+
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    if (File.Exists(candidate))
+                    {
+                        return Path.GetFullPath(candidate);
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private static bool RunPowerShellCommand(string command)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{command}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using (var proc = Process.Start(psi))
+                {
+                    if (proc == null) return false;
+                    string output = proc.StandardOutput.ReadToEnd();
+                    string error = proc.StandardError.ReadToEnd();
+                    proc.WaitForExit();
+
+                    if (proc.ExitCode != 0)
+                    {
+                        Logger.LogWarning($"PowerShell command failed (exit code {proc.ExitCode}): {error} {output}");
+                        return false;
+                    }
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"RunPowerShellCommand execution failed: {ex.Message}", ex);
+                return false;
+            }
+        }
+
         private static void RegisterInternal(RegistryKey root, bool enable)
         {
             string exePath = GetExePath();

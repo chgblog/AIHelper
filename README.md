@@ -83,6 +83,10 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 - **🌐 Multi-Language Interface (I18n)**
   - Built-in Language Manager supporting dynamic switching between **Simplified Chinese** and **English**, auto-adapting to local time zone.
 
+- **📂 Windows File Context Menu Integration**
+  - Seamlessly integrates into Windows File Explorer context menu. Right-click on images (PNG/JPG/SVG/WEBP), Office documents (Word/Excel/PPT), PDFs, TXT, Markdown, code files (JS/TS/JSON/HTML), or folders to summon the AIHelper toolbar instantly.
+  - Native display in Windows 10; provides an official developer **MSIX Sparse Package** solution for direct injection into the Windows 11 modern top-level context menu.
+
 - **💻 Modern & Lightweight UI with System Tray**
   - Built with WPF and Microsoft WebView2 for a smooth web browsing and interaction experience.
   - System tray context menu provides quick controls ("Open Settings", "Enable/Disable Selection Helper").
@@ -104,6 +108,82 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
 | `Ctrl + Alt + O` | Summary (Summarize) | Summarizes the selected text |
 
 > *Note: All hotkeys can be reconfigured in the application's Settings window with real-time conflict detection.*
+
+---
+
+## 📂 Windows 11 File Context Menu Integration Guide
+
+AIHelper supports deep integration with Windows File Explorer context menus. Right-click on supported files (images, Office documents, PDFs, TXT, Markdown, source code, folders) to quickly invoke the AI toolbar for processing.
+
+### 1. Default Behavior (Traditional Scheme)
+* **How to enable**: Check "Enable file context menu" under `Settings -> General`.
+* **OS Differences**:
+  * **Windows 10**: Appears immediately in the primary first-level right-click menu.
+  * **Windows 11**: By default, Windows 11 collapses traditional context menu entries under the secondary "Show more options" menu (`Shift + F10`) unless the top-level registration command is executed.
+
+---
+
+### 2. Method 1: Official Developer Solution (Register directly into Windows 11 Top-Level Menu)
+Windows 11 requires extensions to possess a **Package Identity** to appear on the modern top-level menu. AIHelper adopts Microsoft's official **MSIX Sparse Package** architecture (`uap10:AllowExternalContent`), preserving the unpackaged/portable nature of the app while registering legitimate package identity to show "使用 AIHelper 处理" directly on the first menu.
+
+#### Option A: Using AIHelper Built-in CLI (Recommended)
+Open a terminal in the folder containing `AIHelper.exe`:
+```cmd
+:: Register into Windows 11 top-level context menu
+AIHelper.exe --register-win11-menu
+
+:: To unregister:
+AIHelper.exe --unregister-win11-menu
+```
+
+#### Option B: Using the Included PowerShell Script
+Run the automated script located in `packaging/windows11/`:
+```powershell
+# Register Win11 top-level menu
+powershell -ExecutionPolicy Bypass -File .\packaging\windows11\Register-Win11Menu.ps1
+
+# Unregister Win11 top-level menu
+powershell -ExecutionPolicy Bypass -File .\packaging\windows11\Unregister-Win11Menu.ps1
+```
+
+#### Option C: Native PowerShell Command
+```powershell
+# Register command (specify AppxManifest.xml and AIHelper installation folder)
+Add-AppxPackage -Path ".\packaging\windows11\AppxManifest.xml" -Register -ExternalLocation "<AIHelper_Directory>"
+
+# Unregister command
+Get-AppxPackage *AIHelper* | Remove-AppxPackage
+```
+> [!TIP]
+> If Windows prompts for a developer signing certificate, enable "Developer Mode" in Windows Settings (`Settings -> System -> For developers -> Developer Mode: ON`).
+
+---
+
+### 3. Method 2: Restore Windows 10 Classic Context Menu (Bypass "Show More Options")
+If you prefer the classic Windows 10 context menu where all traditional application entries are immediately visible without folding:
+
+* **Enable Classic Context Menu:**
+  ```cmd
+  reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /f /ve
+  taskkill /f /im explorer.exe & start explorer.exe
+  ```
+* **Revert to Windows 11 Modern Menu:**
+  ```cmd
+  reg delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f
+  taskkill /f /im explorer.exe & start explorer.exe
+  ```
+
+---
+
+### 4. Method 3: Traditional Context Menu CLI
+If you only need to register/unregister the legacy menu (equivalent to toggling in the Settings window):
+```cmd
+:: Register traditional context menu
+AIHelper.exe --register-context-menu
+
+:: Unregister traditional context menu
+AIHelper.exe --unregister-context-menu
+```
 
 ---
 

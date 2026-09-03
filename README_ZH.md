@@ -81,6 +81,10 @@ https://github.com/user-attachments/assets/5b0386f3-706b-4be9-bb22-960bb03d147a
 - **🌐 界面多语言支持 (Internationalization)**
   - 内置语言管理器，支持**简体中文**与 **English** 双语界面随时动态切换，根据时区自动适配。
 
+- **📂 Windows 文件右键快捷集成 (File Context Menu)**
+  - 深度集成 Windows 资源管理器右键菜单，支持在图片（PNG/JPG/SVG/WEBP等）、Office 文档（Word/Excel/PPT）、PDF、TXT、Markdown、代码文件（JS/TS/JSON/HTML）及目录上点击右键，一键调用 AIHelper 工具条智能处理。
+  - 支持 Windows 10 经典菜单直接呈现；并针对 Windows 11 提供官方开发者合法的 **MSIX 稀疏包（Sparse Package）** 方案，可直接注入 Win11 首次展示的现代一级菜单。
+
 - **💻 现代且轻量的 UI 与系统托盘**
   - 基于 WPF 构建，结合 Microsoft WebView2 提供流畅的网页浏览与交互体验。
   - 系统托盘图标右键菜单支持快捷「打开设置」、「开启/关闭划词搜索」等便捷控制。
@@ -102,6 +106,82 @@ https://github.com/user-attachments/assets/5b0386f3-706b-4be9-bb22-960bb03d147a
 | `Ctrl + Alt + O` | 总结 (Summarize) | 为选中文本生成总结 |
 
 > *注：所有快捷键均可在应用“设置”窗口中重新配置，并支持按键冲突实时检测。*
+
+---
+
+## 📂 Windows 11 文件右键菜单集成指南
+
+AIHelper 支持深度集成至 Windows 文件资源管理器右键菜单。在支持的文件（图片、Office 文档、PDF、TXT、Markdown、代码文件等）上右键点击，即可唤起 AI 工具条快速处理。
+
+### 1. 默认行为（传统方案）
+* **开启方式**：在 AIHelper「设置 -> 通用 -> 勾选“启用文件右键菜单”」即可生效。
+* **表现区别**：
+  * **Windows 10**：直接显示在文件的一级右键菜单中。
+  * **Windows 11**：受微软系统新规则限制，未单独执行一级菜单注册命令前，默认收拢在二级菜单「显示更多选项」（快捷键 `Shift + F10`）中。
+
+---
+
+### 2. 方案一：官方开发者方案（合法加入 Windows 11 原生一级菜单）
+微软在 Windows 11 中要求一级菜单必须拥有**应用包身份 (Package Identity)**。本项目采用了微软官方专为传统桌面应用设计的 **MSIX 稀疏包 (Sparse Package)** 机制（声明 `uap10:AllowExternalContent`），既保留免安装运行的便携性，又可合法将「使用 AIHelper 处理」直接注入到 Win11 原生一级右键菜单中。
+
+#### 方法 A：使用 AIHelper 内置命令行（推荐）
+在终端中进入 `AIHelper.exe` 所在目录：
+```cmd
+:: 注册加入 Windows 11 原生一级右键菜单
+AIHelper.exe --register-win11-menu
+
+:: 如需注销，执行：
+AIHelper.exe --unregister-win11-menu
+```
+
+#### 方法 B：使用项目自带 PowerShell 脚本
+在 PowerShell 中运行位于 `packaging/windows11/` 的自动化脚本：
+```powershell
+# 注册 Win11 一级菜单
+powershell -ExecutionPolicy Bypass -File .\packaging\windows11\Register-Win11Menu.ps1
+
+# 注销 Win11 一级菜单
+powershell -ExecutionPolicy Bypass -File .\packaging\windows11\Unregister-Win11Menu.ps1
+```
+
+#### 方法 C：通过原生 PowerShell 命令手动注册
+```powershell
+# 注册命令（需传入 AppxManifest.xml 路径及 AIHelper.exe 所在目录）
+Add-AppxPackage -Path ".\packaging\windows11\AppxManifest.xml" -Register -ExternalLocation "<AIHelper所在目录>"
+
+# 注销命令
+Get-AppxPackage *AIHelper* | Remove-AppxPackage
+```
+> [!TIP]
+> 如果 Windows 提示需要数字签名证书，请在 Windows 设置中开启「开发者模式」（路径：`Windows 设置 -> 系统 -> 开发者选项 -> 开发者模式：开启`）。
+
+---
+
+### 3. 方案二：一键切换 Windows 10 经典右键菜单（免点击“显示更多选项”）
+如果你更习惯 Windows 10 的经典右键菜单布局，或不希望在 Win11 中多次折叠，可以通过以下命令一键将 Windows 11 的右键菜单彻底切换回经典模式，此时所有软件添加的传统右键菜单项均会**直接展示**：
+
+* **开启经典菜单：**
+  ```cmd
+  reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /f /ve
+  taskkill /f /im explorer.exe & start explorer.exe
+  ```
+* **恢复 Win11 默认现代菜单：**
+  ```cmd
+  reg delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f
+  taskkill /f /im explorer.exe & start explorer.exe
+  ```
+
+---
+
+### 4. 方案三：传统右键菜单命令行
+如果仅需注册传统菜单（等同于设置界面勾选）：
+```cmd
+:: 注册传统右键菜单
+AIHelper.exe --register-context-menu
+
+:: 注销传统右键菜单
+AIHelper.exe --unregister-context-menu
+```
 
 ---
 
