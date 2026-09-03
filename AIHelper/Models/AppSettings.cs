@@ -41,6 +41,11 @@ namespace AIHelper.Models
         /// </summary>
         public bool AutoCheckUpdate { get; set; } = false;
 
+        /// <summary>
+        /// 是否启用 Windows 文件右键菜单
+        /// </summary>
+        public bool EnableContextMenu { get; set; } = false;
+
         public string ProxyServer { get; set; } = "";
         public string Language { get; set; }
 

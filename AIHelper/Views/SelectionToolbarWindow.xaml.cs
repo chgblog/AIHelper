@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 chgblog
+// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,8 @@ namespace AIHelper.Views
     public partial class SelectionToolbarWindow : Window
     {
         private string _selectedText;
+        private string _currentFilePath;
+        private bool _isForFile;
         private List<ActionItem> _actions;
         private DispatcherTimer _autoHideTimer;
         private Point _currentScreenPos;
@@ -26,6 +28,7 @@ namespace AIHelper.Views
         private const int MaxInitialActions = 5;
 
         public event Action<ActionItem, string> ActionRequested;
+        public event Action<ActionItem, string> FileActionRequested;
 
         public SelectionToolbarWindow()
         {
@@ -47,7 +50,7 @@ namespace AIHelper.Views
         }
 
         /// <summary>
-        /// 显示工具条
+        /// 显示划词工具条
         /// </summary>
         /// <param name="text">选中的文字</param>
         /// <param name="screenPos">鼠标屏幕坐标</param>
@@ -58,8 +61,10 @@ namespace AIHelper.Views
         {
             try
             {
-                _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
+                _isForFile = false;
+                _currentFilePath = null;
                 _selectedText = text;
+                _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
                 _actions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList();
                 _currentScreenPos = screenPos;
                 _isExpanded = false;
@@ -76,6 +81,41 @@ namespace AIHelper.Views
             catch (Exception ex)
             {
                 Logger.LogError("SelectionToolbarWindow: ShowAt failed.", ex);
+            }
+        }
+
+        /// <summary>
+        /// 显示文件快捷处理工具条
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <param name="screenPos">鼠标屏幕坐标</param>
+        /// <param name="actions">可用操作列表</param>
+        /// <param name="autoHideSeconds">自动消失秒数</param>
+        /// <param name="copyMode">复制按钮模式 (0: 不开启, 1: 开启且在第一个, 2: 开启且在最后一个)</param>
+        public void ShowForFile(string filePath, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3, int copyMode = 0)
+        {
+            try
+            {
+                _isForFile = true;
+                _currentFilePath = filePath;
+                _selectedText = null;
+                _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
+                _actions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList();
+                _currentScreenPos = screenPos;
+                _isExpanded = false;
+                _copyMode = copyMode;
+
+                BuildButtons();
+                PositionWindow(_currentScreenPos);
+
+                this.Show();
+                _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                StartAutoHideTimer();
+                PlayShowAnimation();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SelectionToolbarWindow: ShowForFile failed.", ex);
             }
         }
 
@@ -126,7 +166,14 @@ namespace AIHelper.Views
                 btn.Click += (s, e) => {
                     try
                     {
-                        ClipboardService.SetText(_selectedText);
+                        if (_isForFile)
+                        {
+                            ClipboardService.SetFileDropList(new[] { _currentFilePath });
+                        }
+                        else
+                        {
+                            ClipboardService.SetText(_selectedText);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -165,11 +212,18 @@ namespace AIHelper.Views
                     btn.Click += (s, e) => {
                         try
                         {
-                            ActionRequested?.Invoke(action, _selectedText);
+                            if (_isForFile)
+                            {
+                                FileActionRequested?.Invoke(action, _currentFilePath);
+                            }
+                            else
+                            {
+                                ActionRequested?.Invoke(action, _selectedText);
+                            }
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogError($"SelectionToolbarWindow: ActionRequested failed (action={action?.Name}).", ex);
+                            Logger.LogError($"SelectionToolbarWindow: Action execution failed (action={action?.Name}, isForFile={_isForFile}).", ex);
                         }
                         HideToolbar();
                     };

@@ -11,7 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <Title>AIHelper</Title>
     <Authors>chgblog</Authors>
-    <Version>0.7.3</Version>
+    <Version>0.8.0</Version>
     <Company>chgblog</Company>
     <Product>AIHelper</Product>
     <PackageProjectUrl>https://github.com/chgblog/AIHelper</PackageProjectUrl>

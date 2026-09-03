@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -140,6 +141,55 @@ namespace AIHelper.Services
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error setting clipboard: {ex.Message}");
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Sets file drop list to clipboard with retry mechanism, setting both FileDrop and Text (path) formats.
+        /// </summary>
+        public static bool SetFileDropList(IEnumerable<string> filePaths)
+        {
+            if (filePaths == null) return false;
+
+            var list = new StringCollection();
+            foreach (var path in filePaths)
+            {
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    list.Add(path);
+                }
+            }
+
+            if (list.Count == 0) return false;
+
+            int maxRetries = 5;
+            int delayMs = 50;
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    var dataObject = new DataObject();
+                    dataObject.SetFileDropList(list);
+                    dataObject.SetText(string.Join(Environment.NewLine, list.Cast<string>()));
+                    Clipboard.SetDataObject(dataObject, true);
+                    return true;
+                }
+                catch (COMException)
+                {
+                    if (i == maxRetries - 1)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Failed to set clipboard file drop list after max retries.");
+                        return false;
+                    }
+                    Thread.Sleep(delayMs);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error setting clipboard file drop list: {ex.Message}");
                     return false;
                 }
             }

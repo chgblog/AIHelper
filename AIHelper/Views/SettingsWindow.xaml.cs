@@ -45,6 +45,7 @@ namespace AIHelper.Views
             chkShowMainWindow.IsChecked = _settings.ShowMainWindowOnStartup;
             chkAutoStart.IsChecked = _settings.AutoStart;
             chkAutoSubmit.IsChecked = _settings.AutoSubmit;
+            chkEnableContextMenu.IsChecked = _settings.EnableContextMenu;
             chkEnableSelectionToolbar.IsChecked = _settings.EnableSelectionToolbar;
             int copyMode = _settings.SelectionToolbarCopyMode;
             if (copyMode == 1) cbiCopyFirst.IsSelected = true;
@@ -170,6 +171,7 @@ namespace AIHelper.Views
             _settings.ShowMainWindowOnStartup = chkShowMainWindow.IsChecked == true;
             _settings.AutoStart = chkAutoStart.IsChecked == true;
             _settings.AutoSubmit = chkAutoSubmit.IsChecked == true;
+            _settings.EnableContextMenu = chkEnableContextMenu.IsChecked == true;
             _settings.EnableSelectionToolbar = chkEnableSelectionToolbar.IsChecked == true;
             int copyMode = 0;
             if (cbiCopyFirst.IsSelected) copyMode = 1;
@@ -197,6 +199,7 @@ namespace AIHelper.Views
             _settings.ProxyServer = newProxy;
 
             AutoStartService.SetAutoStart(_settings.AutoStart);
+            FileContextMenuService.SetContextMenuEnabled(_settings.EnableContextMenu);
 
             var activePlatform = _settings.Platforms.FirstOrDefault(p => p.IsActive);
             if (activePlatform != null)
@@ -217,6 +220,25 @@ namespace AIHelper.Views
             }
 
             return true;
+        }
+
+        private void ChkEnableContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            bool enable = chkEnableContextMenu.IsChecked == true;
+            bool success = FileContextMenuService.SetContextMenuEnabled(enable);
+            if (!success)
+            {
+                chkEnableContextMenu.IsChecked = !enable;
+                MessageBox.Show(
+                    LanguageManager.Instance["ContextMenu_AuthFailed"],
+                    LanguageManager.Instance["Notice"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            else
+            {
+                _settings.EnableContextMenu = enable;
+            }
         }
 
         private void ChkEnableSelectionToolbar_Click(object sender, RoutedEventArgs e)

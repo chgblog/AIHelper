@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 chgblog
+// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Diagnostics;
@@ -47,15 +47,49 @@ namespace AIHelper
             SetupExceptionHandling();
             Logger.LogInfo($"App starting up with args: {string.Join(" ", e.Args)}");
 
+            if (e.Args != null)
+            {
+                if (e.Args.Any(a => string.Equals(a, "--register-context-menu", StringComparison.OrdinalIgnoreCase)))
+                {
+                    FileContextMenuService.RegisterDirect(machineWide: true, enable: true);
+                    Shutdown(0);
+                    return;
+                }
+                if (e.Args.Any(a => string.Equals(a, "--unregister-context-menu", StringComparison.OrdinalIgnoreCase)))
+                {
+                    FileContextMenuService.RegisterDirect(machineWide: true, enable: false);
+                    Shutdown(0);
+                    return;
+                }
+            }
+
             bool createdNew;
             _mutex = new Mutex(true, "AIHelper_SingleInstance", out createdNew);
 
             if (!createdNew)
             {
-                BringToFront();
+                bool sent = false;
+                if (e.Args != null && e.Args.Length > 0)
+                {
+                    sent = SingleInstanceIpcService.SendArgsToRunningInstance(e.Args);
+                }
+
+                if (!sent)
+                {
+                    BringToFront();
+                }
                 Shutdown();
                 return;
             }
+
+            // 启动单实例 IPC 服务，监听后续从右键菜单等发来的参数
+            SingleInstanceIpcService.StartServer(args =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    HandleCommandLineArgs(args);
+                });
+            });
 
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             InitializeTrayIcon();
@@ -63,6 +97,9 @@ namespace AIHelper
             _mainWindow = MainWindowInstance;
 
             var settings = SettingsService.Instance.Load();
+
+            string initialFile = ExtractFileArg(e.Args);
+            bool hasInitialFile = !string.IsNullOrEmpty(initialFile);
 
             bool startVisible = e.Args != null && e.Args.Any(arg => 
                 string.Equals(arg, "--show", StringComparison.OrdinalIgnoreCase) || 
@@ -74,7 +111,7 @@ namespace AIHelper
                 string.Equals(arg, "--hide", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(arg, "-hide", StringComparison.OrdinalIgnoreCase));
 
-            bool shouldShow = startVisible || (!startMinimized && settings.ShowMainWindowOnStartup);
+            bool shouldShow = !hasInitialFile && (startVisible || (!startMinimized && settings.ShowMainWindowOnStartup));
 
             if (shouldShow)
             {
@@ -86,6 +123,11 @@ namespace AIHelper
                 Logger.LogInfo("Starting hidden in system tray.");
             }
 
+            if (hasInitialFile)
+            {
+                _mainWindow.HandleFileContextMenu(initialFile);
+            }
+
             base.OnStartup(e);
 
             // 启动后台自动检测新版本
@@ -93,6 +135,35 @@ namespace AIHelper
             {
                 UpdateCheckService.StartDelayedCheck(settings);
             }
+        }
+
+        private void HandleCommandLineArgs(string[] args)
+        {
+            if (args == null || args.Length == 0)
+            {
+                MainWindowInstance.ShowAndActivate();
+                return;
+            }
+
+            string file = ExtractFileArg(args);
+            if (!string.IsNullOrEmpty(file))
+            {
+                MainWindowInstance.HandleFileContextMenu(file);
+                return;
+            }
+
+            bool show = args.Any(arg => 
+                string.Equals(arg, "--show", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(arg, "-show", StringComparison.OrdinalIgnoreCase));
+            if (show)
+            {
+                MainWindowInstance.ShowAndActivate();
+            }
+        }
+
+        public static string ExtractFileArg(string[] args)
+        {
+            return SingleInstanceIpcService.ExtractFileArg(args);
         }
 
         private void SetupExceptionHandling()
@@ -250,6 +321,7 @@ namespace AIHelper
             _trayIcon?.Dispose();
             TextSelectionService.Instance?.Dispose();
             HotkeyService.Instance?.UnregisterAll();
+            SingleInstanceIpcService.StopServer();
             base.OnExit(e);
         }
     }

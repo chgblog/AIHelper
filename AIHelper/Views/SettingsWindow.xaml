@@ -38,7 +38,10 @@
                             <TextBlock Text="{Binding [Settings_General_AutoStartTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,15" Foreground="#a0a0b0" FontSize="12"/>
 
                             <CheckBox x:Name="chkAutoSubmit" Content="{Binding [Settings_General_AutoSubmit], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{Binding [Settings_General_AutoSubmitTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding [Settings_General_AutoSubmitTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,15" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <CheckBox x:Name="chkEnableContextMenu" Content="{Binding [Settings_General_EnableContextMenu], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" Margin="0,5,0,0" VerticalContentAlignment="Center" Click="ChkEnableContextMenu_Click"/>
+                            <TextBlock Text="{Binding [Settings_General_EnableContextMenuTip], Source={x:Static services:LanguageManager.Instance}}" Margin="20,5,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
 
                             <Border Height="1" Background="#3a3a5e" Margin="0,15,0,15"/>
 

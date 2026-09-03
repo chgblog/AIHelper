@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2026 chgblog
+// Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
 using System.Collections.Generic;
@@ -120,6 +120,7 @@ namespace AIHelper.Views
 
                 _selectionToolbar = new SelectionToolbarWindow();
                 _selectionToolbar.ActionRequested += SelectionToolbar_ActionRequested;
+                _selectionToolbar.FileActionRequested += SelectionToolbar_FileActionRequested;
 
                 TextSelectionService.Instance.TextSelected += TextSelectionService_TextSelected;
                 TextSelectionService.Instance.DismissRequested += TextSelectionService_DismissRequested;
@@ -143,9 +144,16 @@ namespace AIHelper.Views
                     SettingsService.Instance.Save(_settings);
                     ShowSettings(2); // 平台设置界面
                 }
-                else if (_settings.AutoStart)
+                else
                 {
-                    AutoStartService.SetAutoStart(true);
+                    if (_settings.AutoStart)
+                    {
+                        AutoStartService.SetAutoStart(true);
+                    }
+                    if (_settings.EnableContextMenu)
+                    {
+                        FileContextMenuService.SetContextMenuEnabled(true);
+                    }
                 }
 
                 LoadPlatforms();
@@ -263,6 +271,61 @@ namespace AIHelper.Views
             {
                 Logger.LogError($"Error in SelectionToolbar_ActionRequested (action={action?.Name})", ex);
             }
+        }
+
+        private async void SelectionToolbar_FileActionRequested(ActionItem action, string filePath)
+        {
+            try
+            {
+                if (action == null || string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
+
+                ClipboardService.SetFileDropList(new[] { filePath });
+                var snapshot = ClipboardSnapshot.FromFileDropList(new[] { filePath });
+                var plan = HotkeyActionPlanner.Build(action.Prompt, snapshot);
+
+                ShowAndActivate();
+                var platform = GetPlatformForAction(action);
+                await EnsurePlatformAndExecuteAsync(platform, plan.PromptText, action.Name, snapshot);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error in SelectionToolbar_FileActionRequested (action={action?.Name}, file={filePath})", ex);
+            }
+        }
+
+        /// <summary>
+        /// 处理来自 Windows 文件右键菜单的调用，在当前鼠标位置弹出工具条
+        /// </summary>
+        public void HandleFileContextMenu(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
+            {
+                Logger.LogWarning($"HandleFileContextMenu called with invalid or missing file: {filePath}");
+                return;
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    if (_selectionToolbar == null)
+                    {
+                        _selectionToolbar = new SelectionToolbarWindow();
+                        _selectionToolbar.ActionRequested += SelectionToolbar_ActionRequested;
+                        _selectionToolbar.FileActionRequested += SelectionToolbar_FileActionRequested;
+                    }
+
+                    int copyMode = _settings?.SelectionToolbarCopyMode ?? 0;
+                    int autoHideSeconds = _settings?.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
+
+                    var mousePos = new Point(System.Windows.Forms.Cursor.Position.X, System.Windows.Forms.Cursor.Position.Y);
+                    _selectionToolbar.ShowForFile(filePath, mousePos, _settings?.Actions, autoHideSeconds, copyMode);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"Error in HandleFileContextMenu (file={filePath})", ex);
+                }
+            });
         }
 
         private void RegisterHotkeys()
@@ -1401,6 +1464,11 @@ namespace AIHelper.Views
             ShowUpdateIndicator(_availableUpdate);
             UpdateMaximizeRestoreState();
             LoadQuickActions();
+
+            if (_settings?.EnableContextMenu == true)
+            {
+                FileContextMenuService.SetContextMenuEnabled(true);
+            }
         }
 
         /// <summary>
