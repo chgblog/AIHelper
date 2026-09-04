@@ -55,6 +55,11 @@ namespace AIHelper.Services
         /// </summary>
         public Func<Point, bool> ShouldDismissOnLeftClick { get; set; }
 
+        /// <summary>
+        /// 供外部注册：判断屏幕物理坐标点是否在工具条窗口区域内（在工具条上的操作不触发划词检测）
+        /// </summary>
+        public Func<Point, bool> IsPointInsideToolbar { get; set; }
+
         private const int WH_MOUSE_LL = 14;
         private const int WM_LBUTTONDOWN = 0x0201;
         private const int WM_LBUTTONUP = 0x0202;
@@ -70,7 +75,6 @@ namespace AIHelper.Services
         private Point _lastClickPos;
 
         private CancellationTokenSource _debounceCts;
-        private int _currentProcessId;
 
         /// <summary>
         /// 全局开关
@@ -95,10 +99,6 @@ namespace AIHelper.Services
         private TextSelectionService()
         {
             _proc = HookCallback;
-            using (var process = Process.GetCurrentProcess())
-            {
-                _currentProcessId = process.Id;
-            }
         }
 
         /// <summary>
@@ -224,7 +224,7 @@ namespace AIHelper.Services
                         IntPtr hwnd = Win32Api.GetForegroundWindow();
                         Win32Api.GetWindowThreadProcessId(hwnd, out uint processId);
 
-                        if (processId != (uint)_currentProcessId && IsProcessInScope(processId))
+                        if (ShouldProcessSelection(_mouseDownPos, mouseUpPos, processId))
                         {
                             CancelPendingDebounce();
                             _debounceCts = new CancellationTokenSource();
@@ -248,7 +248,7 @@ namespace AIHelper.Services
                         }
                         else
                         {
-                            Debug.WriteLine("TextSelectionService: Ignored self window or out of scope app.");
+                            Debug.WriteLine("TextSelectionService: Ignored toolbar click or out of scope app.");
                         }
                     }
                 }
@@ -774,7 +774,17 @@ namespace AIHelper.Services
             Win32Api.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Win32Api.INPUT)));
         }
 
-        private bool IsProcessInScope(uint processId)
+        internal bool ShouldProcessSelection(Point mouseDownPos, Point mouseUpPos, uint processId)
+        {
+            if (IsPointInsideToolbar?.Invoke(mouseDownPos) == true || IsPointInsideToolbar?.Invoke(mouseUpPos) == true)
+            {
+                return false;
+            }
+
+            return IsProcessInScope(processId);
+        }
+
+        internal bool IsProcessInScope(uint processId)
         {
             if (AppScopeMode == 0) return true; // 全部应用
 

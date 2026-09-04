@@ -27,6 +27,7 @@ namespace AIHelper.Tests
             Run("selection toolbar point in rect hit testing", TestSelectionToolbarPointInRect);
             Run("selection toolbar left click outside dismiss routing", TestSelectionToolbarDismissOnLeftClick);
             Run("text selection service triggers dismiss on left click outside", TestTextSelectionServiceDismissOnLeftClick);
+            Run("text selection service allows self window selection and ignores toolbar clicks", TestTextSelectionServiceSelfWindowAndToolbarClick);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -447,6 +448,45 @@ namespace AIHelper.Tests
             {
                 service.DismissRequested -= onDismiss;
                 service.ShouldDismissOnLeftClick = null;
+            }
+        }
+
+        private static void TestTextSelectionServiceSelfWindowAndToolbarClick()
+        {
+            var service = TextSelectionService.Instance;
+            uint currentPid = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+
+            try
+            {
+                service.AppScopeMode = 0;
+                service.IsPointInsideToolbar = null;
+
+                // 1. Own process window must be in scope by default
+                AssertTrue(service.IsProcessInScope(currentPid), "current process window should be in scope by default");
+
+                // 2. Dragging/selecting inside own window should be allowed when toolbar is not clicked
+                AssertTrue(service.ShouldProcessSelection(new System.Windows.Point(10, 10), new System.Windows.Point(50, 50), currentPid),
+                    "selection inside self window should be allowed");
+
+                // 3. Configure toolbar area: (100, 100) to (200, 150)
+                service.IsPointInsideToolbar = pt => pt.X >= 100 && pt.X <= 200 && pt.Y >= 100 && pt.Y <= 150;
+
+                // Mouse down inside toolbar
+                AssertFalse(service.ShouldProcessSelection(new System.Windows.Point(120, 120), new System.Windows.Point(250, 250), currentPid),
+                    "drag starting inside toolbar should be ignored");
+
+                // Mouse up inside toolbar
+                AssertFalse(service.ShouldProcessSelection(new System.Windows.Point(50, 50), new System.Windows.Point(150, 120), currentPid),
+                    "drag ending inside toolbar should be ignored");
+
+                // Drag completely outside toolbar in self window
+                AssertTrue(service.ShouldProcessSelection(new System.Windows.Point(10, 10), new System.Windows.Point(50, 50), currentPid),
+                    "selection outside toolbar in self window should be processed");
+            }
+            finally
+            {
+                service.IsPointInsideToolbar = null;
+                service.AppScopeMode = 0;
             }
         }
 
