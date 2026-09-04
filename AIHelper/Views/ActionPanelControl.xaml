@@ -6,6 +6,7 @@
              xmlns:services="clr-namespace:AIHelper.Services"
              mc:Ignorable="d" 
              d:DesignHeight="250" d:DesignWidth="400"
+             PreviewKeyDown="ActionPanel_PreviewKeyDown"
              Background="#1e1e2e" Foreground="#e0e0e0">
     <UserControl.Resources>
         <Style TargetType="Button" x:Key="ActionButtonStyle">
@@ -43,7 +44,35 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Text="{Binding [ActionPanel_ContentHeader], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Margin="0,0,0,5" FontSize="14"/>
+        <!-- 顶部标题与关闭按钮 -->
+        <Grid Grid.Row="0" Margin="0,0,0,5">
+            <TextBlock Text="{Binding [ActionPanel_ContentHeader], Source={x:Static services:LanguageManager.Instance}}" 
+                       FontWeight="Bold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            
+            <Button x:Name="btnClosePanel" Content="✕" Width="26" Height="26"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Foreground="#a0a0b0" Background="Transparent" BorderThickness="0"
+                    FontSize="12" Cursor="Hand" Click="BtnClosePanel_Click"
+                    ToolTip="{Binding [ActionPanel_Close], Source={x:Static services:LanguageManager.Instance}}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#3a3a5e"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#4a4a6e"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
         
         <Grid Grid.Row="1" Margin="0,0,0,15" MinHeight="90">
             <!-- 文本输入框：当剪贴板为文本或普通文本输入时显示 -->

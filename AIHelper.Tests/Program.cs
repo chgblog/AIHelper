@@ -22,6 +22,7 @@ namespace AIHelper.Tests
             Run("context menu registration lifecycle in HKCU", TestContextMenuRegistrationLifecycle);
             Run("context menu two level cascading registration and sync in HKCU", TestContextMenuTwoLevelRegistration);
             Run("action panel snapshot routing for text image and file", TestActionPanelSnapshotRouting);
+            Run("action panel close functionality and event notification", TestActionPanelClose);
             Run("submit result deserialization and error routing", TestSubmitResultHandling);
             Run("submit ready result deserialization", TestSubmitReadyResultHandling);
             Run("selection toolbar point in rect hit testing", TestSelectionToolbarPointInRect);
@@ -337,6 +338,28 @@ namespace AIHelper.Tests
             panel.ClearAttachment();
             AssertTrue(panel.CurrentSnapshot == null, "snapshot cleared after ClearAttachment");
             AssertEquals(string.Empty, panel.GetContent(), "text cleared after ClearAttachment");
+        }
+
+        private static void TestActionPanelClose()
+        {
+            var panel = new AIHelper.Views.ActionPanelControl();
+            panel.Visibility = System.Windows.Visibility.Visible;
+
+            bool closeRequestedFired = false;
+            panel.CloseRequested += () =>
+            {
+                closeRequestedFired = true;
+            };
+
+            // Call Close()
+            panel.Close();
+
+            AssertTrue(panel.Visibility == System.Windows.Visibility.Collapsed, "panel Visibility should be Collapsed after Close()");
+            AssertTrue(closeRequestedFired, "CloseRequested event should be fired");
+
+            // Localized string verification
+            string closeTextZh = LanguageManager.Instance["ActionPanel_Close"];
+            AssertTrue(!string.IsNullOrEmpty(closeTextZh), "ActionPanel_Close should have localized string");
         }
 
         private static void TestSubmitResultHandling()

@@ -8,7 +8,8 @@
         mc:Ignorable="d"
         Title="{Binding [AppName], Source={x:Static services:LanguageManager.Instance}}" Height="600" Width="800" Icon="/icon.ico"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen">
+        ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="MainWindow_PreviewKeyDown">
     <Window.Resources>
         <Style x:Key="QuickActionButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#252538"/>
@@ -147,7 +148,8 @@
 
             <!-- Action Panel -->
             <local:ActionPanelControl x:Name="actionPanel" Grid.Row="1" Visibility="Collapsed" 
-                                      ActionSubmitted="ActionPanel_ActionSubmitted"/>
+                                      ActionSubmitted="ActionPanel_ActionSubmitted"
+                                      CloseRequested="ActionPanel_CloseRequested"/>
 
             <!-- WebView2 Container -->
             <Grid x:Name="webViewContainer" Grid.Row="2"/>

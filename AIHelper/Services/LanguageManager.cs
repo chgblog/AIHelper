@@ -193,6 +193,7 @@ namespace AIHelper.Services
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 内容" },
+            { "ActionPanel_Close", "关闭快捷面板" },
             { "ActionPanel_AvailableActions", "可用操作:" },
             { "ActionPanel_Image", "图片" },
             { "ActionPanel_File", "文件" },
@@ -433,6 +434,7 @@ namespace AIHelper.Services
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 Content" },
+            { "ActionPanel_Close", "Close Panel" },
             { "ActionPanel_AvailableActions", "Available Actions:" },
             { "ActionPanel_Image", "Image" },
             { "ActionPanel_File", "File" },

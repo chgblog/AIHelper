@@ -813,6 +813,34 @@ namespace AIHelper.Views
             }
         }
 
+        private void ActionPanel_CloseRequested()
+        {
+            if (actionPanel != null)
+            {
+                actionPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                if (actionPanel != null && actionPanel.Visibility == Visibility.Visible)
+                {
+                    actionPanel.Close();
+                    e.Handled = true;
+                    return;
+                }
+
+                if (popupMoreActions != null && popupMoreActions.IsOpen)
+                {
+                    popupMoreActions.IsOpen = false;
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
         private const int MaxQuickActionsOnBar = 5;
 
         private void LoadQuickActions()

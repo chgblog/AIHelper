@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using AIHelper.Models;
 using AIHelper.Services;
@@ -22,6 +23,7 @@ namespace AIHelper.Views
 
         public event Action<ActionItem> ActionClicked;
         public event Action<ActionItem, string, ClipboardSnapshot> ActionSubmitted;
+        public event Action CloseRequested;
 
         public List<ActionItem> ActionItems 
         { 
@@ -131,6 +133,26 @@ namespace AIHelper.Views
         private void BtnClearAttachment_Click(object sender, RoutedEventArgs e)
         {
             ClearAttachment();
+        }
+
+        public void Close()
+        {
+            this.Visibility = Visibility.Collapsed;
+            CloseRequested?.Invoke();
+        }
+
+        private void BtnClosePanel_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void ActionPanel_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+                Close();
+            }
         }
 
         public void LoadActions(List<ActionItem> actions)
