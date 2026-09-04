@@ -161,5 +161,51 @@ namespace AIHelper.Services
             }
             return null;
         }
+
+        /// <summary>
+        /// Extracts the action ID from command line arguments (e.g. --action id, -action id, --action=id).
+        /// </summary>
+        public static string ExtractActionIdArg(string[] args)
+        {
+            if (args == null) return null;
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], "--action", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(args[i], "-action", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i + 1 < args.Length)
+                    {
+                        return args[i + 1];
+                    }
+                }
+                if (args[i].StartsWith("--action=", StringComparison.OrdinalIgnoreCase) ||
+                    args[i].StartsWith("-action=", StringComparison.OrdinalIgnoreCase))
+                {
+                    int eqIdx = args[i].IndexOf('=');
+                    if (eqIdx >= 0 && eqIdx < args[i].Length - 1)
+                    {
+                        return args[i].Substring(eqIdx + 1).Trim('"');
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Checks whether the arguments include the --more flag.
+        /// </summary>
+        public static bool HasMoreArg(string[] args)
+        {
+            if (args == null) return false;
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], "--more", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(args[i], "-more", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

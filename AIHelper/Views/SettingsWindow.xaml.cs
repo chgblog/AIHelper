@@ -199,7 +199,7 @@ namespace AIHelper.Views
             _settings.ProxyServer = newProxy;
 
             AutoStartService.SetAutoStart(_settings.AutoStart);
-            FileContextMenuService.SetContextMenuEnabled(_settings.EnableContextMenu);
+            FileContextMenuService.SetContextMenuEnabled(_settings.EnableContextMenu, _settings.Actions);
 
             var activePlatform = _settings.Platforms.FirstOrDefault(p => p.IsActive);
             if (activePlatform != null)
@@ -225,7 +225,7 @@ namespace AIHelper.Views
         private void ChkEnableContextMenu_Click(object sender, RoutedEventArgs e)
         {
             bool enable = chkEnableContextMenu.IsChecked == true;
-            bool success = FileContextMenuService.SetContextMenuEnabled(enable);
+            bool success = FileContextMenuService.SetContextMenuEnabled(enable, _settings.Actions);
             if (!success)
             {
                 chkEnableContextMenu.IsChecked = !enable;
@@ -465,7 +465,7 @@ namespace AIHelper.Views
                 HotkeyModifiers = "",
                 HotkeyKey = "",
                 SortOrder = nextSort,
-                Icon = "📋"
+                Icon = ""
             };
 
             var editWindow = new ActionEditWindow(newAction, LanguageManager.Instance["ActionEdit_Title_Add"], _settings.Platforms, _settings);

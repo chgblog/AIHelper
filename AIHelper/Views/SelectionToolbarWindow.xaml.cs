@@ -94,7 +94,8 @@ namespace AIHelper.Views
         /// <param name="actions">可用操作列表</param>
         /// <param name="autoHideSeconds">自动消失秒数</param>
         /// <param name="copyMode">复制按钮模式 (0: 不开启, 1: 开启且在第一个, 2: 开启且在最后一个)</param>
-        public void ShowForFile(string filePath, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3, int copyMode = 0)
+        /// <param name="isExpanded">是否直接展开显示全部操作</param>
+        public void ShowForFile(string filePath, System.Windows.Point screenPos, List<ActionItem> actions, int autoHideSeconds = 3, int copyMode = 0, bool isExpanded = false)
         {
             try
             {
@@ -104,7 +105,7 @@ namespace AIHelper.Views
                 _autoHideSeconds = autoHideSeconds > 0 ? autoHideSeconds : 3;
                 _actions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList();
                 _currentScreenPos = screenPos;
-                _isExpanded = false;
+                _isExpanded = isExpanded;
                 _copyMode = copyMode;
 
                 BuildButtons();

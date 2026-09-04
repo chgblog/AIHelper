@@ -125,7 +125,7 @@ namespace AIHelper
 
             if (hasInitialFile)
             {
-                _mainWindow.HandleFileContextMenu(initialFile);
+                DispatchFileInvocation(initialFile, e.Args);
             }
 
             base.OnStartup(e);
@@ -148,7 +148,7 @@ namespace AIHelper
             string file = ExtractFileArg(args);
             if (!string.IsNullOrEmpty(file))
             {
-                MainWindowInstance.HandleFileContextMenu(file);
+                DispatchFileInvocation(file, args);
                 return;
             }
 
@@ -159,6 +159,31 @@ namespace AIHelper
             {
                 MainWindowInstance.ShowAndActivate();
             }
+        }
+
+        private void DispatchFileInvocation(string filePath, string[] args)
+        {
+            if (string.IsNullOrEmpty(filePath)) return;
+
+            string actionId = SingleInstanceIpcService.ExtractActionIdArg(args);
+            bool hasMore = SingleInstanceIpcService.HasMoreArg(args);
+
+            if (!string.IsNullOrEmpty(actionId))
+            {
+                var settings = SettingsService.Instance.Load();
+                var action = settings?.Actions?.FirstOrDefault(a => 
+                    string.Equals(a.Id, actionId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a.Name, actionId, StringComparison.OrdinalIgnoreCase));
+
+                if (action != null)
+                {
+                    MainWindowInstance.ExecuteFileAction(action, filePath);
+                    return;
+                }
+                Logger.LogWarning($"Action '{actionId}' not found for file invocation '{filePath}'. Falling back to toolbar.");
+            }
+
+            MainWindowInstance.HandleFileContextMenu(filePath, isExpanded: hasMore);
         }
 
         public static string ExtractFileArg(string[] args)

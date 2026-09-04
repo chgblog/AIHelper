@@ -152,7 +152,7 @@ namespace AIHelper.Views
                     }
                     if (_settings.EnableContextMenu)
                     {
-                        FileContextMenuService.SetContextMenuEnabled(true);
+                        FileContextMenuService.SetContextMenuEnabled(true, _settings.Actions);
                     }
                 }
 
@@ -273,11 +273,23 @@ namespace AIHelper.Views
             }
         }
 
-        private async void SelectionToolbar_FileActionRequested(ActionItem action, string filePath)
+        private void SelectionToolbar_FileActionRequested(ActionItem action, string filePath)
+        {
+            ExecuteFileAction(action, filePath);
+        }
+
+        /// <summary>
+        /// 直接执行指定操作处理文件（放入剪贴板、构建 Prompt、呼出主界面并交由平台处理）
+        /// </summary>
+        public async void ExecuteFileAction(ActionItem action, string filePath)
         {
             try
             {
-                if (action == null || string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
+                if (action == null || string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+                {
+                    Logger.LogWarning($"ExecuteFileAction called with invalid action or file: action={action?.Name}, file={filePath}");
+                    return;
+                }
 
                 ClipboardService.SetFileDropList(new[] { filePath });
                 var snapshot = ClipboardSnapshot.FromFileDropList(new[] { filePath });
@@ -289,14 +301,14 @@ namespace AIHelper.Views
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Error in SelectionToolbar_FileActionRequested (action={action?.Name}, file={filePath})", ex);
+                Logger.LogError($"Error in ExecuteFileAction (action={action?.Name}, file={filePath})", ex);
             }
         }
 
         /// <summary>
         /// 处理来自 Windows 文件右键菜单的调用，在当前鼠标位置弹出工具条
         /// </summary>
-        public void HandleFileContextMenu(string filePath)
+        public void HandleFileContextMenu(string filePath, bool isExpanded = false)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
             {
@@ -319,7 +331,7 @@ namespace AIHelper.Views
                     int autoHideSeconds = _settings?.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3;
 
                     var mousePos = new Point(System.Windows.Forms.Cursor.Position.X, System.Windows.Forms.Cursor.Position.Y);
-                    _selectionToolbar.ShowForFile(filePath, mousePos, _settings?.Actions, autoHideSeconds, copyMode);
+                    _selectionToolbar.ShowForFile(filePath, mousePos, _settings?.Actions, autoHideSeconds, copyMode, isExpanded);
                 }
                 catch (Exception ex)
                 {
@@ -1487,7 +1499,7 @@ namespace AIHelper.Views
 
             if (_settings?.EnableContextMenu == true)
             {
-                FileContextMenuService.SetContextMenuEnabled(true);
+                FileContextMenuService.SetContextMenuEnabled(true, _settings.Actions);
             }
         }
 
