@@ -15,7 +15,6 @@
         PreviewMouseRightButtonDown="Window_PreviewMouseRightButtonDown"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="ClearType"
-        RenderOptions.ClearTypeHint="Enabled"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         Opacity="0">
@@ -25,8 +24,8 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI, sans-serif"/>
-            <Setter Property="FontSize" Value="14.5"/>
-            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Padding" Value="10,6"/>
@@ -44,7 +43,9 @@
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" 
                                               VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}"/>
+                                              Margin="{TemplateBinding Padding}"
+                                              RecognizesAccessKey="False"
+                                              SnapsToDevicePixels="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -67,16 +68,32 @@
             <Setter Property="Width" Value="1"/>
             <Setter Property="Margin" Value="3,8"/>
             <Setter Property="Fill" Value="#383854"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
     </Window.Resources>
 
-    <Border Background="#F2171726" BorderBrush="#3E3E60" BorderThickness="1" CornerRadius="10" Margin="10" RenderTransformOrigin="0.5,0.5">
-        <Border.RenderTransform>
+    <Grid Margin="10" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
             <ScaleTransform ScaleX="0.8" ScaleY="0.8" x:Name="WindowScale" />
-        </Border.RenderTransform>
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" Opacity="0.45" BlurRadius="16" ShadowDepth="4"/>
-        </Border.Effect>
-        <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Margin="6,4"/>
-    </Border>
+        </Grid.RenderTransform>
+
+        <!-- 阴影层：独立于内容层，避免 DropShadowEffect 导致按钮与文字被强制转为位图渲染破坏清晰度 -->
+        <Border Background="#171726" CornerRadius="10">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.45" BlurRadius="16" ShadowDepth="4"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- 内容层：无任何 Effect，使用完全不透明背景（#171726）并开启 ClearTypeHint，保证文字像素级锐利 -->
+        <Border Background="#171726" 
+                BorderBrush="#3E3E60" 
+                BorderThickness="1" 
+                CornerRadius="10"
+                RenderOptions.ClearTypeHint="Enabled"
+                SnapsToDevicePixels="True"
+                UseLayoutRounding="True">
+            <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Margin="6,4"
+                        SnapsToDevicePixels="True" UseLayoutRounding="True"/>
+        </Border>
+    </Grid>
 </Window>

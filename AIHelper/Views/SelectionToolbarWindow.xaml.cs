@@ -34,6 +34,8 @@ namespace AIHelper.Views
         {
             InitializeComponent();
 
+            new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
+
             _autoHideTimer = new DispatcherTimer();
             _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
             _autoHideTimer.Tick += (s, e) =>
@@ -294,12 +296,25 @@ namespace AIHelper.Views
             double x = (screenPos.X * dpiScaleX) - (this.ActualWidth / 2.0);
             double y = (screenPos.Y * dpiScaleY) - this.ActualHeight - 10;
 
-            var screenBounds = SystemParameters.WorkArea;
+            // 获取当前鼠标所在的屏幕工作区（支持多显示器）
+            var currentScreen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)screenPos.X, (int)screenPos.Y));
+            var workArea = currentScreen != null ? currentScreen.WorkingArea : System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+
+            double workAreaLeft = workArea.Left * dpiScaleX;
+            double workAreaTop = workArea.Top * dpiScaleY;
+            double workAreaRight = workArea.Right * dpiScaleX;
 
             // Bounds adjustment
-            if (y < screenBounds.Top) y = screenPos.Y * dpiScaleY + 20;
-            if (x + this.ActualWidth > screenBounds.Right) x = screenBounds.Right - this.ActualWidth;
-            if (x < screenBounds.Left) x = screenBounds.Left;
+            if (y < workAreaTop) y = (screenPos.Y * dpiScaleY) + 20;
+            if (x + this.ActualWidth > workAreaRight) x = workAreaRight - this.ActualWidth;
+            if (x < workAreaLeft) x = workAreaLeft;
+
+            // 对齐到物理设备像素，消除亚像素定位导致的整窗模糊
+            if (dpiScaleX > 0 && dpiScaleY > 0)
+            {
+                x = Math.Round(x / dpiScaleX) * dpiScaleX;
+                y = Math.Round(y / dpiScaleY) * dpiScaleY;
+            }
 
             this.Left = x;
             this.Top = y;
@@ -309,21 +324,21 @@ namespace AIHelper.Views
         {
             var sb = new Storyboard();
 
-            var opacityAnim = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(150))
+            var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(150))
             {
                 EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut }
             };
             Storyboard.SetTarget(opacityAnim, this);
             Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(Window.OpacityProperty));
 
-            var scaleXAnim = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(150))
+            var scaleXAnim = new DoubleAnimation(0.85, 1.0, TimeSpan.FromMilliseconds(150))
             {
                 EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut }
             };
             Storyboard.SetTarget(scaleXAnim, WindowScale);
             Storyboard.SetTargetProperty(scaleXAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
 
-            var scaleYAnim = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(150))
+            var scaleYAnim = new DoubleAnimation(0.85, 1.0, TimeSpan.FromMilliseconds(150))
             {
                 EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut }
             };
@@ -333,6 +348,15 @@ namespace AIHelper.Views
             sb.Children.Add(opacityAnim);
             sb.Children.Add(scaleXAnim);
             sb.Children.Add(scaleYAnim);
+
+            sb.Completed += (s, e) =>
+            {
+                // 动画完成后剥离动画时钟并赋予静态值，使 WPF 脱离过渡渲染并稳定在整数像素栅格
+                WindowScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                WindowScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                WindowScale.ScaleX = 1.0;
+                WindowScale.ScaleY = 1.0;
+            };
 
             sb.Begin();
         }
