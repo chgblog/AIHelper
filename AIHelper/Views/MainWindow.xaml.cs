@@ -124,6 +124,8 @@ namespace AIHelper.Views
 
                 TextSelectionService.Instance.TextSelected += TextSelectionService_TextSelected;
                 TextSelectionService.Instance.DismissRequested += TextSelectionService_DismissRequested;
+                TextSelectionService.Instance.ShouldDismissOnLeftClick = pt =>
+                    _selectionToolbar != null && _selectionToolbar.IsToolbarVisible && !_selectionToolbar.IsPointInside(pt);
                 UpdateTextSelectionServiceState();
 
                 // 新版本提示（后台检测完成后可能早于/晚于本窗口创建）

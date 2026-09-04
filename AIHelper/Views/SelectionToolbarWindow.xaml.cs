@@ -27,6 +27,11 @@ namespace AIHelper.Views
         private int _copyMode = 0;
         private const int MaxInitialActions = 5;
 
+        private readonly IntPtr _hwnd;
+        private volatile bool _isToolbarVisible;
+        private bool _isHiding;
+        private int _hideAnimationId;
+
         public event Action<ActionItem, string> ActionRequested;
         public event Action<ActionItem, string> FileActionRequested;
 
@@ -34,7 +39,7 @@ namespace AIHelper.Views
         {
             InitializeComponent();
 
-            new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
+            _hwnd = new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
 
             _autoHideTimer = new DispatcherTimer();
             _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
@@ -63,6 +68,8 @@ namespace AIHelper.Views
         {
             try
             {
+                _isHiding = false;
+                ++_hideAnimationId;
                 _isForFile = false;
                 _currentFilePath = null;
                 _selectedText = text;
@@ -75,7 +82,9 @@ namespace AIHelper.Views
                 BuildButtons();
                 PositionWindow(_currentScreenPos);
 
+                this.BeginAnimation(Window.OpacityProperty, null);
                 this.Show();
+                _isToolbarVisible = true;
                 _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
                 StartAutoHideTimer();
                 PlayShowAnimation();
@@ -99,6 +108,8 @@ namespace AIHelper.Views
         {
             try
             {
+                _isHiding = false;
+                ++_hideAnimationId;
                 _isForFile = true;
                 _currentFilePath = filePath;
                 _selectedText = null;
@@ -111,7 +122,9 @@ namespace AIHelper.Views
                 BuildButtons();
                 PositionWindow(_currentScreenPos);
 
+                this.BeginAnimation(Window.OpacityProperty, null);
                 this.Show();
+                _isToolbarVisible = true;
                 _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
                 StartAutoHideTimer();
                 PlayShowAnimation();
@@ -127,9 +140,61 @@ namespace AIHelper.Views
         /// </summary>
         public void HideToolbar()
         {
-            if (this.Visibility != Visibility.Visible) return;
+            if (this.Visibility != Visibility.Visible || _isHiding) return;
+            _isHiding = true;
+            _isToolbarVisible = false;
             StopAutoHideTimer();
-            PlayHideAnimation(() => this.Hide());
+            int currentHideId = ++_hideAnimationId;
+            PlayHideAnimation(() =>
+            {
+                if (_hideAnimationId == currentHideId)
+                {
+                    this.Hide();
+                    _isHiding = false;
+                }
+            });
+        }
+
+        /// <summary>
+        /// 获取工具条当前是否处于显示状态（非隐藏且非正在退出隐藏中）
+        /// </summary>
+        public bool IsToolbarVisible => _isToolbarVisible && !_isHiding;
+
+        /// <summary>
+        /// 判断屏幕物理坐标点是否在指定矩形范围内
+        /// </summary>
+        internal static bool IsPointInRect(Point screenPoint, Win32Api.RECT rect)
+        {
+            return screenPoint.X >= rect.Left && screenPoint.X <= rect.Right &&
+                   screenPoint.Y >= rect.Top && screenPoint.Y <= rect.Bottom;
+        }
+
+        /// <summary>
+        /// 判断屏幕物理坐标点是否在工具条窗口区域内
+        /// </summary>
+        public bool IsPointInside(Point screenPoint)
+        {
+            if (!IsToolbarVisible || _hwnd == IntPtr.Zero) return false;
+
+            try
+            {
+                if (Win32Api.GetWindowRect(_hwnd, out Win32Api.RECT rect))
+                {
+                    return IsPointInRect(screenPoint, rect);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("SelectionToolbarWindow: IsPointInside check failed.", ex);
+            }
+
+            return false;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _isToolbarVisible = false;
+            base.OnClosed(e);
         }
 
         private void Window_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

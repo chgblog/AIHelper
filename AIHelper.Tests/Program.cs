@@ -24,6 +24,9 @@ namespace AIHelper.Tests
             Run("action panel snapshot routing for text image and file", TestActionPanelSnapshotRouting);
             Run("submit result deserialization and error routing", TestSubmitResultHandling);
             Run("submit ready result deserialization", TestSubmitReadyResultHandling);
+            Run("selection toolbar point in rect hit testing", TestSelectionToolbarPointInRect);
+            Run("selection toolbar left click outside dismiss routing", TestSelectionToolbarDismissOnLeftClick);
+            Run("text selection service triggers dismiss on left click outside", TestTextSelectionServiceDismissOnLeftClick);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -366,6 +369,85 @@ namespace AIHelper.Tests
             var timeoutResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitReadyResult>(timeoutJson);
             AssertTrue(timeoutResult != null && !timeoutResult.ready, "timeout ready result parsed as false");
             AssertEquals("TIMEOUT", timeoutResult.reason, "timeout reason matches");
+        }
+
+        private static void TestSelectionToolbarPointInRect()
+        {
+            var rect = new Win32Api.RECT { Left = 100, Top = 200, Right = 300, Bottom = 400 };
+
+            // Inside
+            AssertTrue(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(150, 250), rect), "point inside rect should return true");
+            AssertTrue(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(100, 200), rect), "top-left border should return true");
+            AssertTrue(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(300, 400), rect), "bottom-right border should return true");
+
+            // Outside
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(99, 250), rect), "left of rect should return false");
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(301, 250), rect), "right of rect should return false");
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(150, 199), rect), "above rect should return false");
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(150, 401), rect), "below rect should return false");
+
+            // Negative coordinates (multi-monitor scenario)
+            var multiMonitorRect = new Win32Api.RECT { Left = -1920, Top = -500, Right = -920, Bottom = 0 };
+            AssertTrue(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(-1500, -200), multiMonitorRect), "point inside multi-monitor rect");
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(-2000, -200), multiMonitorRect), "point left of multi-monitor rect");
+            AssertFalse(AIHelper.Views.SelectionToolbarWindow.IsPointInRect(new System.Windows.Point(0, 0), multiMonitorRect), "point right of multi-monitor rect");
+        }
+
+        private static void TestSelectionToolbarDismissOnLeftClick()
+        {
+            bool isToolbarVisible = false;
+            var rect = new Win32Api.RECT { Left = 500, Top = 300, Right = 700, Bottom = 350 };
+            Func<System.Windows.Point, bool> isPointInside = pt => AIHelper.Views.SelectionToolbarWindow.IsPointInRect(pt, rect);
+
+            Func<System.Windows.Point, bool> shouldDismiss = pt => isToolbarVisible && !isPointInside(pt);
+
+            // Toolbar not visible: always false
+            isToolbarVisible = false;
+            AssertFalse(shouldDismiss(new System.Windows.Point(100, 100)), "hidden toolbar should not dismiss on left click outside");
+            AssertFalse(shouldDismiss(new System.Windows.Point(550, 320)), "hidden toolbar should not dismiss on left click inside");
+
+            // Toolbar visible: inside should NOT dismiss
+            isToolbarVisible = true;
+            AssertFalse(shouldDismiss(new System.Windows.Point(550, 320)), "visible toolbar should not dismiss when left clicking inside");
+            AssertFalse(shouldDismiss(new System.Windows.Point(500, 300)), "visible toolbar should not dismiss when left clicking border");
+
+            // Toolbar visible: outside SHOULD dismiss
+            AssertTrue(shouldDismiss(new System.Windows.Point(100, 100)), "visible toolbar must dismiss when left clicking outside");
+            AssertTrue(shouldDismiss(new System.Windows.Point(800, 500)), "visible toolbar must dismiss when left clicking outside");
+        }
+
+        private static void TestTextSelectionServiceDismissOnLeftClick()
+        {
+            var service = TextSelectionService.Instance;
+            bool dismissFired = false;
+            Action onDismiss = () => { dismissFired = true; };
+            service.DismissRequested += onDismiss;
+
+            try
+            {
+                // When ShouldDismissOnLeftClick is null
+                service.ShouldDismissOnLeftClick = null;
+                dismissFired = false;
+                service.HandleLeftButtonDownForTesting(new System.Windows.Point(100, 100));
+                AssertFalse(dismissFired, "dismiss should not fire when ShouldDismissOnLeftClick is null");
+
+                // When ShouldDismissOnLeftClick returns false (e.g. clicked inside toolbar)
+                service.ShouldDismissOnLeftClick = pt => false;
+                dismissFired = false;
+                service.HandleLeftButtonDownForTesting(new System.Windows.Point(100, 100));
+                AssertFalse(dismissFired, "dismiss should not fire when ShouldDismissOnLeftClick returns false");
+
+                // When ShouldDismissOnLeftClick returns true (e.g. clicked outside toolbar)
+                service.ShouldDismissOnLeftClick = pt => true;
+                dismissFired = false;
+                service.HandleLeftButtonDownForTesting(new System.Windows.Point(100, 100));
+                AssertTrue(dismissFired, "dismiss must fire when ShouldDismissOnLeftClick returns true");
+            }
+            finally
+            {
+                service.DismissRequested -= onDismiss;
+                service.ShouldDismissOnLeftClick = null;
+            }
         }
 
         private static void AssertTrue(bool condition, string message)

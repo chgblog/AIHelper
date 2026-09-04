@@ -50,6 +50,11 @@ namespace AIHelper.Services
         /// </summary>
         public event Action DismissRequested;
 
+        /// <summary>
+        /// 供外部注册：判断鼠标左键点击时是否应该关闭工具条（例如：工具条正在显示且鼠标点击在工具条外部）
+        /// </summary>
+        public Func<Point, bool> ShouldDismissOnLeftClick { get; set; }
+
         private const int WH_MOUSE_LL = 14;
         private const int WM_LBUTTONDOWN = 0x0201;
         private const int WM_LBUTTONUP = 0x0202;
@@ -179,26 +184,13 @@ namespace AIHelper.Services
                 {
                     _isMouseDown = false;
                     CancelPendingDebounce();
-                    Application.Current?.Dispatcher.InvokeAsync(() =>
-                    {
-                        try
-                        {
-                            DismissRequested?.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError("TextSelectionService: DismissRequested handler threw.", ex);
-                        }
-                    });
+                    NotifyDismissRequested();
                 }
                 else if (wParam == (IntPtr)WM_LBUTTONDOWN)
                 {
-                    _isMouseDown = true;
                     Win32Api.MSLLHOOKSTRUCT hookStruct = (Win32Api.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.MSLLHOOKSTRUCT));
-                    _mouseDownPos = new Point(hookStruct.pt.x, hookStruct.pt.y);
-                    
-                    // 取消之前的等待
-                    CancelPendingDebounce();
+                    Point clickPos = new Point(hookStruct.pt.x, hookStruct.pt.y);
+                    ProcessLeftButtonDown(clickPos);
                 }
                 else if (wParam == (IntPtr)WM_LBUTTONUP && _isMouseDown)
                 {
@@ -278,6 +270,62 @@ namespace AIHelper.Services
             {
                 Logger.LogError("TextSelectionService: Failed to cancel pending selection.", ex);
             }
+        }
+
+        private void ProcessLeftButtonDown(Point pt)
+        {
+            _isMouseDown = true;
+            _mouseDownPos = pt;
+
+            // 取消之前的等待
+            CancelPendingDebounce();
+
+            try
+            {
+                if (ShouldDismissOnLeftClick?.Invoke(_mouseDownPos) == true)
+                {
+                    NotifyDismissRequested();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("TextSelectionService: Error checking ShouldDismissOnLeftClick.", ex);
+            }
+        }
+
+        private void NotifyDismissRequested()
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        DismissRequested?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("TextSelectionService: DismissRequested handler threw.", ex);
+                    }
+                });
+            }
+            else
+            {
+                try
+                {
+                    DismissRequested?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("TextSelectionService: DismissRequested handler threw.", ex);
+                }
+            }
+        }
+
+        internal void HandleLeftButtonDownForTesting(Point pt)
+        {
+            ProcessLeftButtonDown(pt);
         }
 
         private void ProcessSelectionAsync(Point mousePos, CancellationToken token)
@@ -848,6 +896,19 @@ namespace AIHelper.Services
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
 
         public const int INPUT_KEYBOARD = 1;
 
