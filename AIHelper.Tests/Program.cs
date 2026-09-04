@@ -5,6 +5,7 @@ namespace AIHelper.Tests
 {
     internal static class Program
     {
+        [STAThread]
         private static int Main()
         {
             Run("text clipboard keeps prompt injection", TestTextClipboard);
@@ -15,6 +16,7 @@ namespace AIHelper.Tests
             Run("context menu supported extensions", TestContextMenuSupportedExtensions);
             Run("cli extract file argument", TestCliExtractFileArg);
             Run("context menu registration lifecycle in HKCU", TestContextMenuRegistrationLifecycle);
+            Run("action panel snapshot routing for text image and file", TestActionPanelSnapshotRouting);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -137,6 +139,47 @@ namespace AIHelper.Tests
             {
                 FileContextMenuService.SetContextMenuEnabled(false);
             }
+        }
+
+        private static void TestActionPanelSnapshotRouting()
+        {
+            var panel = new AIHelper.Views.ActionPanelControl();
+
+            // 1. Text snapshot
+            var textSnapshot = ClipboardSnapshot.FromText("test text content");
+            panel.SetSnapshot(textSnapshot);
+            AssertTrue(panel.CurrentSnapshot == null, "text snapshot sets CurrentSnapshot to null");
+            AssertEquals("test text content", panel.GetContent(), "text snapshot populates input text");
+
+            // 2. Image snapshot
+            var imageSnapshot = ClipboardSnapshot.FromImage();
+            panel.SetSnapshot(imageSnapshot);
+            AssertTrue(panel.CurrentSnapshot != null && panel.CurrentSnapshot.Kind == ClipboardContentKind.Image, "image snapshot sets CurrentSnapshot to Image");
+            AssertEquals(string.Empty, panel.GetContent(), "image snapshot clears text input");
+            var imagePlan = HotkeyActionPlanner.Build("Action: {content}", panel.CurrentSnapshot);
+            AssertTrue(imagePlan.ShouldPasteClipboard, "image plan should paste");
+            AssertEquals("Action: ", imagePlan.PromptText, "image plan prompt text");
+
+            // 3. File snapshot
+            var fileSnapshot = ClipboardSnapshot.FromFileDropList(new[] { @"C:\test\sample.pdf" });
+            panel.SetSnapshot(fileSnapshot);
+            AssertTrue(panel.CurrentSnapshot != null && panel.CurrentSnapshot.Kind == ClipboardContentKind.FileDropList, "file snapshot sets CurrentSnapshot to FileDropList");
+            AssertEquals(string.Empty, panel.GetContent(), "file snapshot clears text input");
+            var filePlan = HotkeyActionPlanner.Build("Analyze: {content}", panel.CurrentSnapshot);
+            AssertTrue(filePlan.ShouldPasteClipboard, "file plan should paste");
+            AssertEquals("Analyze: ", filePlan.PromptText, "file plan prompt text");
+
+            // 4. Empty snapshot
+            panel.SetSnapshot(ClipboardSnapshot.Empty());
+            AssertTrue(panel.CurrentSnapshot == null, "empty snapshot sets CurrentSnapshot to null");
+            AssertEquals(string.Empty, panel.GetContent(), "empty snapshot clears text input");
+
+            // 5. Clear attachment restores text mode
+            panel.SetSnapshot(imageSnapshot);
+            AssertTrue(panel.CurrentSnapshot != null, "snapshot set before clear");
+            panel.ClearAttachment();
+            AssertTrue(panel.CurrentSnapshot == null, "snapshot cleared after ClearAttachment");
+            AssertEquals(string.Empty, panel.GetContent(), "text cleared after ClearAttachment");
         }
 
         private static void AssertTrue(bool condition, string message)

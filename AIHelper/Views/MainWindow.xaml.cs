@@ -758,7 +758,8 @@ namespace AIHelper.Views
             {
                 actionPanel.Visibility = Visibility.Visible;
                 actionPanel.LoadActions(_settings.Actions);
-                actionPanel.SetContent(ClipboardService.GetText());
+                var snapshot = ClipboardService.GetSnapshot();
+                actionPanel.SetSnapshot(snapshot);
             }
         }
 
@@ -771,13 +772,29 @@ namespace AIHelper.Views
             await EnsurePlatformAndExecuteAsync(platform, plan.PromptText, action.Name, clipboard);
         }
 
-        private async void ActionPanel_ActionSubmitted(ActionItem action, string text)
+        private async void ActionPanel_ActionSubmitted(ActionItem action, string text, ClipboardSnapshot snapshot)
         {
             actionPanel.Visibility = Visibility.Collapsed;
             if (action == null) return;
-            string prompt = action.Prompt.Replace("{content}", text);
+
+            ShowAndActivate();
             var platform = GetPlatformForAction(action);
-            await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+
+            if (snapshot != null && HotkeyActionPlanner.IsAttachmentClipboard(snapshot))
+            {
+                if (snapshot.Kind == ClipboardContentKind.FileDropList && snapshot.FilePaths != null && snapshot.FilePaths.Count > 0)
+                {
+                    ClipboardService.SetFileDropList(snapshot.FilePaths);
+                }
+
+                var plan = HotkeyActionPlanner.Build(action.Prompt, snapshot);
+                await EnsurePlatformAndExecuteAsync(platform, plan.PromptText, action.Name, snapshot);
+            }
+            else
+            {
+                string prompt = (action.Prompt ?? string.Empty).Replace("{content}", text ?? string.Empty);
+                await EnsurePlatformAndExecuteAsync(platform, prompt, action.Name);
+            }
         }
 
         private const int MaxQuickActionsOnBar = 5;

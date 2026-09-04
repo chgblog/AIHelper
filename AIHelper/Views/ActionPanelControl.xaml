@@ -45,11 +45,53 @@
         
         <TextBlock Text="{Binding [ActionPanel_ContentHeader], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Margin="0,0,0,5" FontSize="14"/>
         
-        <TextBox x:Name="txtInput" Grid.Row="1" TextWrapping="Wrap" AcceptsReturn="True" 
-                 MinLines="4" MaxLines="10" VerticalScrollBarVisibility="Auto"
-                 Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" 
-                 BorderThickness="1" Padding="5" Margin="0,0,0,15"
-                 Style="{DynamicResource {x:Type TextBox}}"/>
+        <Grid Grid.Row="1" Margin="0,0,0,15" MinHeight="90">
+            <!-- 文本输入框：当剪贴板为文本或普通文本输入时显示 -->
+            <TextBox x:Name="txtInput" TextWrapping="Wrap" AcceptsReturn="True" 
+                     MinLines="4" MaxLines="10" VerticalScrollBarVisibility="Auto"
+                     Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" 
+                     BorderThickness="1" Padding="5"
+                     Style="{DynamicResource {x:Type TextBox}}"/>
+
+            <!-- 附件展示框：当剪贴板为图片或文件时在输入框位置显示图标 -->
+            <Border x:Name="borderAttachment" Background="#1a1a2e" BorderBrush="#3a3a5e"
+                    BorderThickness="1" CornerRadius="4" Visibility="Collapsed">
+                <Grid>
+                    <!-- 图标居中展示 -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- 图片图标 -->
+                        <Path x:Name="iconImage" Width="44" Height="44" Stretch="Uniform" 
+                              Fill="#9d72ff" Visibility="Collapsed"
+                              Data="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        <!-- 文件图标 -->
+                        <Path x:Name="iconFile" Width="44" Height="44" Stretch="Uniform" 
+                              Fill="#9d72ff" Visibility="Collapsed"
+                              Data="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </StackPanel>
+
+                    <!-- 右上角清除按钮，可供切回文本输入 -->
+                    <Button x:Name="btnClearAttachment" Content="✕" Width="24" Height="24"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0"
+                            Foreground="#808090" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" Click="BtnClearAttachment_Click"
+                            ToolTip="{Binding [ActionPanel_ClearAttachment], Source={x:Static services:LanguageManager.Instance}}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="btnBorder" Property="Background" Value="#3a3a5e"/>
+                                        <Setter Property="Foreground" Value="#ffffff"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
                  
         <TextBlock Grid.Row="2" Text="{Binding [ActionPanel_AvailableActions], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,5" Foreground="#a0a0b0"/>
         

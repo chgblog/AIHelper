@@ -194,6 +194,9 @@ namespace AIHelper.Services
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 内容" },
             { "ActionPanel_AvailableActions", "可用操作:" },
+            { "ActionPanel_Image", "图片" },
+            { "ActionPanel_File", "文件" },
+            { "ActionPanel_ClearAttachment", "清除附件并切换为文本输入" },
 
             // SettingsWindow
             { "Settings_Title", "设置" },
@@ -430,6 +433,9 @@ namespace AIHelper.Services
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 Content" },
             { "ActionPanel_AvailableActions", "Available Actions:" },
+            { "ActionPanel_Image", "Image" },
+            { "ActionPanel_File", "File" },
+            { "ActionPanel_ClearAttachment", "Clear attachment and switch to text input" },
 
             // SettingsWindow
             { "Settings_Title", "Settings" },
