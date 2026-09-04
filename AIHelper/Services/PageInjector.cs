@@ -341,14 +341,13 @@ namespace AIHelper.Services
             {
                 string jsonInputSelector = string.IsNullOrEmpty(inputSelector) ? "null" : JsonConvert.SerializeObject(inputSelector);
                 string jsonSubmitSelector = string.IsNullOrEmpty(submitSelector) ? "null" : JsonConvert.SerializeObject(submitSelector);
-                string rawJson = await EvalAsync(webView,
-                    $"{injectorScript}\n return window.AiHelperInjector.submit({jsonInputSelector}, {jsonSubmitSelector});");
+                string rawJson = await RunJobAsync(webView, injectorScript, "submit",
+                    $"{jsonInputSelector}, {jsonSubmitSelector}", 10000);
 
                 var result = string.IsNullOrEmpty(rawJson) ? null : JsonConvert.DeserializeObject<SubmitResult>(rawJson);
                 if (result == null)
                 {
-                    // Fallback: if the script executed without throwing, treat it as sent.
-                    return new InjectionResult { Success = true, Reason = "CLICKED", Message = LanguageManager.Instance["Inject_SendSuccess"] };
+                    return new InjectionResult { Success = false, Reason = "NO_RESULT", Message = LanguageManager.Instance["Inject_NoResult"] };
                 }
 
                 return new InjectionResult

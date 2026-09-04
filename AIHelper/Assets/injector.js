@@ -122,6 +122,43 @@
         }
     }
 
+    // Checks whether an attachment is actively uploading or processing in the composer
+    function isAttachmentUploading(container) {
+        const root = container || document;
+        try {
+            // 1. Check for active progress bars, spinners, or loading indicators
+            const progressEls = root.querySelectorAll(
+                '[role="progressbar"], [aria-busy="true"], ' +
+                '[data-status="uploading"], [data-state="uploading"], [data-uploading="true"], ' +
+                '[class*="uploading" i], [class*="upload-progress" i], ' +
+                '[class*="loading-spinner" i], [class*="loading" i] svg, ' +
+                'svg[class*="spin" i], svg[class*="loading" i], svg[class*="animate-spin" i], ' +
+                '.ds-loading, .ds-icon-loading, mat-progress-spinner, ' +
+                'circle[stroke-dashoffset]'
+            );
+            for (let i = 0; i < progressEls.length; i++) {
+                const el = progressEls[i];
+                if (isUsable(el) && el.offsetWidth > 0 && el.offsetHeight > 0) {
+                    return true;
+                }
+            }
+
+            // 2. Check for pending or uploading attachment items
+            const pendingCards = root.querySelectorAll(
+                '[class*="attachment" i][class*="pending" i], ' +
+                '[class*="file" i][class*="pending" i], ' +
+                '[class*="thumbnail" i][class*="loading" i]'
+            );
+            for (let i = 0; i < pendingCards.length; i++) {
+                if (isUsable(pendingCards[i])) return true;
+            }
+
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function detectPlatform() {
         const url = window.location.href;
         if (url.includes("claude.ai")) return "claude";
@@ -215,25 +252,28 @@
 
         if (!submitBtn || submitBtn.offsetWidth === 0) {
             if (platform === "deepseek") {
-                submitBtn = container.querySelector('#chat-input-send-button') ||
+                submitBtn = document.querySelector('#chat-input-send-button') ||
+                            container.querySelector('#chat-input-send-button') ||
                             container.querySelector('div[class*="send-button"]') ||
                             container.querySelector('div[class*="sendButton"]') ||
                             container.querySelector('div[class*="_send_button"]');
             } else if (platform === "claude") {
-                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
-                            container.querySelector('button[aria-label*="发送"]');
+                submitBtn = container.querySelector('button[aria-label*="Send" i]') ||
+                            container.querySelector('button[aria-label*="发送"]') ||
+                            container.querySelector('button[data-testid*="send" i]');
             } else if (platform === "gemini") {
-                submitBtn = container.querySelector('button[aria-label*="Send"]') ||
+                submitBtn = container.querySelector('button[aria-label*="Send" i]') ||
                             container.querySelector('button[aria-label*="发送"]') ||
                             container.querySelector('.send-button');
             }
         }
 
         if (!submitBtn || submitBtn.offsetWidth === 0 || isFileUploadElement(submitBtn)) {
-            submitBtn = container.querySelector('button[type="submit"]') ||
-                        container.querySelector('button[aria-label*="Send"]') ||
+            submitBtn = container.querySelector('button[data-testid*="send" i]') ||
+                        container.querySelector('button[type="submit"]') ||
+                        container.querySelector('button[aria-label*="Send" i]') ||
                         container.querySelector('button[aria-label*="发送"]') ||
-                        container.querySelector('div[role="button"][aria-label*="Send"]') ||
+                        container.querySelector('div[role="button"][aria-label*="Send" i]') ||
                         container.querySelector('div[role="button"][aria-label*="发送"]');
         }
 
@@ -263,20 +303,51 @@
             }
         }
 
+        if (submitBtn) {
+            const actualBtn = submitBtn.closest('button, [role="button"], div[class*="button"]') || submitBtn;
+            submitBtn = actualBtn;
+        }
+
         return submitBtn || null;
     }
 
     function isButtonReady(btn) {
         if (!btn || !isUsable(btn) || isFileUploadElement(btn)) return false;
         if (btn.disabled) return false;
+        if (btn.hasAttribute && btn.hasAttribute('disabled')) return false;
+
         const ariaDisabled = (btn.getAttribute('aria-disabled') || '').toLowerCase();
         if (ariaDisabled === 'true') return false;
         const dataDisabled = (btn.getAttribute('data-disabled') || '').toLowerCase();
         if (dataDisabled === 'true') return false;
+        const dataIsDisabled = (btn.getAttribute('data-is-disabled') || '').toLowerCase();
+        if (dataIsDisabled === 'true') return false;
+
+        const cls = (btn.className || '').toString().toLowerCase();
+        if (cls.includes('disabled') || cls.includes('not-allowed')) return false;
+
         try {
             const style = window.getComputedStyle(btn);
-            if (style && (style.pointerEvents === 'none' || style.visibility === 'hidden')) return false;
+            if (style) {
+                if (style.pointerEvents === 'none' || style.visibility === 'hidden' || style.display === 'none') return false;
+                if (style.cursor === 'not-allowed') return false;
+                if (style.opacity !== '' && parseFloat(style.opacity) < 0.5) return false;
+            }
         } catch (e) {}
+
+        if (btn.querySelector && btn.querySelector('[class*="spin" i], [class*="loading" i], [role="progressbar"], circle[stroke-dashoffset]')) {
+            return false;
+        }
+
+        if (btn.parentElement) {
+            const parentCls = (btn.parentElement.className || '').toString().toLowerCase();
+            if (parentCls.includes('disabled') || parentCls.includes('send-button-disabled')) return false;
+            try {
+                const parentStyle = window.getComputedStyle(btn.parentElement);
+                if (parentStyle && (parentStyle.pointerEvents === 'none' || parentStyle.cursor === 'not-allowed')) return false;
+            } catch (e) {}
+        }
+
         return true;
     }
 
@@ -522,6 +593,11 @@
                 const deadline = Date.now() + (timeoutMs || 300000);
                 const platform = detectPlatform();
                 const myRun = window.__aiHelperRunId;
+                const REQUIRED_STABLE_MS = 600;
+                let stableSince = 0;
+
+                // Initial brief wait for upload states to mount if paste just finished
+                await sleep(300);
 
                 while (Date.now() < deadline) {
                     if (window.__aiHelperRunId !== myRun) return { ready: false, reason: "SUPERSEDED" };
@@ -530,16 +606,30 @@
 
                     const inputEl = findInput(platform, inputSelector);
                     if (!inputEl) {
-                        await sleep(250);
+                        stableSince = 0;
+                        await sleep(200);
                         continue;
                     }
 
+                    const container = (inputEl && inputEl.closest('form')) ||
+                                      (inputEl && inputEl.parentElement?.parentElement) ||
+                                      document.body;
+
+                    const uploading = isAttachmentUploading(container);
                     const submitBtn = findSubmitButton(platform, inputEl, submitSelector);
-                    if (isButtonReady(submitBtn)) {
-                        return { ready: true, reason: "READY" };
+                    const btnReady = isButtonReady(submitBtn);
+
+                    if (!uploading && btnReady) {
+                        if (stableSince === 0) {
+                            stableSince = Date.now();
+                        } else if (Date.now() - stableSince >= REQUIRED_STABLE_MS) {
+                            return { ready: true, reason: "READY" };
+                        }
+                    } else {
+                        stableSince = 0;
                     }
 
-                    await sleep(250);
+                    await sleep(200);
                 }
 
                 return { ready: false, reason: "TIMEOUT" };
@@ -591,7 +681,7 @@
                 if (autoSubmit) {
                     await sleep(200);
                     try {
-                        window.AiHelperInjector.submit(inputSelector, submitSelector);
+                        await window.AiHelperInjector.submit(inputSelector, submitSelector);
                     } catch (e) {
                         console.error("Auto submit error:", e);
                     }
@@ -619,22 +709,108 @@
             }
         },
 
-        submit: function(inputSelector, submitSelector) {
-            const platform = detectPlatform();
-            const inputEl = findInput(platform, inputSelector);
-            if (!inputEl) return { success: false, reason: "INPUT_NOT_FOUND" };
+        submit: async function(inputSelector, submitSelector) {
+            try {
+                const platform = detectPlatform();
+                const inputEl = findInput(platform, inputSelector);
+                if (!inputEl) return { success: false, reason: "INPUT_NOT_FOUND" };
 
-            const submitBtn = findSubmitButton(platform, inputEl, submitSelector);
-            if (submitBtn && isButtonReady(submitBtn)) {
-                submitBtn.click();
-                const svg = submitBtn.querySelector('svg');
-                if (svg) {
-                    svg.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                let submitBtn = findSubmitButton(platform, inputEl, submitSelector);
+                if (!submitBtn || !isButtonReady(submitBtn)) {
+                    return { success: false, reason: "SUBMIT_NOT_READY" };
                 }
-                return { success: true, reason: "CLICKED" };
-            }
 
-            return { success: false, reason: "SUBMIT_NOT_READY" };
+                const targetBtn = submitBtn.closest('button, [role="button"], div[class*="button"]') || submitBtn;
+                const initialText = readText(inputEl);
+                const initialAttachments = countAttachments();
+
+                const triggerClick = (el) => {
+                    if (!el) return;
+                    try {
+                        const opts = { bubbles: true, cancelable: true, view: window };
+                        el.dispatchEvent(new PointerEvent('pointerdown', opts));
+                        el.dispatchEvent(new MouseEvent('mousedown', opts));
+                        el.dispatchEvent(new PointerEvent('pointerup', opts));
+                        el.dispatchEvent(new MouseEvent('mouseup', opts));
+                        el.click();
+                    } catch (e) {
+                        try { el.click(); } catch(e2) {}
+                    }
+                };
+
+                const triggerEnter = (el) => {
+                    if (!el) return;
+                    try {
+                        el.focus();
+                        const opts = {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true,
+                            composed: true
+                        };
+                        el.dispatchEvent(new KeyboardEvent('keydown', opts));
+                        el.dispatchEvent(new KeyboardEvent('keypress', opts));
+                        el.dispatchEvent(new KeyboardEvent('keyup', opts));
+                    } catch (e) {}
+                };
+
+                const isSubmitted = () => {
+                    const currentText = readText(inputEl);
+                    const currentAttachments = countAttachments();
+                    const currentBtn = findSubmitButton(platform, inputEl, submitSelector);
+
+                    // 1. Text has been cleared (if there was text)
+                    if (initialText.trim().length > 0 && currentText.trim().length === 0) return true;
+                    // 2. Attachments have been consumed/cleared (if there were attachments)
+                    if (initialAttachments > 0 && currentAttachments < initialAttachments) return true;
+                    // 3. Submit button became disabled or switched to stop/generating
+                    if (currentBtn) {
+                        if (!isButtonReady(currentBtn)) return true;
+                        const btnAria = (currentBtn.getAttribute('aria-label') || '').toLowerCase();
+                        const btnCls = (currentBtn.className || '').toString().toLowerCase();
+                        if (btnAria.includes('stop') || btnAria.includes('停止') || btnCls.includes('stop')) return true;
+                    }
+                    return false;
+                };
+
+                // Attempt 1: Full pointer/mouse click
+                triggerClick(targetBtn);
+                if (targetBtn !== submitBtn) {
+                    triggerClick(submitBtn);
+                }
+
+                await sleep(350);
+                if (isSubmitted()) {
+                    return { success: true, reason: "CLICKED" };
+                }
+
+                // Attempt 2: Enter key fallback
+                triggerEnter(inputEl);
+                await sleep(350);
+                if (isSubmitted()) {
+                    return { success: true, reason: "ENTER_KEY" };
+                }
+
+                // Attempt 3: Retry click
+                triggerClick(targetBtn);
+                await sleep(300);
+                if (isSubmitted()) {
+                    return { success: true, reason: "RETRY_CLICKED" };
+                }
+
+                // If button state changed or at least click completed without throwing
+                const finalBtn = findSubmitButton(platform, inputEl, submitSelector);
+                if (!finalBtn || !isButtonReady(finalBtn)) {
+                    return { success: true, reason: "CLICKED_NOT_READY" };
+                }
+
+                return { success: false, reason: "SUBMIT_UNACKNOWLEDGED" };
+            } catch (err) {
+                return { success: false, reason: "EXCEPTION", message: err.message };
+            }
         }
     };
 })();

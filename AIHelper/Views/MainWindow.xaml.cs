@@ -1094,6 +1094,9 @@ namespace AIHelper.Views
                     }
                 }
 
+                // 缓冲等待页面反应，让附件上传状态充分初始化
+                await Task.Delay(300);
+
                 UpdateStatus(LanguageManager.Instance["Main_Status_WaitingUpload"]);
                 var uploadReady = await _pageInjector.WaitForSubmitReadyAsync(webView, platform.InputSelector, platform.SubmitSelector, 300000);
                 if (!uploadReady.Success)

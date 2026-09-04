@@ -17,6 +17,8 @@ namespace AIHelper.Tests
             Run("cli extract file argument", TestCliExtractFileArg);
             Run("context menu registration lifecycle in HKCU", TestContextMenuRegistrationLifecycle);
             Run("action panel snapshot routing for text image and file", TestActionPanelSnapshotRouting);
+            Run("submit result deserialization and error routing", TestSubmitResultHandling);
+            Run("submit ready result deserialization", TestSubmitReadyResultHandling);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -180,6 +182,39 @@ namespace AIHelper.Tests
             panel.ClearAttachment();
             AssertTrue(panel.CurrentSnapshot == null, "snapshot cleared after ClearAttachment");
             AssertEquals(string.Empty, panel.GetContent(), "text cleared after ClearAttachment");
+        }
+
+        private static void TestSubmitResultHandling()
+        {
+            // Valid success result
+            string successJson = "{\"success\":true,\"reason\":\"CLICKED\"}";
+            var successResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitResult>(successJson);
+            AssertTrue(successResult != null && successResult.success, "success submit result parsed");
+            AssertEquals("CLICKED", successResult.reason, "success reason matches");
+
+            // Unacknowledged submit (e.g. upload incomplete or ignored)
+            string unackJson = "{\"success\":false,\"reason\":\"SUBMIT_UNACKNOWLEDGED\"}";
+            var unackResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitResult>(unackJson);
+            AssertTrue(unackResult != null && !unackResult.success, "unacknowledged submit result parsed as not successful");
+            AssertEquals("SUBMIT_UNACKNOWLEDGED", unackResult.reason, "unacknowledged reason matches");
+
+            // Exception or not ready submit
+            string notReadyJson = "{\"success\":false,\"reason\":\"SUBMIT_NOT_READY\"}";
+            var notReadyResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitResult>(notReadyJson);
+            AssertTrue(notReadyResult != null && !notReadyResult.success, "not ready submit result parsed as not successful");
+        }
+
+        private static void TestSubmitReadyResultHandling()
+        {
+            string readyJson = "{\"ready\":true,\"reason\":\"READY\"}";
+            var readyResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitReadyResult>(readyJson);
+            AssertTrue(readyResult != null && readyResult.ready, "ready result parsed as true");
+            AssertEquals("READY", readyResult.reason, "ready reason matches");
+
+            string timeoutJson = "{\"ready\":false,\"reason\":\"TIMEOUT\"}";
+            var timeoutResult = Newtonsoft.Json.JsonConvert.DeserializeObject<SubmitReadyResult>(timeoutJson);
+            AssertTrue(timeoutResult != null && !timeoutResult.ready, "timeout ready result parsed as false");
+            AssertEquals("TIMEOUT", timeoutResult.reason, "timeout reason matches");
         }
 
         private static void AssertTrue(bool condition, string message)
