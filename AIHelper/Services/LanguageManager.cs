@@ -366,6 +366,7 @@ namespace AIHelper.Services
             { "AppSelection_NoAppsFound", "未找到匹配的运行中应用" },
             { "SelectionToolbar_Sending", "正在发送到 {0}..." },
             { "SelectionToolbar_More", "更多 ▾" },
+            { "SelectionToolbar_Back", "返回" },
 
             { "Inject_Exception", "注入异常: {0}" },
 
@@ -607,6 +608,7 @@ namespace AIHelper.Services
             { "AppSelection_NoAppsFound", "No matching running applications found" },
             { "SelectionToolbar_Sending", "Sending to {0}..." },
             { "SelectionToolbar_More", "More ▾" },
+            { "SelectionToolbar_Back", "Back" },
 
             { "Inject_Exception", "Injection exception: {0}" },
 

@@ -29,6 +29,8 @@ namespace AIHelper.Tests
             Run("selection toolbar left click outside dismiss routing", TestSelectionToolbarDismissOnLeftClick);
             Run("text selection service triggers dismiss on left click outside", TestTextSelectionServiceDismissOnLeftClick);
             Run("text selection service allows self window selection and ignores toolbar clicks", TestTextSelectionServiceSelfWindowAndToolbarClick);
+            Run("selection toolbar more expansion exclusion back button and multi-line layout", TestSelectionToolbarMoreExpansionAndMultiLineLayout);
+            Run("selection toolbar window interactive more and back toggle", TestSelectionToolbarWindowInteractiveMoreAndBack);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -511,6 +513,131 @@ namespace AIHelper.Tests
                 service.IsPointInsideToolbar = null;
                 service.AppScopeMode = 0;
             }
+        }
+
+        private static void TestSelectionToolbarMoreExpansionAndMultiLineLayout()
+        {
+            List<ActionItem> CreateActions(int count)
+            {
+                var list = new List<ActionItem>();
+                for (int i = 1; i <= count; i++)
+                {
+                    list.Add(new ActionItem { Id = $"action_{i}", Name = $"操作{i}", SortOrder = i, Prompt = $"Prompt {i}" });
+                }
+                return list;
+            }
+
+            // 1. 默认状态，5项及以内，不出现“更多”，保留复制
+            var actions3 = CreateActions(3);
+            var layoutDefault3 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions3, isExpanded: false, copyMode: 1);
+            AssertEquals("1", layoutDefault3.Count.ToString(), "default <= 5 actions should be 1 row");
+            AssertEquals("4", layoutDefault3[0].Count.ToString(), "row should have 4 items (copy + 3 actions)");
+            AssertEquals("📋 复制", layoutDefault3[0][0], "first item should be copy when copyMode=1");
+            AssertEquals("操作1", layoutDefault3[0][1], "second item should be action 1");
+
+            // 2. 默认状态，超过5项，显示前5项与“更多 ▾”
+            var actions8 = CreateActions(8);
+            var layoutDefault8 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions8, isExpanded: false, copyMode: 2);
+            AssertEquals("1", layoutDefault8.Count.ToString(), "default > 5 actions should be 1 row");
+            AssertEquals("7", layoutDefault8[0].Count.ToString(), "row should have 7 items (5 actions + more + copy)");
+            AssertEquals("操作1", layoutDefault8[0][0], "first item should be action 1");
+            AssertEquals("操作5", layoutDefault8[0][4], "fifth item should be action 5");
+            AssertEquals("更多 ▾", layoutDefault8[0][5], "sixth item should be More");
+            AssertEquals("📋 复制", layoutDefault8[0][6], "seventh item should be copy at last position");
+
+            // 3. 点击“更多”展开：排除复制，排除前5项，第一项加返回
+            // 剩余项 = 8 - 5 = 3 项 (<= 6)，应保持单行
+            var layoutExpanded8 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions8, isExpanded: true, copyMode: 2);
+            AssertEquals("1", layoutExpanded8.Count.ToString(), "expanded with 3 remaining actions should be 1 row");
+            AssertEquals("4", layoutExpanded8[0].Count.ToString(), "row should have 4 items (Back + 3 remaining actions)");
+            AssertEquals("◀ 返回", layoutExpanded8[0][0], "first item must be Back button");
+            AssertEquals("操作6", layoutExpanded8[0][1], "first remaining action should be action 6 (first 5 excluded)");
+            AssertEquals("操作7", layoutExpanded8[0][2], "second remaining action should be action 7");
+            AssertEquals("操作8", layoutExpanded8[0][3], "third remaining action should be action 8");
+            AssertFalse(layoutExpanded8[0].Contains("📋 复制"), "copy button must be excluded in expanded view");
+
+            // 4. 点击“更多”展开：剩余项恰好为 6 项 (总共 11 项，11 - 5 = 6)，未超过 6 项，应保持单行
+            var actions11 = CreateActions(11);
+            var layoutExpanded11 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions11, isExpanded: true, copyMode: 1);
+            AssertEquals("1", layoutExpanded11.Count.ToString(), "expanded with 6 remaining actions should still be 1 row");
+            AssertEquals("7", layoutExpanded11[0].Count.ToString(), "row should have 7 items (Back + 6 remaining actions)");
+            AssertEquals("◀ 返回", layoutExpanded11[0][0], "first item must be Back button");
+            AssertEquals("操作6", layoutExpanded11[0][1], "second item action 6");
+            AssertEquals("操作11", layoutExpanded11[0][6], "seventh item action 11");
+            AssertFalse(layoutExpanded11[0].Contains("📋 复制"), "copy button must be excluded in expanded view");
+
+            // 5. 点击“更多”展开：剩余项超过 6 项 (总共 12 项，剩余 7 项 > 6)，触发多行显示！
+            // 行1: 返回 + 前6项剩余操作 (操作6~操作11)
+            // 行2: 剩余第7项操作 (操作12)
+            var actions12 = CreateActions(12);
+            var layoutExpanded12 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions12, isExpanded: true, copyMode: 1);
+            AssertEquals("2", layoutExpanded12.Count.ToString(), "expanded with 7 remaining actions must be 2 rows");
+            AssertEquals("7", layoutExpanded12[0].Count.ToString(), "row 1 should have 7 items (Back + 6 actions)");
+            AssertEquals("◀ 返回", layoutExpanded12[0][0], "row 1 first item is Back");
+            AssertEquals("操作6", layoutExpanded12[0][1], "row 1 has action 6");
+            AssertEquals("操作11", layoutExpanded12[0][6], "row 1 has action 11");
+            AssertEquals("1", layoutExpanded12[1].Count.ToString(), "row 2 should have 1 item (action 12)");
+            AssertEquals("操作12", layoutExpanded12[1][0], "row 2 first item is action 12");
+            AssertFalse(layoutExpanded12[0].Contains("📋 复制") || layoutExpanded12[1].Contains("📋 复制"), "copy button must be excluded in all rows");
+
+            // 6. 点击“更多”展开：剩余项为 13 项 (总共 18 项，剩余 13 项)，超过 2 行容量 (6*2)，分为 3 行！
+            // 行1: 返回 + 6项 (操作6~11)
+            // 行2: 6项 (操作12~17)
+            // 行3: 1项 (操作18)
+            var actions18 = CreateActions(18);
+            var layoutExpanded18 = AIHelper.Views.SelectionToolbarWindow.ComputeButtonLayout(actions18, isExpanded: true, copyMode: 0);
+            AssertEquals("3", layoutExpanded18.Count.ToString(), "expanded with 13 remaining actions must be 3 rows");
+            AssertEquals("7", layoutExpanded18[0].Count.ToString(), "row 1 has 7 items");
+            AssertEquals("6", layoutExpanded18[1].Count.ToString(), "row 2 has 6 items");
+            AssertEquals("1", layoutExpanded18[2].Count.ToString(), "row 3 has 1 item");
+            AssertEquals("操作18", layoutExpanded18[2][0], "row 3 item is action 18");
+        }
+
+        private static void TestSelectionToolbarWindowInteractiveMoreAndBack()
+        {
+            var list = new List<ActionItem>();
+            for (int i = 1; i <= 12; i++)
+            {
+                list.Add(new ActionItem { Id = $"act_{i}", Name = $"动作{i}", SortOrder = i, Prompt = $"P{i}" });
+            }
+
+            var toolbar = new AIHelper.Views.SelectionToolbarWindow();
+
+            // 1. 初始化为默认未展开状态，copyMode = 1
+            toolbar.SetupForTesting(list, copyMode: 1, isExpanded: false);
+            AssertFalse(toolbar.IsExpandedForTesting, "initially not expanded");
+            AssertEquals("1", toolbar.RowCountForTesting.ToString(), "initial view should have 1 row");
+
+            var visualDefault = toolbar.GetCurrentVisualButtonLayoutForTesting();
+            AssertEquals("1", visualDefault.Count.ToString(), "visual rows count should be 1");
+            AssertEquals("📋 复制", visualDefault[0][0], "first button should be copy");
+            AssertEquals("动作1", visualDefault[0][1], "second button should be action 1");
+            AssertEquals("更多 ▾", visualDefault[0][6], "seventh button should be More");
+
+            // 2. 模拟点击“更多 ▾”
+            toolbar.TriggerMoreClickForTesting();
+            AssertTrue(toolbar.IsExpandedForTesting, "after more click, isExpanded should be true");
+            AssertEquals("2", toolbar.RowCountForTesting.ToString(), "12 actions (7 remaining > 6) should generate 2 rows");
+
+            var visualExpanded = toolbar.GetCurrentVisualButtonLayoutForTesting();
+            AssertEquals("2", visualExpanded.Count.ToString(), "expanded visual rows count should be 2");
+            AssertEquals("◀ 返回", visualExpanded[0][0], "expanded row 1 first button should be Back");
+            AssertEquals("动作6", visualExpanded[0][1], "expanded row 1 second button should be action 6 (actions 1-5 excluded)");
+            AssertEquals("动作11", visualExpanded[0][6], "expanded row 1 last button should be action 11");
+            AssertEquals("动作12", visualExpanded[1][0], "expanded row 2 first button should be action 12");
+            AssertFalse(visualExpanded[0].Exists(t => t.Contains("复制")), "copy button should be excluded in row 1");
+            AssertFalse(visualExpanded[1].Exists(t => t.Contains("复制")), "copy button should be excluded in row 2");
+
+            // 3. 模拟点击“◀ 返回”返回默认操作
+            toolbar.TriggerBackClickForTesting();
+            AssertFalse(toolbar.IsExpandedForTesting, "after back click, isExpanded should be false");
+            AssertEquals("1", toolbar.RowCountForTesting.ToString(), "restored default view should have 1 row");
+
+            var visualRestored = toolbar.GetCurrentVisualButtonLayoutForTesting();
+            AssertEquals("1", visualRestored.Count.ToString(), "restored visual rows count should be 1");
+            AssertEquals("📋 复制", visualRestored[0][0], "first button should be copy again");
+            AssertEquals("动作1", visualRestored[0][1], "second button should be action 1 again");
+            AssertEquals("更多 ▾", visualRestored[0][6], "seventh button should be More again");
         }
 
         private static void AssertTrue(bool condition, string message)

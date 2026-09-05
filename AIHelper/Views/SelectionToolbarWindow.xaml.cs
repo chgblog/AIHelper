@@ -26,6 +26,7 @@ namespace AIHelper.Views
         private int _autoHideSeconds = 3;
         private int _copyMode = 0;
         private const int MaxInitialActions = 5;
+        private const int MaxActionsPerRowInMore = 6;
 
         private readonly IntPtr _hwnd;
         private volatile bool _isToolbarVisible;
@@ -54,6 +55,124 @@ namespace AIHelper.Views
                     Logger.LogError("SelectionToolbarWindow: Auto hide failed.", ex);
                 }
             };
+        }
+
+        /// <summary>
+        /// 计算工具条在不同状态下的布局结构（行与各按钮名称），供自动化测试与逻辑校验
+        /// </summary>
+        internal static List<List<string>> ComputeButtonLayout(List<ActionItem> actions, bool isExpanded, int copyMode)
+        {
+            var result = new List<List<string>>();
+            var sortedActions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList() ?? new List<ActionItem>();
+            bool hasActions = sortedActions.Count > 0;
+
+            if (!hasActions && (copyMode == 0 || isExpanded))
+            {
+                return result;
+            }
+
+            if (isExpanded)
+            {
+                var row = new List<string> { "◀ 返回" };
+                var remaining = sortedActions.Skip(MaxInitialActions).ToList();
+                int firstRowCount = Math.Min(remaining.Count, MaxActionsPerRowInMore);
+                for (int i = 0; i < firstRowCount; i++)
+                {
+                    row.Add(remaining[i].Name);
+                }
+                result.Add(row);
+
+                if (remaining.Count > MaxActionsPerRowInMore)
+                {
+                    for (int i = MaxActionsPerRowInMore; i < remaining.Count; i += MaxActionsPerRowInMore)
+                    {
+                        var nextRow = new List<string>();
+                        int count = Math.Min(MaxActionsPerRowInMore, remaining.Count - i);
+                        for (int j = 0; j < count; j++)
+                        {
+                            nextRow.Add(remaining[i + j].Name);
+                        }
+                        result.Add(nextRow);
+                    }
+                }
+            }
+            else
+            {
+                var row = new List<string>();
+                if (copyMode == 1)
+                {
+                    row.Add("📋 复制");
+                }
+
+                if (hasActions)
+                {
+                    bool hasMore = sortedActions.Count > MaxInitialActions;
+                    var display = hasMore ? sortedActions.Take(MaxInitialActions) : sortedActions;
+                    foreach (var a in display)
+                    {
+                        row.Add(a.Name);
+                    }
+                    if (hasMore)
+                    {
+                        row.Add("更多 ▾");
+                    }
+                }
+
+                if (copyMode == 2)
+                {
+                    row.Add("📋 复制");
+                }
+
+                result.Add(row);
+            }
+
+            return result;
+        }
+
+        internal int RowCountForTesting => buttonPanel?.Children.Count ?? 0;
+        internal bool IsExpandedForTesting => _isExpanded;
+
+        internal List<List<string>> GetCurrentVisualButtonLayoutForTesting()
+        {
+            var result = new List<List<string>>();
+            if (buttonPanel == null) return result;
+
+            foreach (UIElement child in buttonPanel.Children)
+            {
+                if (child is StackPanel rowPanel)
+                {
+                    var rowTexts = new List<string>();
+                    foreach (UIElement rowChild in rowPanel.Children)
+                    {
+                        if (rowChild is Button btn && btn.Content is string text)
+                        {
+                            rowTexts.Add(text);
+                        }
+                    }
+                    result.Add(rowTexts);
+                }
+            }
+            return result;
+        }
+
+        internal void TriggerMoreClickForTesting()
+        {
+            _isExpanded = true;
+            BuildButtons();
+        }
+
+        internal void TriggerBackClickForTesting()
+        {
+            _isExpanded = false;
+            BuildButtons();
+        }
+
+        internal void SetupForTesting(List<ActionItem> actions, int copyMode = 0, bool isExpanded = false)
+        {
+            _actions = actions?.Where(a => a != null).OrderBy(a => a.SortOrder).ToList();
+            _copyMode = copyMode;
+            _isExpanded = isExpanded;
+            BuildButtons();
         }
 
         /// <summary>
@@ -207,17 +326,37 @@ namespace AIHelper.Views
         {
             buttonPanel.Children.Clear();
             bool hasActions = _actions != null && _actions.Count > 0;
-            if (!hasActions && _copyMode == 0) return;
+            if (!hasActions && (_copyMode == 0 || _isExpanded)) return;
 
-            bool isFirst = true;
+            StackPanel currentRow = null;
+            bool isFirstInRow = true;
 
-            void AddSeparator()
+            StackPanel CreateRow()
             {
-                if (!isFirst)
+                var row = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    SnapsToDevicePixels = true,
+                    UseLayoutRounding = true
+                };
+                if (buttonPanel.Children.Count > 0)
+                {
+                    row.Margin = new Thickness(0, 3, 0, 0);
+                }
+                buttonPanel.Children.Add(row);
+                isFirstInRow = true;
+                return row;
+            }
+
+            void AddButtonToRow(StackPanel row, Button btn)
+            {
+                if (!isFirstInRow)
                 {
                     var sep = new Rectangle { Style = (Style)FindResource("SeparatorStyle") };
-                    buttonPanel.Children.Add(sep);
+                    row.Children.Add(sep);
                 }
+                row.Children.Add(btn);
+                isFirstInRow = false;
             }
 
             Button CreateCopyButton()
@@ -253,92 +392,165 @@ namespace AIHelper.Views
                 return btn;
             }
 
-            // 1. Copy at first position
-            if (_copyMode == 1)
+            Button CreateActionButton(ActionItem action)
             {
-                buttonPanel.Children.Add(CreateCopyButton());
-                isFirst = false;
+                var btn = new Button
+                {
+                    Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
+                    Tag = action,
+                    Style = (Style)FindResource("ToolbarButtonStyle")
+                };
+
+                btn.Click += (s, e) => {
+                    try
+                    {
+                        if (_isForFile)
+                        {
+                            FileActionRequested?.Invoke(action, _currentFilePath);
+                        }
+                        else
+                        {
+                            ActionRequested?.Invoke(action, _selectedText);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError($"SelectionToolbarWindow: Action execution failed (action={action?.Name}, isForFile={_isForFile}).", ex);
+                    }
+                    HideToolbar();
+                };
+
+                return btn;
             }
 
-            // 2. Action buttons
-            if (hasActions)
+            Button CreateMoreButton()
             {
-                bool hasMore = _actions.Count > MaxInitialActions && !_isExpanded;
-                var displayActions = hasMore ? _actions.Take(MaxInitialActions) : _actions;
+                string moreText = LanguageManager.Instance["SelectionToolbar_More"];
+                if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
 
-                foreach (var action in displayActions)
+                var moreBtn = new Button
                 {
-                    AddSeparator();
+                    Content = moreText,
+                    Style = (Style)FindResource("ToolbarButtonStyle")
+                };
 
-                    var btn = new Button
+                moreBtn.Click += (s, e) => {
+                    try
                     {
-                        Content = (string.IsNullOrEmpty(action.Icon) ? "" : action.Icon + " ") + action.Name,
-                        Tag = action,
-                        Style = (Style)FindResource("ToolbarButtonStyle")
-                    };
-
-                    btn.Click += (s, e) => {
-                        try
-                        {
-                            if (_isForFile)
-                            {
-                                FileActionRequested?.Invoke(action, _currentFilePath);
-                            }
-                            else
-                            {
-                                ActionRequested?.Invoke(action, _selectedText);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError($"SelectionToolbarWindow: Action execution failed (action={action?.Name}, isForFile={_isForFile}).", ex);
-                        }
-                        HideToolbar();
-                    };
-
-                    buttonPanel.Children.Add(btn);
-                    isFirst = false;
-                }
-
-                if (hasMore)
-                {
-                    AddSeparator();
-
-                    string moreText = LanguageManager.Instance["SelectionToolbar_More"];
-                    if (string.IsNullOrEmpty(moreText)) moreText = "更多 ▾";
-
-                    var moreBtn = new Button
+                        _isExpanded = true;
+                        BuildButtons();
+                        PositionWindow(_currentScreenPos);
+                        _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                        StartAutoHideTimer();
+                    }
+                    catch (Exception ex)
                     {
-                        Content = moreText,
-                        Style = (Style)FindResource("ToolbarButtonStyle")
-                    };
+                        Logger.LogError("SelectionToolbarWindow: Expand failed.", ex);
+                    }
+                };
 
-                    moreBtn.Click += (s, e) => {
-                        try
-                        {
-                            _isExpanded = true;
-                            BuildButtons();
-                            PositionWindow(_currentScreenPos);
-                            _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
-                            StartAutoHideTimer();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError("SelectionToolbarWindow: Expand failed.", ex);
-                        }
-                    };
-
-                    buttonPanel.Children.Add(moreBtn);
-                    isFirst = false;
-                }
+                return moreBtn;
             }
 
-            // 3. Copy at last position
-            if (_copyMode == 2)
+            Button CreateBackButton()
             {
-                AddSeparator();
-                buttonPanel.Children.Add(CreateCopyButton());
-                isFirst = false;
+                string backText = LanguageManager.Instance["SelectionToolbar_Back"];
+                if (string.IsNullOrEmpty(backText)) backText = "返回";
+                string backContent = backText.StartsWith("◀") || backText.StartsWith("◂") || backText.StartsWith("←")
+                    ? backText
+                    : "◀ " + backText;
+
+                var backBtn = new Button
+                {
+                    Content = backContent,
+                    Style = (Style)FindResource("ToolbarButtonStyle")
+                };
+
+                backBtn.Click += (s, e) => {
+                    try
+                    {
+                        _isExpanded = false;
+                        BuildButtons();
+                        PositionWindow(_currentScreenPos);
+                        _autoHideTimer.Interval = TimeSpan.FromSeconds(_autoHideSeconds);
+                        StartAutoHideTimer();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("SelectionToolbarWindow: Back to default failed.", ex);
+                    }
+                };
+
+                return backBtn;
+            }
+
+            if (_isExpanded)
+            {
+                // 点击更多后：排除复制和前5项操作，第一项加返回，点击显示默认操作，剩余项操作超过6项显示多行
+                var remainingActions = hasActions ? _actions.Skip(MaxInitialActions).ToList() : new List<ActionItem>();
+
+                // 第一项加返回
+                currentRow = CreateRow();
+                AddButtonToRow(currentRow, CreateBackButton());
+
+                if (remainingActions.Count > 0)
+                {
+                    bool isMultiLine = remainingActions.Count > MaxActionsPerRowInMore;
+
+                    // 第一行最多放置 6 个剩余操作项
+                    int firstRowActionCount = Math.Min(remainingActions.Count, MaxActionsPerRowInMore);
+                    for (int i = 0; i < firstRowActionCount; i++)
+                    {
+                        AddButtonToRow(currentRow, CreateActionButton(remainingActions[i]));
+                    }
+
+                    // 剩余项操作超过6项显示多行：后续操作按每行最多 6 项换行显示
+                    if (isMultiLine)
+                    {
+                        for (int i = MaxActionsPerRowInMore; i < remainingActions.Count; i += MaxActionsPerRowInMore)
+                        {
+                            currentRow = CreateRow();
+                            int countInThisRow = Math.Min(MaxActionsPerRowInMore, remainingActions.Count - i);
+                            for (int j = 0; j < countInThisRow; j++)
+                            {
+                                AddButtonToRow(currentRow, CreateActionButton(remainingActions[i + j]));
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                currentRow = CreateRow();
+
+                // 1. Copy at first position
+                if (_copyMode == 1)
+                {
+                    AddButtonToRow(currentRow, CreateCopyButton());
+                }
+
+                // 2. Action buttons
+                if (hasActions)
+                {
+                    bool hasMore = _actions.Count > MaxInitialActions;
+                    var displayActions = hasMore ? _actions.Take(MaxInitialActions) : _actions;
+
+                    foreach (var action in displayActions)
+                    {
+                        AddButtonToRow(currentRow, CreateActionButton(action));
+                    }
+
+                    if (hasMore)
+                    {
+                        AddButtonToRow(currentRow, CreateMoreButton());
+                    }
+                }
+
+                // 3. Copy at last position
+                if (_copyMode == 2)
+                {
+                    AddButtonToRow(currentRow, CreateCopyButton());
+                }
             }
         }
 

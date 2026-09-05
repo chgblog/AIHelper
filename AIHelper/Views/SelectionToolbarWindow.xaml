@@ -92,7 +92,7 @@
                 RenderOptions.ClearTypeHint="Enabled"
                 SnapsToDevicePixels="True"
                 UseLayoutRounding="True">
-            <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Margin="6,4"
+            <StackPanel x:Name="buttonPanel" Orientation="Vertical" Margin="6,4"
                         SnapsToDevicePixels="True" UseLayoutRounding="True"/>
         </Border>
     </Grid>
