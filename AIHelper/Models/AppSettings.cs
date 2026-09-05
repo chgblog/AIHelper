@@ -37,6 +37,11 @@ namespace AIHelper.Models
         public bool AutoSubmit { get; set; } = true;
 
         /// <summary>
+        /// 主窗口底部操作是否开启新会话（默认开启）
+        /// </summary>
+        public bool QuickActionStartNewChat { get; set; } = true;
+
+        /// <summary>
         /// 是否启用自动检测新版本（默认不选中）
         /// </summary>
         public bool AutoCheckUpdate { get; set; } = false;
@@ -109,6 +114,7 @@ namespace AIHelper.Models
             {
                 IsFirstRun = true,
                 ShowMainWindowOnStartup = true,
+                QuickActionStartNewChat = true,
                 Language = lang,
                 ActivePlatformId = deepSeekId,
                 Platforms = new List<AiPlatform>

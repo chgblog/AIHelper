@@ -190,6 +190,8 @@ namespace AIHelper.Services
             { "Main_Status_NewChat", "正在新建会话..." },
             { "Main_QuickActions_More", "更多 ▾" },
             { "Main_QuickActions_AllTitle", "更多操作" },
+            { "Main_NewChatOption", "开启新会话" },
+            { "Main_NewChatOption_Tip", "勾选后点击底部操作会先新建会话再注入提示词；未勾选时直接注入到当前会话" },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 内容" },
@@ -432,6 +434,8 @@ namespace AIHelper.Services
             { "Main_Status_NewChat", "Starting a new chat..." },
             { "Main_QuickActions_More", "More ▾" },
             { "Main_QuickActions_AllTitle", "More Actions" },
+            { "Main_NewChatOption", "New Chat" },
+            { "Main_NewChatOption_Tip", "When checked, clicking bottom actions will create a new chat before injecting prompt; when unchecked, injects directly into current chat" },
 
             // ActionPanelControl
             { "ActionPanel_ContentHeader", "📋 Content" },

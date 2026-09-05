@@ -166,8 +166,20 @@
                            Foreground="#a0a0b0" VerticalAlignment="Center" Margin="12,0,8,0"
                            TextTrimming="CharacterEllipsis"/>
 
-                <StackPanel x:Name="pnlQuickActions" Grid.Column="1" Orientation="Horizontal"
-                            VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <CheckBox x:Name="chkNewChat" 
+                              Content="{Binding [Main_NewChatOption], Source={x:Static services:LanguageManager.Instance}}"
+                              ToolTip="{Binding [Main_NewChatOption_Tip], Source={x:Static services:LanguageManager.Instance}}"
+                              IsChecked="True"
+                              Foreground="#c0c0d0"
+                              FontSize="12"
+                              VerticalAlignment="Center"
+                              VerticalContentAlignment="Center"
+                              Cursor="Hand"
+                              Margin="0,0,8,0"
+                              Click="ChkNewChat_Click"/>
+                    <StackPanel x:Name="pnlQuickActions" Orientation="Horizontal" VerticalAlignment="Center"/>
+                </StackPanel>
 
                 <!-- More Actions Floating Popup -->
                 <Popup x:Name="popupMoreActions" AllowsTransparency="True" StaysOpen="False"

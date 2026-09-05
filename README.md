@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
   - Robust retry, load-waiting, and injection mechanisms across platform switches, ensuring stable prompt injection and configurable **Auto Submit** toggle (auto send vs. manual confirmation).
 
 - **🖥️ Main Window Quick Actions & Modern UX**
-  - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution without selecting text.
+  - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution, with a "New Chat" toggle on the left to control whether to trigger a new session before injecting prompts.
   - **Window Maximize & Restore**: Maximize/restore window controls and double-click title bar support.
 
 - **📦 Configuration Management & Backup / Restore**

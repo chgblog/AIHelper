@@ -853,7 +853,14 @@ namespace AIHelper.Views
             if (_settings?.Actions == null || _settings.Actions.Count == 0)
             {
                 if (popupMoreActions != null) popupMoreActions.IsOpen = false;
+                if (chkNewChat != null) chkNewChat.Visibility = Visibility.Collapsed;
                 return;
+            }
+
+            if (chkNewChat != null)
+            {
+                chkNewChat.Visibility = Visibility.Visible;
+                chkNewChat.IsChecked = _settings.QuickActionStartNewChat;
             }
 
             var sortedActions = _settings.Actions.OrderBy(a => a.SortOrder).ToList();
@@ -918,6 +925,15 @@ namespace AIHelper.Views
             }
         }
 
+        private void ChkNewChat_Click(object sender, RoutedEventArgs e)
+        {
+            if (_settings != null)
+            {
+                _settings.QuickActionStartNewChat = chkNewChat.IsChecked == true;
+                SettingsService.Instance.Save(_settings);
+            }
+        }
+
         private async void QuickActionButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is ActionItem action)
@@ -927,7 +943,7 @@ namespace AIHelper.Views
         }
 
         /// <summary>
-        /// 快速注入提示词到当前平台输入框：不新建会话、只注入提示词、去除 {content} 占位符、不自动提交
+        /// 快速注入提示词到当前平台输入框：可根据设置先新建会话再注入，或直接注入提示词，去除 {content} 占位符，不自动提交
         /// </summary>
         private async Task QuickInjectActionAsync(ActionItem action)
         {
@@ -956,9 +972,15 @@ namespace AIHelper.Views
                 return;
             }
 
+            bool shouldStartNewChat = chkNewChat?.IsChecked ?? _settings?.QuickActionStartNewChat ?? true;
+            if (shouldStartNewChat)
+            {
+                if (!await StartNewChatAndWaitAsync(platform)) return;
+            }
+
             UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Executing", action.Name));
 
-            // 不新开会话，直接注入到当前输入框，autoSubmit 为 false
+            // 不自动提交，只注入提示词
             var result = await _pageInjector.InjectAndSubmitAsync(webView, prompt, platform.InputSelector, platform.SubmitSelector, autoSubmit: false);
             if (!result.Success)
             {

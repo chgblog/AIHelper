@@ -31,6 +31,7 @@ namespace AIHelper.Tests
             Run("text selection service allows self window selection and ignores toolbar clicks", TestTextSelectionServiceSelfWindowAndToolbarClick);
             Run("selection toolbar more expansion exclusion back button and multi-line layout", TestSelectionToolbarMoreExpansionAndMultiLineLayout);
             Run("selection toolbar window interactive more and back toggle", TestSelectionToolbarWindowInteractiveMoreAndBack);
+            Run("quick action start new chat settings and language keys", TestQuickActionStartNewChatSettingsAndLanguage);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -638,6 +639,44 @@ namespace AIHelper.Tests
             AssertEquals("📋 复制", visualRestored[0][0], "first button should be copy again");
             AssertEquals("动作1", visualRestored[0][1], "second button should be action 1 again");
             AssertEquals("更多 ▾", visualRestored[0][6], "seventh button should be More again");
+        }
+
+        private static void TestQuickActionStartNewChatSettingsAndLanguage()
+        {
+            // 1. 默认设置检测
+            var defaultSettings = AppSettings.CreateDefault();
+            AssertTrue(defaultSettings.QuickActionStartNewChat, "QuickActionStartNewChat should default to true in CreateDefault");
+
+            var newSettings = new AppSettings();
+            AssertTrue(newSettings.QuickActionStartNewChat, "QuickActionStartNewChat should default to true in new instance");
+
+            // 2. 序列化与反序列化（旧配置无此字段时反序列化自动保持默认 true）
+            string jsonWithoutField = "{}";
+            var deserializedWithout = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(jsonWithoutField);
+            AssertTrue(deserializedWithout.QuickActionStartNewChat, "Deserializing without QuickActionStartNewChat should default to true");
+
+            // 3. 显式设置为 false 后的序列化反序列化
+            deserializedWithout.QuickActionStartNewChat = false;
+            string jsonWithFalse = Newtonsoft.Json.JsonConvert.SerializeObject(deserializedWithout);
+            var deserializedWithFalse = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(jsonWithFalse);
+            AssertFalse(deserializedWithFalse.QuickActionStartNewChat, "QuickActionStartNewChat set to false should be preserved");
+
+            // 4. 多语言键检测
+            string originalLang = LanguageManager.Instance.CurrentLanguage;
+            try
+            {
+                LanguageManager.Instance.CurrentLanguage = "zh";
+                AssertEquals("开启新会话", LanguageManager.Instance["Main_NewChatOption"], "ZH Main_NewChatOption");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Main_NewChatOption_Tip"]), "ZH Main_NewChatOption_Tip not empty");
+
+                LanguageManager.Instance.CurrentLanguage = "en";
+                AssertEquals("New Chat", LanguageManager.Instance["Main_NewChatOption"], "EN Main_NewChatOption");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Main_NewChatOption_Tip"]), "EN Main_NewChatOption_Tip not empty");
+            }
+            finally
+            {
+                LanguageManager.Instance.CurrentLanguage = originalLang;
+            }
         }
 
         private static void AssertTrue(bool condition, string message)
