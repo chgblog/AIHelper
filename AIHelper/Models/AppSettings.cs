@@ -94,6 +94,36 @@ namespace AIHelper.Models
         }
 
         /// <summary>
+        /// 模拟访问 - 每次滚动间隔最小时长（秒，支持小数，默认 0.5）
+        /// </summary>
+        public double SimulateVisitMinIntervalSeconds { get; set; } = 0.5;
+
+        /// <summary>
+        /// 模拟访问 - 每次滚动间隔最大时长（秒，支持小数，默认 3.0）
+        /// </summary>
+        public double SimulateVisitMaxIntervalSeconds { get; set; } = 3.0;
+
+        /// <summary>
+        /// 模拟访问 - 每次向下滚动最小移动间距（像素，默认 100）
+        /// </summary>
+        public int SimulateVisitMinScrollDistance { get; set; } = 100;
+
+        /// <summary>
+        /// 模拟访问 - 每次向下滚动最大移动间距（像素，默认 300）
+        /// </summary>
+        public int SimulateVisitMaxScrollDistance { get; set; } = 300;
+
+        /// <summary>
+        /// 模拟访问 - 是否启用代理（默认 false，与系统代理一致；选中则按常规设置中的代理访问）
+        /// </summary>
+        public bool SimulateVisitUseProxy { get; set; } = false;
+
+        /// <summary>
+        /// 浏览器模式最后访问的 URL（默认 "https://www.bing.com"）
+        /// </summary>
+        public string BrowserModeLastUrl { get; set; } = "https://www.bing.com";
+
+        /// <summary>
         /// Gets the active platform
         /// </summary>
         public AiPlatform GetActivePlatform()

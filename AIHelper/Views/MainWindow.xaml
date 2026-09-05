@@ -109,9 +109,69 @@
                 <TextBlock Grid.Column="0" Text="AIHelper" Foreground="#7c3aed" FontWeight="Bold"
                            VerticalAlignment="Center" Margin="15,0,0,0"/>
 
-                <ComboBox x:Name="cmbPlatforms" Grid.Column="1" Width="200" HorizontalAlignment="Left"
-                          Margin="20,0,0,0" VerticalAlignment="Center" SelectionChanged="CmbPlatforms_SelectionChanged"
-                          DisplayMemberPath="Name" />
+                <Grid Grid.Column="1">
+                    <!-- AI Mode Controls -->
+                    <StackPanel x:Name="pnlAiModeControls" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
+                        <ComboBox x:Name="cmbPlatforms" Width="180" HorizontalAlignment="Left"
+                                  VerticalAlignment="Center" SelectionChanged="CmbPlatforms_SelectionChanged"
+                                  DisplayMemberPath="Name" />
+                        <Button x:Name="btnSwitchToBrowser" Style="{StaticResource QuickActionButtonStyle}"
+                                Height="26" Margin="6,0,0,0" Padding="6,2" Cursor="Hand"
+                                ToolTip="{Binding [Main_SwitchToBrowserMode], Source={x:Static services:LanguageManager.Instance}}"
+                                Click="BtnSwitchToBrowser_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🌐" FontSize="13" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Browser Mode Controls -->
+                    <Grid x:Name="pnlBrowserModeControls" Visibility="Collapsed" VerticalAlignment="Center" Margin="10,0,10,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="btnSwitchToAi" Grid.Column="0" Style="{StaticResource QuickActionButtonStyle}"
+                                Height="26" Margin="0,0,6,0" Padding="6,2" Cursor="Hand"
+                                ToolTip="{Binding [Main_SwitchToAiMode], Source={x:Static services:LanguageManager.Instance}}"
+                                Click="BtnSwitchToAi_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🤖" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text=" AI" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBox x:Name="txtBrowserUrl" Grid.Column="1" Height="26" Background="#1a1a2e" Foreground="#e0e0e0"
+                                 BorderBrush="#3a3a5e" BorderThickness="1" Padding="6,2" FontSize="12"
+                                 VerticalContentAlignment="Center" Margin="0,0,4,0"
+                                 PreviewKeyDown="TxtBrowserUrl_PreviewKeyDown"/>
+
+                        <Button x:Name="btnBrowserGo" Grid.Column="2" Style="{StaticResource QuickActionButtonStyle}"
+                                Height="26" Padding="6,2" Margin="0,0,3,0" Cursor="Hand"
+                                ToolTip="{Binding [Main_BrowserGo], Source={x:Static services:LanguageManager.Instance}}"
+                                Click="BtnBrowserGo_Click">
+                            <TextBlock Text="➔" FontSize="12" FontWeight="Bold"/>
+                        </Button>
+
+                        <Button x:Name="btnBrowserRefresh" Grid.Column="3" Style="{StaticResource QuickActionButtonStyle}"
+                                Height="26" Padding="6,2" Margin="0,0,8,0" Cursor="Hand"
+                                ToolTip="{Binding [Main_BrowserRefresh], Source={x:Static services:LanguageManager.Instance}}"
+                                Click="BtnBrowserRefresh_Click">
+                            <TextBlock Text="↻" FontSize="13" FontWeight="Bold"/>
+                        </Button>
+
+                        <CheckBox x:Name="chkSimulateHuman" Grid.Column="4" IsChecked="False"
+                                  Content="{Binding [Main_SimulateHuman], Source={x:Static services:LanguageManager.Instance}}"
+                                  ToolTip="{Binding [Main_SimulateHuman_Tip], Source={x:Static services:LanguageManager.Instance}}"
+                                  Foreground="#c0c0d0" FontSize="12" VerticalAlignment="Center"
+                                  VerticalContentAlignment="Center" Cursor="Hand"
+                                  Click="ChkSimulateHuman_Click"/>
+                    </Grid>
+                </Grid>
 
                 <!-- 新版本提示：检测到更新后才显示，点击打开更新页 -->
                 <Button x:Name="btnUpdate" Grid.Column="2" Visibility="Collapsed" Padding="8,0"
@@ -166,7 +226,7 @@
                            Foreground="#a0a0b0" VerticalAlignment="Center" Margin="12,0,8,0"
                            TextTrimming="CharacterEllipsis"/>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                <StackPanel x:Name="pnlBottomAiActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                     <CheckBox x:Name="chkNewChat" 
                               Content="{Binding [Main_NewChatOption], Source={x:Static services:LanguageManager.Instance}}"
                               ToolTip="{Binding [Main_NewChatOption_Tip], Source={x:Static services:LanguageManager.Instance}}"

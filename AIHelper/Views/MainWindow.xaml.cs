@@ -95,7 +95,13 @@ namespace AIHelper.Views
         private SelectionToolbarWindow _selectionToolbar;
         private SettingsWindow _currentSettingsWindow;
         private WebView2 webView;
+        private WebView2 browserWebView;
+        private bool _isBrowserMode = false;
+        private System.Threading.CancellationTokenSource _simulateBrowsingCts;
+        private readonly Random _random = new Random();
         private bool _currentWebViewUsesProxy;
+        private bool _currentBrowserWebViewUsesProxy;
+        private string _currentBrowserProxyServer;
         private UpdateCheckService.UpdateInfo _availableUpdate;
 
         public bool IsExiting { get; set; } = false;
@@ -416,6 +422,14 @@ namespace AIHelper.Views
         }
 
         /// <summary>
+        /// Determines whether the simulation visit / browser mode should use proxy based on SimulateVisitUseProxy flag and global proxy config
+        /// </summary>
+        private bool ShouldSimulateVisitUseProxy()
+        {
+            return (_settings?.SimulateVisitUseProxy ?? false) && !string.IsNullOrWhiteSpace(_settings?.ProxyServer);
+        }
+
+        /// <summary>
         /// Gets the appropriate userDataFolder path based on whether proxy is used.
         /// WebView2 requires separate userDataFolder for different environment options.
         /// </summary>
@@ -465,6 +479,41 @@ namespace AIHelper.Views
                 catch (Exception ex)
                 {
                     Logger.LogError("Error disposing WebView2", ex);
+                }
+            }
+            DestroyBrowserWebView();
+        }
+
+        /// <summary>
+        /// Destroys the browser mode WebView2 control
+        /// </summary>
+        private void DestroyBrowserWebView()
+        {
+            StopSimulateBrowsing();
+            if (browserWebView != null)
+            {
+                browserWebView.NavigationStarting -= BrowserWebView_NavigationStarting;
+                browserWebView.NavigationCompleted -= BrowserWebView_NavigationCompleted;
+                browserWebView.SourceChanged -= BrowserWebView_SourceChanged;
+                webViewContainer.Children.Remove(browserWebView);
+                var bw = browserWebView;
+                browserWebView = null;
+                _currentBrowserProxyServer = null;
+                try
+                {
+                    if (bw.CoreWebView2 != null)
+                    {
+                        bw.CoreWebView2.Stop();
+                    }
+                }
+                catch { }
+                try
+                {
+                    bw.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Error disposing browser WebView2", ex);
                 }
             }
         }
@@ -1046,6 +1095,11 @@ namespace AIHelper.Views
         /// </summary>
         private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null, ClipboardSnapshot clipboard = null)
         {
+            if (_isBrowserMode)
+            {
+                SwitchToAiMode();
+            }
+
             if (platform == null)
             {
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", "No platform"));
@@ -1435,6 +1489,347 @@ namespace AIHelper.Views
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_PageLoadFailed", e.WebErrorStatus));
         }
 
+        #region Browser Mode & Simulation
+
+        private async Task<bool> EnsureBrowserWebViewReadyAsync()
+        {
+            bool needProxy = ShouldSimulateVisitUseProxy();
+            string proxyServer = _settings?.ProxyServer?.Trim() ?? "";
+
+            if (browserWebView?.CoreWebView2 != null)
+            {
+                if (_currentBrowserWebViewUsesProxy == needProxy &&
+                    (!needProxy || _currentBrowserProxyServer == proxyServer))
+                {
+                    return true;
+                }
+
+                // Proxy setting changed for browser mode, destroy and recreate
+                DestroyBrowserWebView();
+                await Task.Delay(200);
+            }
+
+            try
+            {
+                if (browserWebView == null)
+                {
+                    browserWebView = new WebView2();
+                    browserWebView.NavigationStarting += BrowserWebView_NavigationStarting;
+                    browserWebView.NavigationCompleted += BrowserWebView_NavigationCompleted;
+                    browserWebView.SourceChanged += BrowserWebView_SourceChanged;
+                    webViewContainer.Children.Add(browserWebView);
+                }
+
+                _currentBrowserWebViewUsesProxy = needProxy;
+                _currentBrowserProxyServer = proxyServer;
+
+                if (webView?.CoreWebView2 != null && _currentWebViewUsesProxy == needProxy && (!needProxy || (_settings?.ProxyServer?.Trim() ?? "") == proxyServer))
+                {
+                    await browserWebView.EnsureCoreWebView2Async(webView.CoreWebView2.Environment);
+                }
+                else
+                {
+                    CoreWebView2EnvironmentOptions options = null;
+                    if (needProxy)
+                    {
+                        options = new CoreWebView2EnvironmentOptions
+                        {
+                            AdditionalBrowserArguments = $"--proxy-server=\"{proxyServer}\""
+                        };
+                    }
+                    string userDataFolder = GetUserDataFolder(needProxy);
+                    CoreWebView2Environment env = null;
+                    const int maxRetries = 3;
+                    for (int attempt = 1; attempt <= maxRetries; attempt++)
+                    {
+                        try
+                        {
+                            env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+                            break;
+                        }
+                        catch (System.Runtime.InteropServices.COMException ex) when (attempt < maxRetries)
+                        {
+                            Logger.LogError($"Browser WebView2 CreateAsync attempt {attempt} failed, retrying...", ex);
+                            await Task.Delay(500 * attempt);
+                        }
+                        catch (Exception ex) when (attempt < maxRetries)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Browser CreateAsync attempt {attempt} failed: {ex.Message}");
+                            await Task.Delay(500 * attempt);
+                        }
+                    }
+
+                    if (env == null)
+                    {
+                        env = await CoreWebView2Environment.CreateAsync(null, null, options);
+                    }
+
+                    await browserWebView.EnsureCoreWebView2Async(env);
+                }
+
+                return browserWebView?.CoreWebView2 != null;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error initializing browser mode WebView2", ex);
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_WebView2InitFailed", ex.Message));
+                return false;
+            }
+        }
+
+        private void BrowserWebView_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
+        {
+            if (_isBrowserMode)
+            {
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_NavigatingTo", e.Uri));
+            }
+        }
+
+        private void BrowserWebView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (!_isBrowserMode) return;
+
+            if (e.IsSuccess)
+            {
+                if (browserWebView?.Source != null && !txtBrowserUrl.IsKeyboardFocused)
+                {
+                    txtBrowserUrl.Text = browserWebView.Source.ToString();
+                }
+
+                if (chkSimulateHuman.IsChecked == true)
+                {
+                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_SimulateActive", _settings.SimulateVisitMinIntervalSeconds.ToString("0.0"), _settings.SimulateVisitMinScrollDistance));
+                    if (_simulateBrowsingCts == null)
+                    {
+                        StartSimulateBrowsing();
+                    }
+                }
+                else
+                {
+                    UpdateStatus(LanguageManager.Instance["Main_Status_PageLoadSuccess"]);
+                }
+            }
+            else
+            {
+                UpdateStatus(LanguageManager.Instance.GetString("Main_Status_PageLoadFailed", e.WebErrorStatus));
+            }
+        }
+
+        private void BrowserWebView_SourceChanged(object sender, CoreWebView2SourceChangedEventArgs e)
+        {
+            if (_isBrowserMode && browserWebView?.Source != null && !txtBrowserUrl.IsKeyboardFocused)
+            {
+                txtBrowserUrl.Text = browserWebView.Source.ToString();
+            }
+        }
+
+        public async void SwitchToBrowserMode()
+        {
+            try
+            {
+                _isBrowserMode = true;
+                pnlAiModeControls.Visibility = Visibility.Collapsed;
+                pnlBrowserModeControls.Visibility = Visibility.Visible;
+                pnlBottomAiActions.Visibility = Visibility.Collapsed;
+
+                if (webView != null)
+                {
+                    webView.Visibility = Visibility.Collapsed;
+                }
+
+                bool ready = await EnsureBrowserWebViewReadyAsync();
+                if (!ready) return;
+
+                browserWebView.Visibility = Visibility.Visible;
+
+                string targetUrl = _settings?.BrowserModeLastUrl;
+                if (string.IsNullOrWhiteSpace(targetUrl))
+                {
+                    targetUrl = "https://www.bing.com";
+                }
+
+                if (browserWebView.Source == null || browserWebView.Source.ToString() == "about:blank")
+                {
+                    txtBrowserUrl.Text = targetUrl;
+                    NavigateBrowser(targetUrl);
+                }
+                else
+                {
+                    txtBrowserUrl.Text = browserWebView.Source.ToString();
+                    UpdateStatus(LanguageManager.Instance["Main_Status_BrowserMode"]);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error in SwitchToBrowserMode", ex);
+            }
+        }
+
+        public void SwitchToAiMode()
+        {
+            try
+            {
+                _isBrowserMode = false;
+                StopSimulateBrowsing();
+                chkSimulateHuman.IsChecked = false;
+
+                pnlBrowserModeControls.Visibility = Visibility.Collapsed;
+                pnlAiModeControls.Visibility = Visibility.Visible;
+                pnlBottomAiActions.Visibility = Visibility.Visible;
+
+                if (browserWebView != null)
+                {
+                    browserWebView.Visibility = Visibility.Collapsed;
+                }
+
+                if (webView != null)
+                {
+                    webView.Visibility = Visibility.Visible;
+                }
+
+                UpdateStatus(LanguageManager.Instance["Main_Status_Ready"]);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error in SwitchToAiMode", ex);
+            }
+        }
+
+        private void NavigateBrowser(string rawUrl)
+        {
+            if (string.IsNullOrWhiteSpace(rawUrl)) return;
+            string url = rawUrl.Trim();
+
+            if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("about:", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            {
+                url = "https://" + url;
+            }
+
+            txtBrowserUrl.Text = url;
+            _settings.BrowserModeLastUrl = url;
+            SettingsService.Instance.Save(_settings);
+
+            if (browserWebView?.CoreWebView2 != null)
+            {
+                browserWebView.CoreWebView2.Navigate(url);
+            }
+        }
+
+        private void BtnSwitchToBrowser_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToBrowserMode();
+        }
+
+        private void BtnSwitchToAi_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToAiMode();
+        }
+
+        private void TxtBrowserUrl_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                NavigateBrowser(txtBrowserUrl.Text);
+            }
+        }
+
+        private void BtnBrowserGo_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateBrowser(txtBrowserUrl.Text);
+        }
+
+        private void BtnBrowserRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            if (browserWebView?.CoreWebView2 != null)
+            {
+                browserWebView.CoreWebView2.Reload();
+            }
+        }
+
+        private void ChkSimulateHuman_Click(object sender, RoutedEventArgs e)
+        {
+            if (chkSimulateHuman.IsChecked == true)
+            {
+                StartSimulateBrowsing();
+            }
+            else
+            {
+                StopSimulateBrowsing();
+            }
+        }
+
+        private void StartSimulateBrowsing()
+        {
+            StopSimulateBrowsing();
+            _simulateBrowsingCts = new System.Threading.CancellationTokenSource();
+            _ = RunSimulateBrowsingLoopAsync(_simulateBrowsingCts.Token);
+        }
+
+        private void StopSimulateBrowsing()
+        {
+            if (_simulateBrowsingCts != null)
+            {
+                try
+                {
+                    _simulateBrowsingCts.Cancel();
+                    _simulateBrowsingCts.Dispose();
+                }
+                catch { }
+                _simulateBrowsingCts = null;
+            }
+            if (_isBrowserMode)
+            {
+                UpdateStatus(LanguageManager.Instance["Main_Status_SimulateStopped"]);
+            }
+        }
+
+        private async Task RunSimulateBrowsingLoopAsync(System.Threading.CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested && chkSimulateHuman.IsChecked == true && _isBrowserMode)
+            {
+                double minSec = Math.Max(0.1, _settings.SimulateVisitMinIntervalSeconds);
+                double maxSec = Math.Max(minSec, _settings.SimulateVisitMaxIntervalSeconds);
+                double intervalSec = minSec + _random.NextDouble() * (maxSec - minSec);
+                int delayMs = (int)(intervalSec * 1000);
+
+                try
+                {
+                    await Task.Delay(delayMs, ct);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+
+                if (ct.IsCancellationRequested || chkSimulateHuman.IsChecked != true || !_isBrowserMode)
+                    break;
+
+                int minPx = Math.Max(1, _settings.SimulateVisitMinScrollDistance);
+                int maxPx = Math.Max(minPx, _settings.SimulateVisitMaxScrollDistance);
+                int distance = _random.Next(minPx, maxPx + 1);
+
+                if (browserWebView?.CoreWebView2 != null)
+                {
+                    try
+                    {
+                        string script = $"(function() {{ window.scrollBy({{ top: {distance}, behavior: 'smooth' }}); }})();";
+                        await browserWebView.CoreWebView2.ExecuteScriptAsync(script);
+                        UpdateStatus(LanguageManager.Instance.GetString("Main_Status_SimulateActive", intervalSec.ToString("0.0"), distance));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("Error executing simulation scroll script", ex);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
         private Point _dragStartPoint;
         private bool _isPotentialDrag;
 
@@ -1623,6 +2018,30 @@ namespace AIHelper.Views
                             webView.CoreWebView2.Navigate(active.Url);
                         }
                     }
+
+                    // Check if proxy settings changed for simulation visit / browser mode
+                    bool browserNeedProxy = ShouldSimulateVisitUseProxy();
+                    string currentProxyServer = _settings.ProxyServer?.Trim() ?? "";
+                    bool browserProxyChanged = (browserNeedProxy != _currentBrowserWebViewUsesProxy) ||
+                                               (browserNeedProxy && _currentBrowserProxyServer != currentProxyServer);
+                    if (browserWebView != null && browserProxyChanged)
+                    {
+                        if (_isBrowserMode)
+                        {
+                            string currentUrl = browserWebView.Source?.ToString() ?? _settings.BrowserModeLastUrl;
+                            DestroyBrowserWebView();
+                            await EnsureBrowserWebViewReadyAsync();
+                            if (browserWebView?.CoreWebView2 != null && !string.IsNullOrWhiteSpace(currentUrl))
+                            {
+                                browserWebView.Visibility = Visibility.Visible;
+                                browserWebView.CoreWebView2.Navigate(currentUrl);
+                            }
+                        }
+                        else
+                        {
+                            DestroyBrowserWebView();
+                        }
+                    }
                 }
                 _currentSettingsWindow = null;
             }
@@ -1668,6 +2087,7 @@ namespace AIHelper.Views
             // 静态事件会持有窗口引用，窗口可能被重建，必须解绑
             UpdateCheckService.UpdateAvailable -= UpdateCheckService_UpdateAvailable;
             LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
+            DestroyBrowserWebView();
             base.OnClosed(e);
         }
 

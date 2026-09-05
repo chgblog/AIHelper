@@ -61,6 +61,12 @@ namespace AIHelper.Views
             txtSelectionAppScopeApps.Text = _settings.SelectionAppScopeApps ?? "";
             txtSelectionToolbarAutoHideSeconds.Text = (_settings.SelectionToolbarAutoHideSeconds > 0 ? _settings.SelectionToolbarAutoHideSeconds : 3).ToString();
 
+            txtSimulateMinInterval.Text = (_settings.SimulateVisitMinIntervalSeconds > 0 ? _settings.SimulateVisitMinIntervalSeconds : 0.5).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            txtSimulateMaxInterval.Text = (_settings.SimulateVisitMaxIntervalSeconds > 0 ? _settings.SimulateVisitMaxIntervalSeconds : 3.0).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            txtSimulateMinDistance.Text = (_settings.SimulateVisitMinScrollDistance > 0 ? _settings.SimulateVisitMinScrollDistance : 100).ToString();
+            txtSimulateMaxDistance.Text = (_settings.SimulateVisitMaxScrollDistance > 0 ? _settings.SimulateVisitMaxScrollDistance : 300).ToString();
+            chkSimulateUseProxy.IsChecked = _settings.SimulateVisitUseProxy;
+
             UpdateSelectionToolbarControlStates();
             UpdateAutoHideTip();
             txtProxyServer.Text = _settings.ProxyServer ?? "";
@@ -193,6 +199,50 @@ namespace AIHelper.Views
             else if (rbScopeExclude.IsChecked == true) appScopeMode = 2;
             _settings.SelectionAppScopeMode = appScopeMode;
             _settings.SelectionAppScopeApps = txtSelectionAppScopeApps.Text?.Trim() ?? "";
+
+            // Validate and save simulation settings
+            string rawMinInt = txtSimulateMinInterval.Text?.Trim();
+            string rawMaxInt = txtSimulateMaxInterval.Text?.Trim();
+            string rawMinDist = txtSimulateMinDistance.Text?.Trim();
+            string rawMaxDist = txtSimulateMaxDistance.Text?.Trim();
+
+            if (!double.TryParse(rawMinInt, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double minInterval) &&
+                !double.TryParse(rawMinInt, out minInterval))
+            {
+                minInterval = -1;
+            }
+
+            if (!double.TryParse(rawMaxInt, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double maxInterval) &&
+                !double.TryParse(rawMaxInt, out maxInterval))
+            {
+                maxInterval = -1;
+            }
+
+            if (!int.TryParse(rawMinDist, out int minDistance))
+            {
+                minDistance = -1;
+            }
+
+            if (!int.TryParse(rawMaxDist, out int maxDistance))
+            {
+                maxDistance = -1;
+            }
+
+            if (minInterval <= 0 || maxInterval < minInterval || minDistance <= 0 || maxDistance < minDistance)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance["Settings_Simulate_ValidateError"],
+                    LanguageManager.Instance["Notice"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            _settings.SimulateVisitMinIntervalSeconds = minInterval;
+            _settings.SimulateVisitMaxIntervalSeconds = maxInterval;
+            _settings.SimulateVisitMinScrollDistance = minDistance;
+            _settings.SimulateVisitMaxScrollDistance = maxDistance;
+            _settings.SimulateVisitUseProxy = chkSimulateUseProxy.IsChecked == true;
             
             string newProxy = txtProxyServer.Text?.Trim() ?? "";
             bool proxyChanged = (_settings.ProxyServer ?? "") != newProxy;

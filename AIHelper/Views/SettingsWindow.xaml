@@ -227,7 +227,72 @@
                 </ScrollViewer>
             </TabItem>
 
-            <!-- 项目与更新 -->
+            <!-- 模拟访问 -->
+            <TabItem Header="{Binding [Settings_Tab_SimulateVisit], Source={x:Static services:LanguageManager.Instance}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Settings_Simulate_Title], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <TextBlock Text="{Binding [Settings_Simulate_Desc], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,15" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <!-- 滚动间隔时长 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Simulate_IntervalSection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="100"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding [Settings_Simulate_MinInterval], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox x:Name="txtSimulateMinInterval" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="~" Foreground="#a0a0b0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding [Settings_Simulate_MaxInterval], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox x:Name="txtSimulateMaxInterval" Grid.Column="4" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding [Settings_Simulate_IntervalTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 滚动移动间距 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Simulate_DistanceSection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="100"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding [Settings_Simulate_MinDistance], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox x:Name="txtSimulateMinDistance" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="~" Foreground="#a0a0b0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding [Settings_Simulate_MaxDistance], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox x:Name="txtSimulateMaxDistance" Grid.Column="4" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding [Settings_Simulate_DistanceTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 网络代理设置 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Simulate_ProxySection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <CheckBox x:Name="chkSimulateUseProxy" Content="{Binding [Settings_Simulate_UseProxy], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalContentAlignment="Center"/>
+                                    <TextBlock Text="{Binding [Settings_Simulate_UseProxyTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" Margin="20,5,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 更新 -->
             <TabItem Header="{Binding [Settings_Tab_About], Source={x:Static services:LanguageManager.Instance}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid Margin="15">

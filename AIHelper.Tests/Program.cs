@@ -32,6 +32,7 @@ namespace AIHelper.Tests
             Run("selection toolbar more expansion exclusion back button and multi-line layout", TestSelectionToolbarMoreExpansionAndMultiLineLayout);
             Run("selection toolbar window interactive more and back toggle", TestSelectionToolbarWindowInteractiveMoreAndBack);
             Run("quick action start new chat settings and language keys", TestQuickActionStartNewChatSettingsAndLanguage);
+            Run("simulate visit settings and language keys", TestSimulateVisitSettingsAndLanguage);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -672,6 +673,66 @@ namespace AIHelper.Tests
                 LanguageManager.Instance.CurrentLanguage = "en";
                 AssertEquals("New Chat", LanguageManager.Instance["Main_NewChatOption"], "EN Main_NewChatOption");
                 AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Main_NewChatOption_Tip"]), "EN Main_NewChatOption_Tip not empty");
+            }
+            finally
+            {
+                LanguageManager.Instance.CurrentLanguage = originalLang;
+            }
+        }
+
+        private static void TestSimulateVisitSettingsAndLanguage()
+        {
+            // 1. Default settings validation
+            var defaultSettings = AppSettings.CreateDefault();
+            AssertEquals("0.5", defaultSettings.SimulateVisitMinIntervalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "Default min interval");
+            AssertEquals("3.0", defaultSettings.SimulateVisitMaxIntervalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "Default max interval");
+            AssertEquals("100", defaultSettings.SimulateVisitMinScrollDistance.ToString(), "Default min distance");
+            AssertEquals("300", defaultSettings.SimulateVisitMaxScrollDistance.ToString(), "Default max distance");
+            AssertTrue(!string.IsNullOrEmpty(defaultSettings.BrowserModeLastUrl), "Default BrowserModeLastUrl not empty");
+            AssertTrue(!defaultSettings.SimulateVisitUseProxy, "Default SimulateVisitUseProxy is false (system proxy)");
+
+            // 2. Serialization and deserialization
+            defaultSettings.SimulateVisitMinIntervalSeconds = 1.2;
+            defaultSettings.SimulateVisitMaxIntervalSeconds = 4.5;
+            defaultSettings.SimulateVisitMinScrollDistance = 150;
+            defaultSettings.SimulateVisitMaxScrollDistance = 450;
+            defaultSettings.SimulateVisitUseProxy = true;
+            defaultSettings.BrowserModeLastUrl = "https://github.com";
+
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(defaultSettings);
+            var deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(json);
+            AssertEquals("1.2", deserialized.SimulateVisitMinIntervalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "Deserialized min interval");
+            AssertEquals("4.5", deserialized.SimulateVisitMaxIntervalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), "Deserialized max interval");
+            AssertEquals("150", deserialized.SimulateVisitMinScrollDistance.ToString(), "Deserialized min distance");
+            AssertEquals("450", deserialized.SimulateVisitMaxScrollDistance.ToString(), "Deserialized max distance");
+            AssertTrue(deserialized.SimulateVisitUseProxy, "Deserialized SimulateVisitUseProxy is true");
+            AssertEquals("https://github.com", deserialized.BrowserModeLastUrl, "Deserialized BrowserModeLastUrl");
+
+            // 3. Multi-language keys test
+            string originalLang = LanguageManager.Instance.CurrentLanguage;
+            try
+            {
+                LanguageManager.Instance.CurrentLanguage = "zh";
+                AssertEquals("更新", LanguageManager.Instance["Settings_Tab_About"], "ZH Settings_Tab_About is 更新");
+                AssertEquals("模拟访问", LanguageManager.Instance["Settings_Tab_SimulateVisit"], "ZH Settings_Tab_SimulateVisit");
+                AssertEquals("切换到浏览器模式", LanguageManager.Instance["Main_SwitchToBrowserMode"], "ZH Main_SwitchToBrowserMode");
+                AssertEquals("切换回 AI 模式", LanguageManager.Instance["Main_SwitchToAiMode"], "ZH Main_SwitchToAiMode");
+                AssertEquals("模拟真人访问", LanguageManager.Instance["Main_SimulateHuman"], "ZH Main_SimulateHuman");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_Simulate_Title"]), "ZH Settings_Simulate_Title not empty");
+                AssertEquals("网络代理设置", LanguageManager.Instance["Settings_Simulate_ProxySection"], "ZH Settings_Simulate_ProxySection");
+                AssertEquals("启用代理", LanguageManager.Instance["Settings_Simulate_UseProxy"], "ZH Settings_Simulate_UseProxy");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_Simulate_UseProxyTip"]), "ZH Settings_Simulate_UseProxyTip not empty");
+
+                LanguageManager.Instance.CurrentLanguage = "en";
+                AssertEquals("Updates", LanguageManager.Instance["Settings_Tab_About"], "EN Settings_Tab_About is Updates");
+                AssertEquals("Simulation", LanguageManager.Instance["Settings_Tab_SimulateVisit"], "EN Settings_Tab_SimulateVisit");
+                AssertEquals("Switch to Browser Mode", LanguageManager.Instance["Main_SwitchToBrowserMode"], "EN Main_SwitchToBrowserMode");
+                AssertEquals("Switch back to AI Mode", LanguageManager.Instance["Main_SwitchToAiMode"], "EN Main_SwitchToAiMode");
+                AssertEquals("Simulate Human Browsing", LanguageManager.Instance["Main_SimulateHuman"], "EN Main_SimulateHuman");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_Simulate_Title"]), "EN Settings_Simulate_Title not empty");
+                AssertEquals("Network Proxy Settings", LanguageManager.Instance["Settings_Simulate_ProxySection"], "EN Settings_Simulate_ProxySection");
+                AssertEquals("Enable Proxy", LanguageManager.Instance["Settings_Simulate_UseProxy"], "EN Settings_Simulate_UseProxy");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_Simulate_UseProxyTip"]), "EN Settings_Simulate_UseProxyTip not empty");
             }
             finally
             {

@@ -70,6 +70,12 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
   - Built-in `injector.js` script that automatically identifies and locates text input fields on major AI platforms.
   - Robust retry, load-waiting, and injection mechanisms across platform switches, ensuring stable prompt injection and configurable **Auto Submit** toggle (auto send vs. manual confirmation).
 
+- **🌐 Browser Mode & Human-Like Browsing Simulation**
+  - **One-Click Mode Switching**: A browser icon next to the AI platform switcher switches to "Browser Mode"; an AI icon on the left of Browser Mode switches seamlessly back to AI mode without losing conversation state.
+  - **Address Bar & Web Navigation**: Enter any URL to visit websites with auto-protocol completion and last-visited URL memory.
+  - **Human-Like Randomized Scrolling**: A toggle next to the address bar enables "Simulate Human Browsing", which automatically scrolls down pages using randomized time intervals (e.g. 0.5s - 3s) and smooth scroll step distances (e.g. 100px - 300px).
+  - **Dedicated Simulation Settings Tab**: Settings window includes a dedicated "Simulation" tab for customizing scroll durations, pixel step ranges, and a proxy toggle (defaults to system proxy, or routes via General Settings proxy when enabled).
+
 - **🖥️ Main Window Quick Actions & Modern UX**
   - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution, with a "New Chat" toggle on the left to control whether to trigger a new session before injecting prompts.
   - **Window Maximize & Restore**: Maximize/restore window controls and double-click title bar support.
