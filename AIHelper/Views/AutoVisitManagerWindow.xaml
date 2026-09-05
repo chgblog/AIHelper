@@ -1,0 +1,65 @@
+<Window x:Class="AIHelper.Views.AutoVisitManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:AIHelper.Services"
+        Title="{Binding [AutoVisit_Manager_Title], Source={x:Static services:LanguageManager.Instance}}" 
+        Height="480" Width="880" Icon="/icon.ico"
+        WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
+        WindowStyle="ToolWindow">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 说明提示 -->
+        <TextBlock Grid.Row="0" Text="{Binding [Settings_AutoVisit_SectionTip], Source={x:Static services:LanguageManager.Instance}}" 
+                   Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+        <!-- 数据表格 -->
+        <DataGrid x:Name="dgAutoVisits" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False"
+                  Background="#161622" RowBackground="#1e1e2e" AlternatingRowBackground="#252538"
+                  Foreground="#e0e0e0" HeadersVisibility="Column" BorderBrush="#3a3a5e"
+                  MouseDoubleClick="DgAutoVisits_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="{Binding [AutoVisit_Col_Enabled], Source={x:Static services:LanguageManager.Instance}}" Width="50">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_Url], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding Url}" Width="*"/>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_Regex], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding LinkMatchRegex}" Width="150"/>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_Limit], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding MaxVisitCount}" Width="75"/>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_NextPage], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding NextPageSelector}" Width="110"/>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_LinkDelay], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding LinkDelayDisplay}" Width="110"/>
+                <DataGridTextColumn Header="{Binding [AutoVisit_Col_Refresh], Source={x:Static services:LanguageManager.Instance}}" Binding="{Binding RefreshIntervalDisplay}" Width="120"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- 底部操作按钮 -->
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧增删改按钮 -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="{Binding [Add], Source={x:Static services:LanguageManager.Instance}}" Click="BtnAdd_Click" Width="75" Margin="0,0,8,0" Padding="5" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                <Button Content="{Binding [Edit], Source={x:Static services:LanguageManager.Instance}}" Click="BtnEdit_Click" Width="75" Margin="0,0,8,0" Padding="5" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                <Button Content="{Binding [Delete], Source={x:Static services:LanguageManager.Instance}}" Click="BtnDelete_Click" Width="75" Margin="0,0,12,0" Padding="5" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                <Button Content="{Binding [AutoVisit_Manager_ClearHistory], Source={x:Static services:LanguageManager.Instance}}" Click="BtnClearHistory_Click" Padding="10,5" Background="#2a2a3e" Foreground="#b0b0c0" BorderThickness="0" Cursor="Hand"/>
+            </StackPanel>
+
+            <!-- 右侧确定取消按钮 -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="{Binding [OK], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOk_Click" Width="80" Margin="0,0,8,0" Padding="5" Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                <Button Content="{Binding [Cancel], Source={x:Static services:LanguageManager.Instance}}" Click="BtnCancel_Click" Width="80" Padding="5" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

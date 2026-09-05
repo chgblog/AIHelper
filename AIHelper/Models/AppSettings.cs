@@ -124,6 +124,12 @@ namespace AIHelper.Models
         public string BrowserModeLastUrl { get; set; } = "https://www.bing.com";
 
         /// <summary>
+        /// 自动访问配置列表
+        /// </summary>
+        public List<AutoVisitConfig> AutoVisitConfigs { get; set; } = new List<AutoVisitConfig>();
+
+
+        /// <summary>
         /// Gets the active platform
         /// </summary>
         public AiPlatform GetActivePlatform()

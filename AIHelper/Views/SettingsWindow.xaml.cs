@@ -738,6 +738,25 @@ namespace AIHelper.Views
             }
         }
 
+        private void BtnManageAutoVisit_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new AutoVisitManagerWindow(_settings.AutoVisitConfigs);
+                win.Owner = this;
+                if (win.ShowDialog() == true && win.Configs != null)
+                {
+                    _settings.AutoVisitConfigs = win.Configs;
+                    SettingsService.Instance.Save(_settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error opening AutoVisitManagerWindow", ex);
+            }
+        }
+
+
         private void TxtPanelHotkey_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             e.Handled = true;

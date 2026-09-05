@@ -287,6 +287,15 @@
                                     <TextBlock Text="{Binding [Settings_Simulate_UseProxyTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" Margin="20,5,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
+
+                            <!-- 自动访问管理 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_AutoVisit_Section], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{Binding [Settings_AutoVisit_SectionTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                                    <Button Content="{Binding [Settings_AutoVisit_ManageBtn], Source={x:Static services:LanguageManager.Instance}}" Click="BtnManageAutoVisit_Click" Width="150" HorizontalAlignment="Left" Padding="10,6" Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Grid>
                 </ScrollViewer>

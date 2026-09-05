@@ -1,0 +1,94 @@
+<Window x:Class="AIHelper.Views.AutoVisitEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:AIHelper.Services"
+        Title="{Binding [AutoVisit_Edit_Title_Edit], Source={x:Static services:LanguageManager.Instance}}" 
+        Height="510" Width="600" Icon="/icon.ico"
+        WindowStartupLocation="CenterOwner" Background="#1a1a2e" Foreground="#e0e0e0"
+        WindowStyle="ToolWindow" ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 自动访问网址 -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [AutoVisit_Edit_Url], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <TextBox x:Name="txtUrl" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12"
+                 Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                 ToolTip="{Binding [AutoVisit_Edit_UrlTT], Source={x:Static services:LanguageManager.Instance}}"/>
+
+        <!-- 自动访问链接正则匹配规则 -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [AutoVisit_Edit_Regex], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <TextBox x:Name="txtLinkMatchRegex" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12"
+                 Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                 ToolTip="{Binding [AutoVisit_Edit_RegexTT], Source={x:Static services:LanguageManager.Instance}}"
+                 FontFamily="Consolas" FontSize="12"/>
+
+        <!-- 自动访问链接数 -->
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [AutoVisit_Edit_Limit], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <TextBox x:Name="txtMaxVisitCount" Grid.Row="2" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,0,0,12"
+                 Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                 ToolTip="{Binding [AutoVisit_Edit_LimitTT], Source={x:Static services:LanguageManager.Instance}}"/>
+
+        <!-- 下一页定位 -->
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [AutoVisit_Edit_NextPage], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <TextBox x:Name="txtNextPageSelector" Grid.Row="3" Grid.Column="1" Margin="0,0,8,12"
+                 Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                 ToolTip="{Binding [AutoVisit_Edit_NextPageTT], Source={x:Static services:LanguageManager.Instance}}"
+                 FontFamily="Consolas" FontSize="12"/>
+        <Button x:Name="btnPickNextPage" Grid.Row="3" Grid.Column="2" 
+                Content="{Binding [AutoVisit_Edit_Pick], Source={x:Static services:LanguageManager.Instance}}" 
+                Click="BtnPickNextPage_Click" Width="70" Margin="0,0,0,12" Padding="6,4"
+                ToolTip="{Binding [AutoVisit_Edit_PickTT], Source={x:Static services:LanguageManager.Instance}}"
+                Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+
+        <!-- 下一链接延迟 -->
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [AutoVisit_Edit_LinkDelay], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+            <TextBox x:Name="txtMinLinkDelay" Width="60" Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                     ToolTip="{Binding [AutoVisit_Edit_LinkDelayTT], Source={x:Static services:LanguageManager.Instance}}"/>
+            <TextBlock Text="~" Foreground="#a0a0b0" VerticalAlignment="Center" Margin="8,0,8,0"/>
+            <TextBox x:Name="txtMaxLinkDelay" Width="60" Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"
+                     ToolTip="{Binding [AutoVisit_Edit_LinkDelayTT], Source={x:Static services:LanguageManager.Instance}}"/>
+            <TextBlock Text="{Binding [AutoVisit_Edit_LinkDelayUnit], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+        </StackPanel>
+
+        <!-- 停止后刷新间隔 -->
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding [AutoVisit_Edit_RefreshInterval], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Center" Margin="0,0,10,12"/>
+        <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+            <TextBox x:Name="txtMinRefreshInterval" Width="60" Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"/>
+            <TextBlock Text="~" Foreground="#a0a0b0" VerticalAlignment="Center" Margin="8,0,8,0"/>
+            <TextBox x:Name="txtMaxRefreshInterval" Width="60" Background="#1e1e2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="6,4"/>
+            <TextBlock Text="{Binding [AutoVisit_Edit_RefreshUnit], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+        </StackPanel>
+
+        <!-- 启用状态 -->
+        <CheckBox x:Name="chkIsEnabled" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
+                  Content="{Binding [AutoVisit_Edit_Enabled], Source={x:Static services:LanguageManager.Instance}}"
+                  IsChecked="True" Foreground="#e0e0e0" Margin="0,0,0,12" VerticalContentAlignment="Center"/>
+
+        <!-- 说明提示 -->
+        <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3"
+                   Text="{Binding [AutoVisit_Edit_RefreshTip], Source={x:Static services:LanguageManager.Instance}}"
+                   Foreground="#808098" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="{Binding [OK], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOk_Click" Width="80" Margin="0,0,10,0" Padding="6" Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            <Button Content="{Binding [Cancel], Source={x:Static services:LanguageManager.Instance}}" Click="BtnCancel_Click" Width="80" Padding="6" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+        </StackPanel>
+    </Grid>
+</Window>

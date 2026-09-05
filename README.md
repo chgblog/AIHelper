@@ -75,6 +75,14 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
   - **Address Bar & Web Navigation**: Enter any URL to visit websites with auto-protocol completion and last-visited URL memory.
   - **Human-Like Randomized Scrolling**: A toggle next to the address bar enables "Simulate Human Browsing", which automatically scrolls down pages using randomized time intervals (e.g. 0.5s - 3s) and smooth scroll step distances (e.g. 100px - 300px).
   - **Dedicated Simulation Settings Tab**: Settings window includes a dedicated "Simulation" tab for customizing scroll durations, pixel step ranges, and a proxy toggle (defaults to system proxy, or routes via General Settings proxy when enabled).
+  - **🤖 Auto Visit & Link Traversing (Auto Visit)**:
+    - **Auto Visit Management**: A dedicated management dialog (similar to Platform Management) under the Simulation tab in Settings allows adding and maintaining auto-visit rules.
+    - **Rule Configuration**: Configure target URL, link regex matching rule, max visit limit per round, next page CSS selector (with visual element picker support), and stop-refresh interval range (min-max minutes, default 30-60).
+    - **Viewport Extraction & 24h De-duplication**: Matches visible links within the current screen viewport and filters out links visited in the last 24 hours.
+    - **Child Page Browsing & Position Restoring**: Clicks matching links, smoothly scrolls child pages to the bottom using human-like parameters, and returns to the main page with previous scroll position preserved.
+    - **Screen-by-Screen Traversal & Pagination**: Scrolls down to the next screen after visiting all links on the current screen; clicks the next-page locator when reaching the page bottom to continue on subsequent pages.
+    - **Randomized Interval Reload & Revisit**: Automatically counts down a randomized wait interval (e.g. 30-60 minutes) when reaching the link limit or page bottom, then reloads the page and restarts from the beginning.
+
 
 - **🖥️ Main Window Quick Actions & Modern UX**
   - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution, with a "New Chat" toggle on the left to control whether to trigger a new session before injecting prompts.

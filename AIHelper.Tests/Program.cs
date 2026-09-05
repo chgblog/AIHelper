@@ -33,6 +33,7 @@ namespace AIHelper.Tests
             Run("selection toolbar window interactive more and back toggle", TestSelectionToolbarWindowInteractiveMoreAndBack);
             Run("quick action start new chat settings and language keys", TestQuickActionStartNewChatSettingsAndLanguage);
             Run("simulate visit settings and language keys", TestSimulateVisitSettingsAndLanguage);
+            Run("auto visit config, history and matching tests", TestAutoVisitFeatures);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -739,6 +740,131 @@ namespace AIHelper.Tests
                 LanguageManager.Instance.CurrentLanguage = originalLang;
             }
         }
+
+        private static void TestAutoVisitFeatures()
+        {
+            // 1. Test AutoVisitConfig defaults and clone
+            var cfg = new AutoVisitConfig
+            {
+                Url = "https://news.ycombinator.com",
+                LinkMatchRegex = @".*item\?id=\d+",
+                MaxVisitCount = 50,
+                NextPageSelector = "a.morelink",
+                MinRefreshIntervalMinutes = 30,
+                MaxRefreshIntervalMinutes = 60,
+                IsEnabled = true
+            };
+
+            AssertEquals("https://news.ycombinator.com", cfg.Url, "cfg.Url matches");
+            AssertEquals(50.ToString(), cfg.MaxVisitCount.ToString(), "cfg.MaxVisitCount default 50");
+            AssertEquals(3.ToString(), cfg.MinLinkDelaySeconds.ToString(), "cfg.MinLinkDelaySeconds default 3");
+            AssertEquals(8.ToString(), cfg.MaxLinkDelaySeconds.ToString(), "cfg.MaxLinkDelaySeconds default 8");
+            AssertEquals("3 ~ 8", cfg.LinkDelayDisplay, "LinkDelayDisplay formatting");
+            AssertEquals("30 ~ 60", cfg.RefreshIntervalDisplay, "RefreshIntervalDisplay formatting");
+
+            var clone = cfg.Clone();
+            AssertEquals(cfg.Id, clone.Id, "Clone Id matches");
+            AssertEquals(cfg.Url, clone.Url, "Clone Url matches");
+            AssertEquals(cfg.LinkMatchRegex, clone.LinkMatchRegex, "Clone LinkMatchRegex matches");
+            AssertEquals(cfg.MaxVisitCount.ToString(), clone.MaxVisitCount.ToString(), "Clone MaxVisitCount matches");
+            AssertEquals(cfg.NextPageSelector, clone.NextPageSelector, "Clone NextPageSelector matches");
+            AssertEquals(cfg.MinLinkDelaySeconds.ToString(), clone.MinLinkDelaySeconds.ToString(), "Clone MinLinkDelaySeconds matches");
+            AssertEquals(cfg.MaxLinkDelaySeconds.ToString(), clone.MaxLinkDelaySeconds.ToString(), "Clone MaxLinkDelaySeconds matches");
+            AssertEquals(cfg.LinkDelayDisplay, clone.LinkDelayDisplay, "Clone LinkDelayDisplay matches");
+            AssertEquals(cfg.MinRefreshIntervalMinutes.ToString(), clone.MinRefreshIntervalMinutes.ToString(), "Clone MinRefreshIntervalMinutes matches");
+            AssertEquals(cfg.MaxRefreshIntervalMinutes.ToString(), clone.MaxRefreshIntervalMinutes.ToString(), "Clone MaxRefreshIntervalMinutes matches");
+            AssertTrue(clone.IsEnabled, "Clone IsEnabled is true");
+
+            // 2. Test AutoVisitHistoryService URL normalization & 24h tracking
+            string url1 = "https://example.com/post/100#comments";
+            string url1Clean = "https://example.com/post/100";
+            AssertEquals(url1Clean, AutoVisitHistoryService.NormalizeUrl(url1), "NormalizeUrl strips fragments");
+
+            string url2 = "https://example.com/items/?a=1";
+            string url2Clean = "https://example.com/items?a=1";
+            AssertEquals(url2Clean, AutoVisitHistoryService.NormalizeUrl(url2), "NormalizeUrl strips trailing slash before query");
+
+            var history = AutoVisitHistoryService.Instance;
+            history.ClearHistory();
+            AssertFalse(history.HasVisitedInLast24Hours("https://example.com/article/1"), "URL not visited yet");
+
+            history.RecordVisit("https://example.com/article/1#tag");
+            AssertTrue(history.HasVisitedInLast24Hours("https://example.com/article/1"), "URL visited after recording (hash agnostic)");
+            AssertTrue(history.HasVisitedInLast24Hours("https://example.com/article/1#diff"), "URL visited with different fragment");
+            AssertFalse(history.HasVisitedInLast24Hours("https://example.com/article/2"), "Different URL not visited");
+
+            history.ClearHistory();
+            AssertFalse(history.HasVisitedInLast24Hours("https://example.com/article/1"), "URL cleared after ClearHistory");
+
+            // 3. Test AutoVisitService FindMatchingConfig
+            var configs = new List<AutoVisitConfig>
+            {
+                new AutoVisitConfig
+                {
+                    Url = "https://news.ycombinator.com",
+                    LinkMatchRegex = ".*item.*",
+                    IsEnabled = true
+                },
+                new AutoVisitConfig
+                {
+                    Url = "https://example.com/blog",
+                    LinkMatchRegex = ".*post.*",
+                    IsEnabled = false
+                }
+            };
+
+            var match1 = AutoVisitService.Instance.FindMatchingConfig("https://news.ycombinator.com/", configs);
+            AssertTrue(match1 != null, "Matches root url with trailing slash");
+            AssertEquals("https://news.ycombinator.com", match1.Url, "Matched config Url");
+
+            var match2 = AutoVisitService.Instance.FindMatchingConfig("https://news.ycombinator.com/news?p=2", configs);
+            AssertTrue(match2 != null, "Matches subpage / query url");
+
+            var matchDisabled = AutoVisitService.Instance.FindMatchingConfig("https://example.com/blog", configs);
+            AssertTrue(matchDisabled == null, "Disabled config does not match");
+
+            var matchNone = AutoVisitService.Instance.FindMatchingConfig("https://bing.com", configs);
+            AssertTrue(matchNone == null, "Non-matching url returns null");
+
+            // 4. Test IsSamePage URL equivalence and hash routing distinction
+            AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com", "https://example.com/"), "Root trailing slash");
+            AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com/page", "https://example.com/page/"), "Path trailing slash");
+            AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com/page#section", "https://example.com/page"), "Anchor stripped");
+            AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com/p?a=1", "https://example.com/p?a=1"), "Query match");
+            AssertFalse(AutoVisitService.Instance.IsSamePage("https://example.com/p?a=1", "https://example.com/p?a=2"), "Different query");
+            AssertFalse(AutoVisitService.Instance.IsSamePage("https://example.com/p1", "https://example.com/p2"), "Different path");
+            AssertFalse(AutoVisitService.Instance.IsSamePage("https://example.com/#/list", "https://example.com/#/detail/1"), "SPA hash routing distinction");
+            AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com/#/list", "https://example.com/#/list"), "SPA hash routing match");
+
+            // 5. Test Language keys in ZH and EN
+            string originalLang = LanguageManager.Instance.CurrentLanguage;
+            try
+            {
+                LanguageManager.Instance.CurrentLanguage = "zh";
+                AssertEquals("自动访问管理", LanguageManager.Instance["AutoVisit_Manager_Title"], "ZH AutoVisit_Manager_Title");
+                AssertEquals("自动访问网址", LanguageManager.Instance["AutoVisit_Col_Url"], "ZH AutoVisit_Col_Url");
+                AssertEquals("正则匹配规则", LanguageManager.Instance["AutoVisit_Col_Regex"], "ZH AutoVisit_Col_Regex");
+                AssertEquals("访问链接数", LanguageManager.Instance["AutoVisit_Col_Limit"], "ZH AutoVisit_Col_Limit");
+                AssertEquals("下一页定位", LanguageManager.Instance["AutoVisit_Col_NextPage"], "ZH AutoVisit_Col_NextPage");
+                AssertEquals("下一链接延迟 (秒)", LanguageManager.Instance["AutoVisit_Col_LinkDelay"], "ZH AutoVisit_Col_LinkDelay");
+                AssertEquals("下一链接延迟:", LanguageManager.Instance["AutoVisit_Edit_LinkDelay"], "ZH AutoVisit_Edit_LinkDelay");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["AutoVisit_Edit_RefreshTip"]), "ZH AutoVisit_Edit_RefreshTip not empty");
+
+                LanguageManager.Instance.CurrentLanguage = "en";
+                AssertEquals("Auto Visit Management", LanguageManager.Instance["AutoVisit_Manager_Title"], "EN AutoVisit_Manager_Title");
+                AssertEquals("Target URL", LanguageManager.Instance["AutoVisit_Col_Url"], "EN AutoVisit_Col_Url");
+                AssertEquals("Regex Rule", LanguageManager.Instance["AutoVisit_Col_Regex"], "EN AutoVisit_Col_Regex");
+                AssertEquals("Visit Limit", LanguageManager.Instance["AutoVisit_Col_Limit"], "EN AutoVisit_Col_Limit");
+                AssertEquals("Next Page Locator", LanguageManager.Instance["AutoVisit_Col_NextPage"], "EN AutoVisit_Col_NextPage");
+                AssertEquals("Link Delay (s)", LanguageManager.Instance["AutoVisit_Col_LinkDelay"], "EN AutoVisit_Col_LinkDelay");
+                AssertEquals("Next Link Delay:", LanguageManager.Instance["AutoVisit_Edit_LinkDelay"], "EN AutoVisit_Edit_LinkDelay");
+            }
+            finally
+            {
+                LanguageManager.Instance.CurrentLanguage = originalLang;
+            }
+        }
+
 
         private static void AssertTrue(bool condition, string message)
         {

@@ -1567,6 +1567,15 @@ namespace AIHelper.Views
                     await browserWebView.EnsureCoreWebView2Async(env);
                 }
 
+                if (browserWebView?.CoreWebView2 != null)
+                {
+                    browserWebView.CoreWebView2.NewWindowRequested += (s, args) =>
+                    {
+                        args.Handled = true;
+                        browserWebView?.CoreWebView2?.Navigate(args.Uri);
+                    };
+                }
+
                 return browserWebView?.CoreWebView2 != null;
             }
             catch (Exception ex)
@@ -1598,10 +1607,18 @@ namespace AIHelper.Views
 
                 if (chkSimulateHuman.IsChecked == true)
                 {
-                    UpdateStatus(LanguageManager.Instance.GetString("Main_Status_SimulateActive", _settings.SimulateVisitMinIntervalSeconds.ToString("0.0"), _settings.SimulateVisitMinScrollDistance));
-                    if (_simulateBrowsingCts == null)
+                    if (!AutoVisitService.Instance.IsRunning)
                     {
-                        StartSimulateBrowsing();
+                        var autoConfig = AutoVisitService.Instance.FindMatchingConfig(browserWebView.Source?.ToString(), _settings?.AutoVisitConfigs);
+                        if (autoConfig != null)
+                        {
+                            StartSimulateBrowsing();
+                        }
+                        else if (_simulateBrowsingCts == null)
+                        {
+                            UpdateStatus(LanguageManager.Instance.GetString("Main_Status_SimulateActive", _settings.SimulateVisitMinIntervalSeconds.ToString("0.0"), _settings.SimulateVisitMinScrollDistance));
+                            StartSimulateBrowsing();
+                        }
                     }
                 }
                 else
@@ -1609,6 +1626,7 @@ namespace AIHelper.Views
                     UpdateStatus(LanguageManager.Instance["Main_Status_PageLoadSuccess"]);
                 }
             }
+
             else
             {
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_PageLoadFailed", e.WebErrorStatus));
@@ -1765,12 +1783,32 @@ namespace AIHelper.Views
         private void StartSimulateBrowsing()
         {
             StopSimulateBrowsing();
-            _simulateBrowsingCts = new System.Threading.CancellationTokenSource();
-            _ = RunSimulateBrowsingLoopAsync(_simulateBrowsingCts.Token);
+
+            if (browserWebView?.CoreWebView2 == null || !_isBrowserMode) return;
+
+            string currentUrl = browserWebView.Source?.ToString();
+            var autoConfig = AutoVisitService.Instance.FindMatchingConfig(currentUrl, _settings?.AutoVisitConfigs);
+
+            if (autoConfig != null)
+            {
+                AutoVisitService.Instance.Start(
+                    browserWebView,
+                    autoConfig,
+                    _settings,
+                    status => UpdateStatus(status),
+                    () => chkSimulateHuman.IsChecked == true && _isBrowserMode);
+            }
+            else
+            {
+                _simulateBrowsingCts = new System.Threading.CancellationTokenSource();
+                _ = RunSimulateBrowsingLoopAsync(_simulateBrowsingCts.Token);
+            }
         }
 
         private void StopSimulateBrowsing()
         {
+            AutoVisitService.Instance.Stop();
+
             if (_simulateBrowsingCts != null)
             {
                 try
@@ -1786,6 +1824,7 @@ namespace AIHelper.Views
                 UpdateStatus(LanguageManager.Instance["Main_Status_SimulateStopped"]);
             }
         }
+
 
         private async Task RunSimulateBrowsingLoopAsync(System.Threading.CancellationToken ct)
         {
