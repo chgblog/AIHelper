@@ -35,6 +35,7 @@ namespace AIHelper.Tests
             Run("simulate visit settings and language keys", TestSimulateVisitSettingsAndLanguage);
             Run("auto visit config, history and matching tests", TestAutoVisitFeatures);
             Run("auto visit select first unvisited link on return", TestAutoVisitFirstUnvisitedLinkSelection);
+            Run("auto check update default settings and language keys", TestAutoCheckUpdateDefaultSettingsAndLanguage);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -964,6 +965,81 @@ namespace AIHelper.Tests
             AssertTrue(AutoVisitService.Instance.SelectFirstUnvisitedLink(new List<LinkItem>(), mainUrl, excluded) == null, "Empty candidates returns null");
 
             history.ClearHistory();
+        }
+
+        private static void TestAutoCheckUpdateDefaultSettingsAndLanguage()
+        {
+            // 1. AppSettings default value
+            var defaultSettings = AppSettings.CreateDefault();
+            AssertTrue(defaultSettings.AutoCheckUpdate, "AutoCheckUpdate should default to true in CreateDefault");
+            AssertEquals(AppSettings.CurrentConfigVersion, defaultSettings.ConfigVersion, "ConfigVersion should default to CurrentConfigVersion in CreateDefault");
+            AssertEquals("0.8.7", AppSettings.CurrentConfigVersion, "CurrentConfigVersion should be 0.8.7");
+
+            var newSettings = new AppSettings();
+            AssertTrue(newSettings.AutoCheckUpdate, "AutoCheckUpdate should default to true in new instance");
+
+            // 2. Deserializing empty JSON preserves default true
+            string jsonWithoutField = "{}";
+            var deserializedWithout = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(jsonWithoutField);
+            AssertTrue(deserializedWithout.AutoCheckUpdate, "Deserializing without AutoCheckUpdate should default to true");
+
+            // 3. Explicitly setting to false is preserved
+            deserializedWithout.AutoCheckUpdate = false;
+            deserializedWithout.ConfigVersion = AppSettings.CurrentConfigVersion;
+            string jsonWithFalse = Newtonsoft.Json.JsonConvert.SerializeObject(deserializedWithout);
+            var deserializedWithFalse = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(jsonWithFalse);
+            AssertFalse(deserializedWithFalse.AutoCheckUpdate, "AutoCheckUpdate set to false should be preserved");
+            AssertEquals("0.8.7", deserializedWithFalse.ConfigVersion, "ConfigVersion 0.8.7 should be preserved");
+
+            // 4. Config Migration: Old user config without ConfigVersion (AutoCheckUpdate was false by old default)
+            string legacyOldJson = "{\"AutoCheckUpdate\": false}";
+            var legacyOldSettings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(legacyOldJson);
+            AssertFalse(legacyOldSettings.AutoCheckUpdate, "Legacy json has AutoCheckUpdate false");
+            AssertTrue(string.IsNullOrEmpty(legacyOldSettings.ConfigVersion), "Legacy json has null ConfigVersion");
+            bool migratedOld = SettingsService.Instance.MigrateSettingsIfNeeded(legacyOldSettings);
+            AssertTrue(migratedOld, "Should migrate legacy config without ConfigVersion");
+            AssertTrue(legacyOldSettings.AutoCheckUpdate, "Legacy config AutoCheckUpdate should be migrated to true");
+            AssertEquals("0.8.7", legacyOldSettings.ConfigVersion, "Legacy config ConfigVersion should be updated to 0.8.7");
+
+            // 5. Config Migration: User config from prior version e.g. 0.8.6 with AutoCheckUpdate false
+            string v086Json = "{\"ConfigVersion\": \"0.8.6\", \"AutoCheckUpdate\": false}";
+            var v086Settings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(v086Json);
+            bool migrated086 = SettingsService.Instance.MigrateSettingsIfNeeded(v086Settings);
+            AssertTrue(migrated086, "Should migrate config from version < 0.8.7");
+            AssertTrue(v086Settings.AutoCheckUpdate, "0.8.6 config AutoCheckUpdate should be migrated to true");
+            AssertEquals("0.8.7", v086Settings.ConfigVersion, "0.8.6 config should be updated to 0.8.7");
+
+            // 6. Config Migration: User explicitly unchecked in 0.8.7 (ConfigVersion == 0.8.7, AutoCheckUpdate == false)
+            string v087UncheckedJson = "{\"ConfigVersion\": \"0.8.7\", \"AutoCheckUpdate\": false}";
+            var v087Settings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(v087UncheckedJson);
+            bool migrated087 = SettingsService.Instance.MigrateSettingsIfNeeded(v087Settings);
+            AssertFalse(migrated087, "Should NOT migrate config that is already 0.8.7");
+            AssertFalse(v087Settings.AutoCheckUpdate, "User unchecked AutoCheckUpdate in 0.8.7 should remain false");
+            AssertEquals("0.8.7", v087Settings.ConfigVersion, "ConfigVersion remains 0.8.7");
+
+            // 7. Config Migration: Future version 0.9.0 with AutoCheckUpdate false should NOT be touched
+            string v090Json = "{\"ConfigVersion\": \"0.9.0\", \"AutoCheckUpdate\": false}";
+            var v090Settings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(v090Json);
+            bool migrated090 = SettingsService.Instance.MigrateSettingsIfNeeded(v090Settings);
+            AssertFalse(migrated090, "Should NOT migrate future config version 0.9.0");
+            AssertFalse(v090Settings.AutoCheckUpdate, "Future config AutoCheckUpdate remains false");
+
+            // 8. Language keys
+            string originalLang = LanguageManager.Instance.CurrentLanguage;
+            try
+            {
+                LanguageManager.Instance.CurrentLanguage = "zh";
+                AssertEquals("自动检测新版本", LanguageManager.Instance["Settings_About_AutoCheckUpdate"], "ZH Settings_About_AutoCheckUpdate");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_About_AutoCheckUpdateTip"]), "ZH Settings_About_AutoCheckUpdateTip not empty");
+
+                LanguageManager.Instance.CurrentLanguage = "en";
+                AssertEquals("Auto-check for updates", LanguageManager.Instance["Settings_About_AutoCheckUpdate"], "EN Settings_About_AutoCheckUpdate");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["Settings_About_AutoCheckUpdateTip"]), "EN Settings_About_AutoCheckUpdateTip not empty");
+            }
+            finally
+            {
+                LanguageManager.Instance.CurrentLanguage = originalLang;
+            }
         }
 
         private static void AssertTrue(bool condition, string message)

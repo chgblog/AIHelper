@@ -184,6 +184,7 @@ namespace AIHelper.Views
             else if (cbiCopyLast.IsSelected) copyMode = 2;
             _settings.SelectionToolbarCopyMode = copyMode;
             _settings.AutoCheckUpdate = chkAutoCheckUpdate.IsChecked == true;
+            _settings.ConfigVersion = AppSettings.CurrentConfigVersion;
 
             if (int.TryParse(txtSelectionToolbarAutoHideSeconds.Text?.Trim(), out int autoHideSec) && autoHideSec > 0)
             {

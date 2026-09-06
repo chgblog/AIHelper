@@ -23,6 +23,16 @@ namespace AIHelper.Models
         /// </summary>
         public string MainWindowHotkeyKey { get; set; } = "Space";
 
+        /// <summary>
+        /// 当前配置架构与程序版本号
+        /// </summary>
+        public const string CurrentConfigVersion = "0.8.7";
+
+        /// <summary>
+        /// 配置版本号（用于设置平滑迁移，当前版本 0.8.7）
+        /// </summary>
+        public string ConfigVersion { get; set; }
+
         public List<ActionItem> Actions { get; set; } = new List<ActionItem>();
         public bool IsFirstRun { get; set; } = true;
 
@@ -42,9 +52,9 @@ namespace AIHelper.Models
         public bool QuickActionStartNewChat { get; set; } = true;
 
         /// <summary>
-        /// 是否启用自动检测新版本（默认不选中）
+        /// 是否启用自动检测新版本（默认选中）
         /// </summary>
-        public bool AutoCheckUpdate { get; set; } = false;
+        public bool AutoCheckUpdate { get; set; } = true;
 
         /// <summary>
         /// 是否启用 Windows 文件右键菜单
@@ -148,9 +158,11 @@ namespace AIHelper.Models
 
             var settings = new AppSettings
             {
+                ConfigVersion = CurrentConfigVersion,
                 IsFirstRun = true,
                 ShowMainWindowOnStartup = true,
                 QuickActionStartNewChat = true,
+                AutoCheckUpdate = true,
                 Language = lang,
                 ActivePlatformId = deepSeekId,
                 Platforms = new List<AiPlatform>
