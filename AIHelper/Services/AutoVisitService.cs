@@ -85,6 +85,23 @@ namespace AIHelper.Services
         }
 
         /// <summary>
+        /// 从候选链接列表中按顺序选取第一个尚未访问、非当前主页面自身且未被排除规则过滤的链接
+        /// </summary>
+        public LinkItem SelectFirstUnvisitedLink(
+            IEnumerable<LinkItem> screenLinks,
+            string currentMainUrl,
+            IEnumerable<string> excludedList)
+        {
+            if (screenLinks == null) return null;
+            return screenLinks.FirstOrDefault(l =>
+                l != null &&
+                !string.IsNullOrWhiteSpace(l.Href) &&
+                !IsSamePage(l.Href, currentMainUrl) &&
+                !IsExcludedUrl(l.Href, excludedList) &&
+                !AutoVisitHistoryService.Instance.HasVisitedInLast24Hours(l.Href));
+        }
+
+        /// <summary>
         /// 启动自动访问流程
         /// </summary>
         public void Start(
@@ -134,19 +151,23 @@ namespace AIHelper.Services
                     int roundVisitedCount = 0;
                     string mainUrl = config.Url;
 
-                    // 确保处于主页面
+                    // 确保处于主页面并重置到首屏顶部
                     await EnsureOnPageAsync(webView, mainUrl, updateStatus, ct);
+                    await ScrollToTopAsync(webView);
+                    await HumanPauseAsync(1000, 1500, ct);
+
                     if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
 
                     bool hasMorePages = true;
 
                     while (hasMorePages && !ct.IsCancellationRequested && isSimulateEnabled())
                     {
+                        // 寻找并访问当前主页面中第一个未访问过的链接（从首屏开始检索）
+                        LinkItem targetLink = null;
                         bool reachedPageBottom = false;
 
-                        while (!reachedPageBottom && !ct.IsCancellationRequested && isSimulateEnabled())
+                        while (targetLink == null && !reachedPageBottom && !ct.IsCancellationRequested && isSimulateEnabled())
                         {
-                            // 记录当前主页面 URL
                             string currentMainUrl = await GetCurrentUrlAsync(webView);
                             if (string.IsNullOrWhiteSpace(currentMainUrl))
                             {
@@ -160,93 +181,17 @@ namespace AIHelper.Services
                             var screenLinks = await GetCurrentScreenMatchingLinksAsync(webView, config.LinkMatchRegex);
                             if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
 
-                            // 2. 过滤掉主页面自身、已配置排除的链接以及过去 24 小时内已访问过的链接
+                            // 2. 筛选首个尚未访问的链接
                             var excludedList = AutoVisitConfig.ParseExcludedUrls(config.ExcludedUrls);
-                            var unvisitedLinks = screenLinks
-                                .Where(l => !IsSamePage(l.Href, currentMainUrl) &&
-                                            !IsExcludedUrl(l.Href, excludedList) &&
-                                            !AutoVisitHistoryService.Instance.HasVisitedInLast24Hours(l.Href))
-                                .ToList();
+                            targetLink = SelectFirstUnvisitedLink(screenLinks, currentMainUrl, excludedList);
 
-                            // 3. 逐个点击进入当前屏幕内未访问过的链接
-                            foreach (var link in unvisitedLinks)
+                            if (targetLink != null)
                             {
-                                if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
-
-                                if (roundVisitedCount >= config.MaxVisitCount)
-                                {
-                                    break;
-                                }
-
-                                // 确保处于当前主页面（如果前一次返回有偏差则强制复位）
-                                string curCheckUrl = await GetCurrentUrlAsync(webView);
-                                if (!IsSamePage(curCheckUrl, currentMainUrl))
-                                {
-                                    await EnsureOnPageAsync(webView, currentMainUrl, updateStatus, ct);
-                                }
-
-                                // 记录访问历史（24小时排重）
-                                AutoVisitHistoryService.Instance.RecordVisit(link.Href);
-
-                                // 保存主页面当前垂直滚动条位置
-                                double savedScrollY = await GetScrollYAsync(webView);
-
-                                updateStatus(LanguageManager.Instance.GetString(
-                                    "AutoVisit_Status_VisitingChild",
-                                    roundVisitedCount + 1,
-                                    config.MaxVisitCount,
-                                    string.IsNullOrWhiteSpace(link.Title) ? link.Href : link.Title));
-
-                                // 点击或导航进入子页面
-                                bool navigated = await NavigateToChildLinkAsync(webView, link.Href, ct);
-                                if (!navigated || ct.IsCancellationRequested || !isSimulateEnabled())
-                                {
-                                    continue;
-                                }
-
-                                // 4. 在子页面中模拟真人平滑向下滚动至页面底部
-                                updateStatus(LanguageManager.Instance["AutoVisit_Status_ScrollingChild"]);
-                                await ScrollChildPageToBottomAsync(webView, settings, updateStatus, ct, isSimulateEnabled);
-
-                                // 到达底部稍作停留 (1 秒)
-                                await HumanPauseAsync(800, 1500, ct);
-
-                                // 5. 返回自动访问主页面并恢复之前的滚动位置
-                                updateStatus(LanguageManager.Instance["AutoVisit_Status_ReturnMain"]);
-                                await ReturnToMainPageAsync(webView, currentMainUrl, savedScrollY, ct);
-
-                                roundVisitedCount++;
-
-                                if (roundVisitedCount >= config.MaxVisitCount)
-                                {
-                                    break;
-                                }
-
-                                // 6. 访问每个链接完成（滚动到底部）后，在访问下一个链接前随机延迟指定秒数
-                                int minDelay = Math.Max(0, config.MinLinkDelaySeconds);
-                                int maxDelay = Math.Max(minDelay, config.MaxLinkDelaySeconds);
-                                int delaySeconds = _random.Next(minDelay, maxDelay + 1);
-
-                                for (int sec = delaySeconds; sec > 0 && !ct.IsCancellationRequested && isSimulateEnabled(); sec--)
-                                {
-                                    updateStatus(LanguageManager.Instance.GetString("AutoVisit_Status_WaitingNextLink", sec));
-                                    await Task.Delay(1000, ct);
-                                }
-
-                                if (ct.IsCancellationRequested || !isSimulateEnabled())
-                                {
-                                    break;
-                                }
-                            }
-
-                            if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
-
-                            if (roundVisitedCount >= config.MaxVisitCount)
-                            {
+                                // 找到首个未访问链接，跳出寻找循环直接进入访问
                                 break;
                             }
 
-                            // 6. 当前屏幕链接访问完毕：检查主页面是否已达底部
+                            // 3. 当前屏幕没有未访问链接，检查主页面是否已达底部
                             bool atBottom = await IsPageAtBottomAsync(webView);
                             if (atBottom)
                             {
@@ -254,52 +199,111 @@ namespace AIHelper.Services
                                 break;
                             }
 
-                            // 向下滚动滚动条到下一屏
+                            // 4. 向下平滑滚动到下一屏继续寻找
                             updateStatus(LanguageManager.Instance["AutoVisit_Status_ScrollNextScreen"]);
                             await ScrollToNextScreenAsync(webView, ct);
-                            await HumanPauseAsync(1200, 2000, ct);
+                            await HumanPauseAsync(800, 1500, ct);
 
-                            // 再次检查滚动后是否到达底部
                             atBottom = await IsPageAtBottomAsync(webView);
                             if (atBottom)
                             {
+                                // 再次检查最后一屏是否有未访问链接
+                                screenLinks = await GetCurrentScreenMatchingLinksAsync(webView, config.LinkMatchRegex);
+                                targetLink = SelectFirstUnvisitedLink(screenLinks, currentMainUrl, excludedList);
                                 reachedPageBottom = true;
+                                break;
                             }
                         }
 
                         if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
 
-                        if (roundVisitedCount >= config.MaxVisitCount)
+                        // 5. 若找到未访问链接，执行进入子页面与真人滚动
+                        if (targetLink != null)
                         {
-                            break;
+                            // 记录访问历史（24小时排重）
+                            AutoVisitHistoryService.Instance.RecordVisit(targetLink.Href);
+
+                            updateStatus(LanguageManager.Instance.GetString(
+                                "AutoVisit_Status_VisitingChild",
+                                roundVisitedCount + 1,
+                                config.MaxVisitCount,
+                                string.IsNullOrWhiteSpace(targetLink.Title) ? targetLink.Href : targetLink.Title));
+
+                            string currentMainUrl = await GetCurrentUrlAsync(webView);
+                            if (string.IsNullOrWhiteSpace(currentMainUrl)) currentMainUrl = config.Url;
+
+                            // 点击或导航进入子页面
+                            bool navigated = await NavigateToChildLinkAsync(webView, targetLink.Href, ct);
+                            if (navigated && !ct.IsCancellationRequested && isSimulateEnabled())
+                            {
+                                // 在子页面中模拟真人平滑向下滚动至页面底部
+                                updateStatus(LanguageManager.Instance["AutoVisit_Status_ScrollingChild"]);
+                                await ScrollChildPageToBottomAsync(webView, settings, updateStatus, ct, isSimulateEnabled);
+
+                                // 到达底部稍作停留 (1 秒左右)
+                                await HumanPauseAsync(800, 1500, ct);
+                            }
+
+                            // 6. 返回主页面并重置滚动条到首屏顶部
+                            updateStatus(LanguageManager.Instance["AutoVisit_Status_ReturnMain"]);
+                            await ReturnToMainPageAsync(webView, currentMainUrl, ct);
+
+                            roundVisitedCount++;
+
+                            if (roundVisitedCount >= config.MaxVisitCount)
+                            {
+                                break;
+                            }
+
+                            // 7. 访问完成返回主页后，在访问下一个链接前随机延迟指定秒数
+                            int minDelay = Math.Max(0, config.MinLinkDelaySeconds);
+                            int maxDelay = Math.Max(minDelay, config.MaxLinkDelaySeconds);
+                            int delaySeconds = _random.Next(minDelay, maxDelay + 1);
+
+                            for (int sec = delaySeconds; sec > 0 && !ct.IsCancellationRequested && isSimulateEnabled(); sec--)
+                            {
+                                updateStatus(LanguageManager.Instance.GetString("AutoVisit_Status_WaitingNextLink", sec));
+                                await Task.Delay(1000, ct);
+                            }
+
+                            if (ct.IsCancellationRequested || !isSimulateEnabled())
+                            {
+                                break;
+                            }
+
+                            // 继续下一轮：主页面已在首屏顶部，下一次寻找将从首屏开始获取第一个未访问链接
+                            continue;
                         }
 
-                        // 7. 若主页面滚动到底部，根据下一页定位判断翻页
-                        if (!string.IsNullOrWhiteSpace(config.NextPageSelector))
+                        // 8. 若当前页已达底部且无任何未访问链接，根据下一页定位判断翻页
+                        if (reachedPageBottom)
                         {
-                            updateStatus(LanguageManager.Instance["AutoVisit_Status_NextPage"]);
-                            bool clicked = await ClickNextPageAsync(webView, config.NextPageSelector, ct);
-                            if (clicked)
+                            if (!string.IsNullOrWhiteSpace(config.NextPageSelector))
                             {
-                                await HumanPauseAsync(2000, 3000, ct);
-                                await ScrollToTopAsync(webView);
-                                await HumanPauseAsync(1000, 1500, ct);
-                                hasMorePages = true;
+                                updateStatus(LanguageManager.Instance["AutoVisit_Status_NextPage"]);
+                                bool clicked = await ClickNextPageAsync(webView, config.NextPageSelector, ct);
+                                if (clicked)
+                                {
+                                    await HumanPauseAsync(2000, 3000, ct);
+                                    await ScrollToTopAsync(webView);
+                                    await HumanPauseAsync(1000, 1500, ct);
+                                    hasMorePages = true;
+                                }
+                                else
+                                {
+                                    hasMorePages = false;
+                                }
                             }
                             else
                             {
                                 hasMorePages = false;
                             }
                         }
-                        else
-                        {
-                            hasMorePages = false;
-                        }
                     }
 
                     if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
 
-                    // 8. 达到访问链接数或滚动到底部：在设置的刷新间隔随机分钟后，刷新页面重新从头访问
+                    // 9. 达到访问链接数或所有页面已访问完毕：在设置的刷新间隔随机分钟后，刷新页面重新从头访问
                     int minMins = Math.Max(1, config.MinRefreshIntervalMinutes);
                     int maxMins = Math.Max(minMins, config.MaxRefreshIntervalMinutes);
                     int waitMinutes = _random.Next(minMins, maxMins + 1);
@@ -684,9 +688,9 @@ namespace AIHelper.Services
         }
 
         /// <summary>
-        /// 返回主页面并恢复滚动位置
+        /// 返回主页面并重置滚动位置到顶部首屏
         /// </summary>
-        private async Task ReturnToMainPageAsync(WebView2 webView, string mainUrl, double scrollY, CancellationToken ct)
+        private async Task ReturnToMainPageAsync(WebView2 webView, string mainUrl, CancellationToken ct)
         {
             if (webView?.CoreWebView2 == null) return;
 
@@ -750,16 +754,23 @@ namespace AIHelper.Services
                 }
             }
 
-            // 4. 只有在确认当前确实已经回到主页面后，才恢复滚动条位置
-            await Task.Delay(600, ct);
+            // 4. 回到主页面后，禁用浏览器历史滚动自动恢复并立即重置滚动条到顶部首屏
+            await Task.Delay(400, ct);
             curUrl = await GetCurrentUrlAsync(webView);
             if (IsSamePage(curUrl, mainUrl))
             {
                 try
                 {
-                    int targetY = (int)Math.Max(0, scrollY);
-                    string restoreScript = $"(function() {{ window.scrollTo({{ top: {targetY}, behavior: 'instant' }}); }})();";
-                    await webView.CoreWebView2.ExecuteScriptAsync(restoreScript);
+                    string resetScrollScript = @"
+(function() {
+    try {
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+    } catch(e) {}
+    window.scrollTo({ top: 0, behavior: 'instant' });
+})();";
+                    await webView.CoreWebView2.ExecuteScriptAsync(resetScrollScript);
                 }
                 catch { }
             }

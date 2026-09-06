@@ -34,6 +34,7 @@ namespace AIHelper.Tests
             Run("quick action start new chat settings and language keys", TestQuickActionStartNewChatSettingsAndLanguage);
             Run("simulate visit settings and language keys", TestSimulateVisitSettingsAndLanguage);
             Run("auto visit config, history and matching tests", TestAutoVisitFeatures);
+            Run("auto visit select first unvisited link on return", TestAutoVisitFirstUnvisitedLinkSelection);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -911,6 +912,59 @@ namespace AIHelper.Tests
             }
         }
 
+        private static void TestAutoVisitFirstUnvisitedLinkSelection()
+        {
+            var history = AutoVisitHistoryService.Instance;
+            history.ClearHistory();
+
+            string mainUrl = "https://example.com/home";
+            var excluded = new List<string> { "https://example.com/ads/*", "https://example.com/login" };
+
+            var link1 = new LinkItem { Href = "https://example.com/post/1", Title = "Post 1" };
+            var link2 = new LinkItem { Href = "https://example.com/post/2", Title = "Post 2" };
+            var link3 = new LinkItem { Href = "https://example.com/post/3", Title = "Post 3" };
+            var linkAd = new LinkItem { Href = "https://example.com/ads/promo", Title = "Ad" };
+            var linkSamePage = new LinkItem { Href = "https://example.com/home#section", Title = "Same Page Section" };
+
+            // 1. Initial screen: link1, link2, link3
+            var screenLinks = new List<LinkItem> { link1, link2, link3 };
+            var picked = AutoVisitService.Instance.SelectFirstUnvisitedLink(screenLinks, mainUrl, excluded);
+            AssertTrue(picked != null, "Should pick a link");
+            AssertEquals(link1.Href, picked.Href, "Should pick first unvisited link (link1)");
+
+            // 2. Mark link1 as visited
+            history.RecordVisit(link1.Href);
+            picked = AutoVisitService.Instance.SelectFirstUnvisitedLink(screenLinks, mainUrl, excluded);
+            AssertTrue(picked != null, "Should pick next unvisited link");
+            AssertEquals(link2.Href, picked.Href, "Should skip visited link1 and pick link2");
+
+            // 3. Simulate new content appeared at top of home page screen!
+            var linkNew = new LinkItem { Href = "https://example.com/post/new-999", Title = "Breaking News" };
+            var screenWithNew = new List<LinkItem> { linkNew, link1, link2, link3 };
+            picked = AutoVisitService.Instance.SelectFirstUnvisitedLink(screenWithNew, mainUrl, excluded);
+            AssertTrue(picked != null, "Should pick a link when new content appears");
+            AssertEquals(linkNew.Href, picked.Href, "Must pick the first unvisited link at the top (linkNew), not previous link");
+
+            // 4. Same page and excluded URLs should be skipped
+            var screenWithAdsAndAnchors = new List<LinkItem> { linkAd, linkSamePage, link2, link3 };
+            picked = AutoVisitService.Instance.SelectFirstUnvisitedLink(screenWithAdsAndAnchors, mainUrl, excluded);
+            AssertTrue(picked != null, "Should pick link skipping ad and same page anchor");
+            AssertEquals(link2.Href, picked.Href, "Should skip ad and same-page anchor and pick link2");
+
+            // 5. Mark all links as visited
+            history.RecordVisit(linkNew.Href);
+            history.RecordVisit(link2.Href);
+            history.RecordVisit(link3.Href);
+
+            picked = AutoVisitService.Instance.SelectFirstUnvisitedLink(screenWithNew, mainUrl, excluded);
+            AssertTrue(picked == null, "Should return null when all links on screen are visited");
+
+            // 6. Null or empty candidates
+            AssertTrue(AutoVisitService.Instance.SelectFirstUnvisitedLink(null, mainUrl, excluded) == null, "Null candidates returns null");
+            AssertTrue(AutoVisitService.Instance.SelectFirstUnvisitedLink(new List<LinkItem>(), mainUrl, excluded) == null, "Empty candidates returns null");
+
+            history.ClearHistory();
+        }
 
         private static void AssertTrue(bool condition, string message)
         {
