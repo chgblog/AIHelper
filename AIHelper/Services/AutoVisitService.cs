@@ -160,9 +160,11 @@ namespace AIHelper.Services
                             var screenLinks = await GetCurrentScreenMatchingLinksAsync(webView, config.LinkMatchRegex);
                             if (ct.IsCancellationRequested || !isSimulateEnabled()) break;
 
-                            // 2. 过滤掉主页面自身以及过去 24 小时内已访问过的链接
+                            // 2. 过滤掉主页面自身、已配置排除的链接以及过去 24 小时内已访问过的链接
+                            var excludedList = AutoVisitConfig.ParseExcludedUrls(config.ExcludedUrls);
                             var unvisitedLinks = screenLinks
                                 .Where(l => !IsSamePage(l.Href, currentMainUrl) &&
+                                            !IsExcludedUrl(l.Href, excludedList) &&
                                             !AutoVisitHistoryService.Instance.HasVisitedInLast24Hours(l.Href))
                                 .ToList();
 
@@ -614,6 +616,71 @@ namespace AIHelper.Services
             }
 
             return string.Equals(CleanUrl(urlA), CleanUrl(urlB), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 判断指定候选链接是否匹配排除列表中的任意一项（支持完全匹配、规范化匹配、目录前缀、通配符及相对路径）
+        /// </summary>
+        public bool IsExcludedUrl(string candidateUrl, IEnumerable<string> excludedList)
+        {
+            if (string.IsNullOrWhiteSpace(candidateUrl) || excludedList == null) return false;
+
+            string normCandidate = AutoVisitHistoryService.NormalizeUrl(candidateUrl);
+            Uri candUri = null;
+            try
+            {
+                Uri.TryCreate(candidateUrl, UriKind.Absolute, out candUri);
+            }
+            catch { }
+
+            foreach (var rawRule in excludedList)
+            {
+                if (string.IsNullOrWhiteSpace(rawRule)) continue;
+                string rule = rawRule.Trim();
+
+                // 1. 完全相同或 IsSamePage 匹配（处理锚点、尾部斜杠、大小写等）
+                if (string.Equals(candidateUrl, rule, StringComparison.OrdinalIgnoreCase)) return true;
+                if (IsSamePage(candidateUrl, rule)) return true;
+
+                // 2. 规范化后比对
+                string normRule = AutoVisitHistoryService.NormalizeUrl(rule);
+                if (!string.IsNullOrEmpty(normRule) && string.Equals(normCandidate, normRule, StringComparison.OrdinalIgnoreCase)) return true;
+
+                // 3. 通配符匹配 (如包含 * 或 ?)
+                if (rule.Contains("*") || rule.Contains("?"))
+                {
+                    try
+                    {
+                        string pattern = "^" + Regex.Escape(rule).Replace(@"\*", ".*").Replace(@"\?", ".") + "$";
+                        if (Regex.IsMatch(candidateUrl, pattern, RegexOptions.IgnoreCase)) return true;
+                    }
+                    catch { }
+                }
+
+                // 4. 目录前缀匹配 (如配置 https://example.com/ad/ 或 https://example.com/ad，匹配 https://example.com/ad/xxx)
+                string prefix = rule.TrimEnd('/') + "/";
+                if (candidateUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+
+                // 5. 相对路径匹配（如配置 /logout 或 /ads/*）
+                if (rule.StartsWith("/") && candUri != null)
+                {
+                    string absPath = candUri.AbsolutePath;
+                    if (string.Equals(absPath, rule, StringComparison.OrdinalIgnoreCase)) return true;
+                    if (absPath.StartsWith(rule.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)) return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 便捷重载：接收原始排除链接配置文本并判断是否匹配
+        /// </summary>
+        public bool IsExcludedUrl(string candidateUrl, string excludedUrlsRaw)
+        {
+            if (string.IsNullOrWhiteSpace(candidateUrl) || string.IsNullOrWhiteSpace(excludedUrlsRaw)) return false;
+            var list = AutoVisitConfig.ParseExcludedUrls(excludedUrlsRaw);
+            return IsExcludedUrl(candidateUrl, list);
         }
 
         /// <summary>

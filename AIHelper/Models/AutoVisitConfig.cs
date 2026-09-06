@@ -1,6 +1,8 @@
 // Copyright (C) 2026 chgblog
 // SPDX-License-Identifier: GPL-3.0
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AIHelper.Models
 {
@@ -66,6 +68,24 @@ namespace AIHelper.Models
         /// </summary>
         public string LinkDelayDisplay => $"{MinLinkDelaySeconds} ~ {MaxLinkDelaySeconds}";
 
+        /// <summary>
+        /// 排除访问的链接（支持设置多个链接地址，每行一个或逗号/分号分隔；支持精确匹配、前缀匹配及通配符匹配）
+        /// </summary>
+        public string ExcludedUrls { get; set; } = "";
+
+        /// <summary>
+        /// 将排除链接配置文本解析为去重后的链接列表
+        /// </summary>
+        public static List<string> ParseExcludedUrls(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return new List<string>();
+            return raw.Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                      .Select(s => s.Trim())
+                      .Where(s => !string.IsNullOrEmpty(s))
+                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                      .ToList();
+        }
+
         public AutoVisitConfig Clone()
         {
             return new AutoVisitConfig
@@ -79,7 +99,8 @@ namespace AIHelper.Models
                 MaxRefreshIntervalMinutes = this.MaxRefreshIntervalMinutes,
                 MinLinkDelaySeconds = this.MinLinkDelaySeconds,
                 MaxLinkDelaySeconds = this.MaxLinkDelaySeconds,
-                IsEnabled = this.IsEnabled
+                IsEnabled = this.IsEnabled,
+                ExcludedUrls = this.ExcludedUrls
             };
         }
     }

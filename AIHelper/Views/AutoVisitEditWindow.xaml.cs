@@ -30,6 +30,7 @@ namespace AIHelper.Views
             txtMaxLinkDelay.Text = (config.MaxLinkDelaySeconds >= config.MinLinkDelaySeconds ? config.MaxLinkDelaySeconds : 8).ToString();
             txtMinRefreshInterval.Text = (config.MinRefreshIntervalMinutes > 0 ? config.MinRefreshIntervalMinutes : 30).ToString();
             txtMaxRefreshInterval.Text = (config.MaxRefreshIntervalMinutes >= config.MinRefreshIntervalMinutes ? config.MaxRefreshIntervalMinutes : 60).ToString();
+            txtExcludedUrls.Text = config.ExcludedUrls ?? "";
             chkIsEnabled.IsChecked = config.IsEnabled;
         }
 
@@ -157,6 +158,7 @@ namespace AIHelper.Views
             _config.MaxLinkDelaySeconds = maxDelay;
             _config.MinRefreshIntervalMinutes = minInterval;
             _config.MaxRefreshIntervalMinutes = maxInterval;
+            _config.ExcludedUrls = txtExcludedUrls.Text?.Trim() ?? "";
             _config.IsEnabled = chkIsEnabled.IsChecked == true;
 
             this.DialogResult = true;

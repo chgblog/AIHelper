@@ -774,6 +774,7 @@ namespace AIHelper.Tests
             AssertEquals(cfg.MinRefreshIntervalMinutes.ToString(), clone.MinRefreshIntervalMinutes.ToString(), "Clone MinRefreshIntervalMinutes matches");
             AssertEquals(cfg.MaxRefreshIntervalMinutes.ToString(), clone.MaxRefreshIntervalMinutes.ToString(), "Clone MaxRefreshIntervalMinutes matches");
             AssertTrue(clone.IsEnabled, "Clone IsEnabled is true");
+            AssertEquals(cfg.ExcludedUrls, clone.ExcludedUrls, "Clone ExcludedUrls matches");
 
             // 2. Test AutoVisitHistoryService URL normalization & 24h tracking
             string url1 = "https://example.com/post/100#comments";
@@ -836,7 +837,48 @@ namespace AIHelper.Tests
             AssertFalse(AutoVisitService.Instance.IsSamePage("https://example.com/#/list", "https://example.com/#/detail/1"), "SPA hash routing distinction");
             AssertTrue(AutoVisitService.Instance.IsSamePage("https://example.com/#/list", "https://example.com/#/list"), "SPA hash routing match");
 
-            // 5. Test Language keys in ZH and EN
+            // 5. Test Excluded URLs parsing and matching
+            var parsed = AutoVisitConfig.ParseExcludedUrls(" https://a.com \r\n https://b.com , https://c.com ; https://a.com ");
+            AssertEquals("3", parsed.Count.ToString(), "ParseExcludedUrls count distinct");
+            AssertEquals("https://a.com", parsed[0], "ParseExcludedUrls item 0");
+            AssertEquals("https://b.com", parsed[1], "ParseExcludedUrls item 1");
+            AssertEquals("https://c.com", parsed[2], "ParseExcludedUrls item 2");
+
+            var excludeRules = new List<string>
+            {
+                "https://example.com/login",
+                "https://example.com/post/100/",
+                "https://example.com/ads/*",
+                "https://example.com/category/",
+                "/logout"
+            };
+
+            // Exact & IsSamePage matching
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/login", excludeRules), "Exact excluded url");
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/login/", excludeRules), "Trailing slash excluded url");
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/login#header", excludeRules), "Anchor excluded url");
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/post/100", excludeRules), "Path match without trailing slash");
+
+            // Wildcard matching
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/ads/banner1.jpg", excludeRules), "Wildcard excluded url");
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/ads/test/index.html", excludeRules), "Wildcard subpath excluded url");
+
+            // Directory prefix matching
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/category/tech", excludeRules), "Directory prefix excluded url");
+            AssertFalse(AutoVisitService.Instance.IsExcludedUrl("https://example.com/category-other", excludeRules), "Non-directory prefix not excluded");
+
+            // Relative path matching
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/logout", excludeRules), "Relative path excluded url");
+
+            // Non-matching
+            AssertFalse(AutoVisitService.Instance.IsExcludedUrl("https://example.com/post/101", excludeRules), "Non-excluded url passes");
+            AssertFalse(AutoVisitService.Instance.IsExcludedUrl("https://other.com/login", excludeRules), "Different domain passes");
+
+            // Test string overload
+            AssertTrue(AutoVisitService.Instance.IsExcludedUrl("https://example.com/login", "https://example.com/login\nhttps://example.com/other"), "String overload matches");
+            AssertFalse(AutoVisitService.Instance.IsExcludedUrl("https://example.com/safe", "https://example.com/login\nhttps://example.com/other"), "String overload non-matching");
+
+            // 6. Test Language keys in ZH and EN
             string originalLang = LanguageManager.Instance.CurrentLanguage;
             try
             {
@@ -848,6 +890,8 @@ namespace AIHelper.Tests
                 AssertEquals("下一页定位", LanguageManager.Instance["AutoVisit_Col_NextPage"], "ZH AutoVisit_Col_NextPage");
                 AssertEquals("下一链接延迟 (秒)", LanguageManager.Instance["AutoVisit_Col_LinkDelay"], "ZH AutoVisit_Col_LinkDelay");
                 AssertEquals("下一链接延迟:", LanguageManager.Instance["AutoVisit_Edit_LinkDelay"], "ZH AutoVisit_Edit_LinkDelay");
+                AssertEquals("排除访问链接:", LanguageManager.Instance["AutoVisit_Edit_ExcludedUrls"], "ZH AutoVisit_Edit_ExcludedUrls");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["AutoVisit_Edit_ExcludedUrlsTT"]), "ZH AutoVisit_Edit_ExcludedUrlsTT not empty");
                 AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["AutoVisit_Edit_RefreshTip"]), "ZH AutoVisit_Edit_RefreshTip not empty");
 
                 LanguageManager.Instance.CurrentLanguage = "en";
@@ -858,6 +902,8 @@ namespace AIHelper.Tests
                 AssertEquals("Next Page Locator", LanguageManager.Instance["AutoVisit_Col_NextPage"], "EN AutoVisit_Col_NextPage");
                 AssertEquals("Link Delay (s)", LanguageManager.Instance["AutoVisit_Col_LinkDelay"], "EN AutoVisit_Col_LinkDelay");
                 AssertEquals("Next Link Delay:", LanguageManager.Instance["AutoVisit_Edit_LinkDelay"], "EN AutoVisit_Edit_LinkDelay");
+                AssertEquals("Exclude URLs:", LanguageManager.Instance["AutoVisit_Edit_ExcludedUrls"], "EN AutoVisit_Edit_ExcludedUrls");
+                AssertTrue(!string.IsNullOrEmpty(LanguageManager.Instance["AutoVisit_Edit_ExcludedUrlsTT"]), "EN AutoVisit_Edit_ExcludedUrlsTT not empty");
             }
             finally
             {
