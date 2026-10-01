@@ -480,7 +480,11 @@ namespace AIHelper.Views
             var lm = LanguageManager.Instance;
             var start = DateTime.UtcNow;
             var deadline = start.AddSeconds(session.Options.TimeoutSeconds);
-            var tracker = new ImageGenerationTracker(start);
+            // 识别不到"生成中"的平台上不能提前判定没有图，否则会在设置的超时之前就失败
+            var tracker = new ImageGenerationTracker(start)
+            {
+                NoSignalGrace = TimeSpan.FromSeconds(session.Options.TimeoutSeconds)
+            };
 
             while (DateTime.UtcNow < deadline)
             {

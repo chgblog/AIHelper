@@ -43,7 +43,8 @@ namespace AIHelper.Services
         public TimeSpan NoImageQuietDuration { get; set; } = TimeSpan.FromSeconds(8);
 
         /// <summary>
-        /// 从未检测到"生成中"状态时，至少等待这么久才判定没有图
+        /// 从未检测到"生成中"状态时，至少等待这么久才判定没有图。识别不到停止按钮的平台上，
+        /// "回复结束但没图"和"图还在渲染"从页面上看不出区别，所以批量生图会把它设成用户配置的单张超时。
         /// </summary>
         public TimeSpan NoSignalGrace { get; set; } = TimeSpan.FromSeconds(20);
 

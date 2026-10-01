@@ -1367,6 +1367,15 @@ namespace AIHelper.Tests
             AssertEquals("Waiting", noSignal.Update(Probe(false, 10), t0.AddSeconds(15)).ToString(), "within grace waits");
             AssertEquals("NoImage", noSignal.Update(Probe(false, 10), t0.AddSeconds(21)).ToString(), "after grace no image");
 
+            // Stop button never detected and the grace is the configured timeout: a quiet page is
+            // not "no image" before that (the image may still be rendering)
+            var slow = new ImageGenerationTracker(t0) { NoSignalGrace = TimeSpan.FromSeconds(360) };
+            slow.Update(Probe(false, 10), t0.AddSeconds(1));
+            AssertEquals("Waiting", slow.Update(Probe(false, 10), t0.AddSeconds(30)).ToString(), "quiet page within the timeout keeps waiting");
+            AssertEquals("Waiting", slow.Update(Probe(false, 10), t0.AddSeconds(300)).ToString(), "still waiting late in the timeout");
+            slow.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(301));
+            AssertEquals("Completed", slow.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(310)).ToString(), "image arriving late still completes");
+
             // Stop button never detected but image appears: longer stability required
             var unconfirmed = new ImageGenerationTracker(t0);
             unconfirmed.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(1));
