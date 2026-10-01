@@ -84,6 +84,16 @@ https://github.com/user-attachments/assets/8a797c85-6701-4d8b-87dc-3e03127509cd
     - **Randomized Interval Reload & Revisit**: Automatically counts down a randomized wait interval (e.g. 30-60 minutes) when reaching the link limit or page bottom, then reloads the page and restarts from the beginning.
 
 
+- **🖼️ Batch Image Generation**
+  - **CSV driven**: Prepare a CSV with "prompt, filename, platform" columns (header optional; with a header the column order is free; an empty platform falls back to the action's platform or the active one). UTF-8 and GBK (Chinese Excel default) encodings are detected automatically.
+  - **Built-in "Batch Image" action**: Always present in action management and cannot be deleted. Trigger it from the quick action bar, a hotkey, the selection toolbar, the action panel or the file context menu, then pick a CSV (right-clicking a `.csv` file uses that file directly). The batch window previews rows and offers start, pause, stop and retry-failed.
+  - **Prompt merging**: `{content}` in the action prompt is replaced with the CSV prompt; without `{content}` the CSV prompt is appended; the action prompt may be empty. The default asks the platform to generate an image so it does not answer with text only.
+  - **One new chat per row**: start a new chat → replay the page preset → inject and submit → wait for the image (stop button gone and new images stable) → extract it (read inside the page, cross-origin images recovered from network responses) → save it under the given name, with the extension taken from the actual image format.
+  - **Page preset (choose the model / image options first)**: For sites where a model, aspect ratio, image count and so on must be chosen first, pick the platform under "Page preset" in the batch window, click Record, choose the options on the page in the main window as you normally would (do not type a prompt or send), then click Finish; the preset is saved per platform. It is replayed after the new chat of every row; buttons already in their recorded state (an aspect ratio that is already selected, say) are not clicked again, so toggles are never switched back off. Test replays it on the page so you can check the result, and single steps or the whole preset can be removed.
+  - **Open the full-size image before saving**: For sites that show only a thumbnail in the chat and load the original when it is clicked, tick "Open the full-size image before saving" under "Page preset". After generation each image is clicked, the largest image in the viewer is saved, and the viewer is closed again (Esc, then a close button, then the backdrop). The thumbnail is saved when no full-size view opens.
+  - **Output layout**: Each batch creates a timestamped folder under the save location from "Settings → Batch Image" (default `Pictures\AIHelper\BatchImages`). When a prompt yields several images the first goes into that folder and the rest into an "Alternates" subfolder; a `_report.csv` run report and a `_source.csv` copy are written alongside.
+  - **Robust runs**: Rows are grouped by platform to minimize proxy switches; timeout, retries and a random interval between images are configurable; a platform is skipped after 3 consecutive failures or when it is not logged in.
+
 - **🖥️ Main Window Quick Actions & Modern UX**
   - **Status Bar Quick Action Bar**: Quick action buttons and a "More ▾" menu embedded right in the bottom status bar of the main window for one-click prompt execution, with a "New Chat" toggle on the left to control whether to trigger a new session before injecting prompts.
   - **Window Maximize & Restore**: Maximize/restore window controls and double-click title bar support.
@@ -149,14 +159,20 @@ AIHelper/
     │   ├── ActionItem.cs       # Action item data model (with platform binding/ordering)
     │   ├── AiPlatform.cs       # AI platform data model (with independent proxy/selectors)
     │   ├── AppItem.cs          # Application data model (for selection app scope filtering)
+    │   ├── BatchImageItem.cs   # Batch image row model (status/result)
+    │   ├── PageSetupStep.cs    # One page preset step (a recorded click/form change)
     │   └── AppSettings.cs      # App settings & defaults (proxy, language, text selection)
     ├── Services/
     │   ├── AppInfoService.cs   # App information & version service
     │   ├── AutoStartService.cs # Auto-start service
+    │   ├── BatchImageService.cs # Batch image CSV parsing, file naming, saving & report
     │   ├── ClipboardService.cs # Clipboard access & key simulation service
     │   ├── HotkeyService.cs    # Global hotkey listener & conflict detection (Win32 API)
+    │   ├── ImageGenerationTracker.cs # Decides when image generation is done
     │   ├── LanguageManager.cs  # Multi-language / I18n dynamic switching service
     │   ├── Logger.cs           # Logging service
+    │   ├── NetworkImageCapture.cs # Caches image responses during a batch (cross-origin fallback)
+    │   ├── PageSetupService.cs # Page preset step merging & display text
     │   ├── PageInjector.cs     # Web JS script injection & execution service
     │   ├── SettingsService.cs  # Local JSON config loading, persistence & backup/restore
     │   ├── TextSelectionService.cs # Text selection & floating toolbar listener service
@@ -165,8 +181,11 @@ AIHelper/
         ├── ActionEditWindow.xaml   # Standalone action editing dialog (with platform binding)
         ├── ActionPanelControl.xaml # Quick action floating panel view
         ├── AppSelectionWindow.xaml # Visual application process picker dialog
+        ├── BatchImageWindow.xaml   # Batch image window (preview/start/pause/stop/retry)
         ├── ElementPickerWindow.xaml# Visual DOM element picker window
         ├── MainWindow.xaml         # Main window (with WebView2 control & status action bar)
+        ├── MainWindow.BatchImage.cs # Batch image run loop (new chat/inject/wait/extract/save)
+        ├── MainWindow.BatchPreset.cs # Page preset recording & test run
         ├── PlatformEditWindow.xaml # Platform editing & selector configuration window (with proxy)
         ├── SelectionToolbarWindow.xaml # Text selection AI floating toolbar window
         └── SettingsWindow.xaml     # Settings window (platform/action/selection/proxy/language)

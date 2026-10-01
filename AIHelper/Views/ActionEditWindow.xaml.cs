@@ -51,6 +51,10 @@ namespace AIHelper.Views
             _hotkeyKey = _action.HotkeyKey ?? "";
             txtHotkey.Text = HotkeyService.FormatHotkey(_hotkeyModifiers, _hotkeyKey);
             txtPrompt.Text = _action.Prompt ?? "";
+            if (_action.IsBatchImage)
+            {
+                tbPromptHint.Visibility = Visibility.Visible;
+            }
 
             // Initialize platform ComboBox
             InitializePlatformComboBox(platforms, _action.PlatformId);

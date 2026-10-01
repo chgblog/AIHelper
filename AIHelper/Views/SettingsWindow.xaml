@@ -301,6 +301,70 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- 批量生图 -->
+            <TabItem Header="{Binding [Settings_Tab_BatchImage], Source={x:Static services:LanguageManager.Instance}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Settings_Batch_Title], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,10" FontWeight="Bold" Foreground="#e0e0e0"/>
+                            <TextBlock Text="{Binding [Settings_Batch_Desc], Source={x:Static services:LanguageManager.Instance}}" Margin="0,0,0,15" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+
+                            <!-- 保存路径 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Batch_SavePathSection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="txtBatchSavePath" Grid.Column="0" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="{Binding [Settings_Batch_Browse], Source={x:Static services:LanguageManager.Instance}}" Click="BtnBrowseBatchSavePath_Click"
+                                                Margin="8,0,0,0" Padding="10,4" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                                        <Button Grid.Column="2" Content="{Binding [Settings_Batch_Open], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOpenBatchSavePath_Click"
+                                                Margin="8,0,0,0" Padding="10,4" Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                                    </Grid>
+                                    <TextBlock x:Name="tbBatchSavePathTip" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 运行参数 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Batch_RunSection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="100"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [Settings_Batch_Timeout], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,8"/>
+                                        <TextBox x:Name="txtBatchTimeout" Grid.Row="0" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center" Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [Settings_Batch_Retry], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,8"/>
+                                        <TextBox x:Name="txtBatchRetry" Grid.Row="1" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center" Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [Settings_Batch_Interval], Source={x:Static services:LanguageManager.Instance}}" Foreground="#e0e0e0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox x:Name="txtBatchMinInterval" Grid.Row="2" Grid.Column="1" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="~" Foreground="#a0a0b0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="txtBatchMaxInterval" Grid.Row="2" Grid.Column="3" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding [Settings_Batch_RunTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
             <!-- 更新 -->
             <TabItem Header="{Binding [Settings_Tab_About], Source={x:Static services:LanguageManager.Instance}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

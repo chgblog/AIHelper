@@ -138,6 +138,36 @@ namespace AIHelper.Models
         /// </summary>
         public List<AutoVisitConfig> AutoVisitConfigs { get; set; } = new List<AutoVisitConfig>();
 
+        /// <summary>
+        /// 批量生图 - 默认保存路径（为空时使用 我的图片\AIHelper\BatchImages）
+        /// </summary>
+        public string BatchImageSavePath { get; set; } = "";
+
+        /// <summary>
+        /// 批量生图 - 单张图片等待超时（秒，默认 300）
+        /// </summary>
+        public int BatchImageTimeoutSeconds { get; set; } = 300;
+
+        /// <summary>
+        /// 批量生图 - 单行失败后的重试次数（默认 1）
+        /// </summary>
+        public int BatchImageRetryCount { get; set; } = 1;
+
+        /// <summary>
+        /// 批量生图 - 两张之间的最小间隔（秒，默认 3）
+        /// </summary>
+        public int BatchImageMinIntervalSeconds { get; set; } = 3;
+
+        /// <summary>
+        /// 批量生图 - 两张之间的最大间隔（秒，默认 8）
+        /// </summary>
+        public int BatchImageMaxIntervalSeconds { get; set; } = 8;
+
+        /// <summary>
+        /// 批量生图 - 上次选择 CSV 文件所在目录
+        /// </summary>
+        public string BatchImageLastCsvDirectory { get; set; } = "";
+
 
         /// <summary>
         /// Gets the active platform
@@ -145,6 +175,57 @@ namespace AIHelper.Models
         public AiPlatform GetActivePlatform()
         {
             return Platforms?.FirstOrDefault(p => p.Id == ActivePlatformId) ?? Platforms?.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 批量生图保存根目录：未设置时取 我的图片\AIHelper\BatchImages，换用户/换电脑也不会失效
+        /// </summary>
+        public string GetBatchImageSaveRoot()
+        {
+            if (!string.IsNullOrWhiteSpace(BatchImageSavePath))
+            {
+                return BatchImageSavePath.Trim();
+            }
+            return GetDefaultBatchImageSaveRoot();
+        }
+
+        public static string GetDefaultBatchImageSaveRoot()
+        {
+            return System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyPictures),
+                "AIHelper", "BatchImages");
+        }
+
+        /// <summary>
+        /// 确保系统内置操作（批量生图）存在且只有一个。老版本配置升级、恢复配置后都会经过这里。
+        /// 返回 true 表示有改动需要保存。
+        /// </summary>
+        public bool EnsureSystemActions()
+        {
+            if (Actions == null)
+            {
+                Actions = new List<ActionItem>();
+            }
+
+            bool changed = false;
+            var batchActions = Actions.Where(a => a != null && a.IsBatchImage).ToList();
+            if (batchActions.Count == 0)
+            {
+                int nextSort = Actions.Count > 0 ? Actions.Where(a => a != null).Select(a => a.SortOrder).DefaultIfEmpty(0).Max() + 1 : 1;
+                bool isEn = string.Equals(Language, "en", System.StringComparison.OrdinalIgnoreCase);
+                Actions.Add(ActionItem.CreateBatchImageAction(isEn, nextSort));
+                changed = true;
+            }
+            else if (batchActions.Count > 1)
+            {
+                foreach (var extra in batchActions.Skip(1))
+                {
+                    Actions.Remove(extra);
+                }
+                changed = true;
+            }
+
+            return changed;
         }
 
         /// <summary>
@@ -248,6 +329,7 @@ namespace AIHelper.Models
                     new ActionItem { Name = "总结", Prompt = "请总结以下内容：\n\n{content}", HotkeyModifiers = "Ctrl+Alt", HotkeyKey = "O", IsBuiltIn = false, SortOrder = 6, Icon = "📋" }
                 }
             };
+            settings.EnsureSystemActions();
             return settings;
         }
     }

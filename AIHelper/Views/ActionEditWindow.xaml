@@ -58,8 +58,12 @@
 
         <!-- 提示词 -->
         <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [ActionEdit_Prompt], Source={x:Static services:LanguageManager.Instance}}" VerticalAlignment="Top" Margin="0,4,10,12" Foreground="#e0e0e0"/>
-        <TextBox x:Name="txtPrompt" Grid.Row="4" Grid.Column="1" Margin="0,0,0,12" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"
-                 AcceptsReturn="True" MinLines="5" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+        <DockPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,12">
+            <TextBlock x:Name="tbPromptHint" DockPanel.Dock="Bottom" Margin="0,6,0,0" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"
+                       Text="{Binding [ActionEdit_BatchPromptHint], Source={x:Static services:LanguageManager.Instance}}" Visibility="Collapsed"/>
+            <TextBox x:Name="txtPrompt" Background="#1a1a2e" Foreground="#e0e0e0" BorderBrush="#3a3a5e" Padding="5,3"
+                     AcceptsReturn="True" MinLines="5" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+        </DockPanel>
 
         <!-- 底部按钮 -->
         <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" 

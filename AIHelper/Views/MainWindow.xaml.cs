@@ -271,6 +271,13 @@ namespace AIHelper.Views
             try
             {
                 if (action == null) return;
+                if (action.IsBatchImage)
+                {
+                    // Let the toolbar hide before the file dialog opens
+                    _ = Dispatcher.BeginInvoke(new Action(() => OpenBatchImage(action)));
+                    return;
+                }
+                if (RejectWhileBatchRunning()) return;
 
                 ShowAndActivate();
                 string prompt = (action.Prompt ?? "{content}").Replace("{content}", text ?? string.Empty);
@@ -300,6 +307,14 @@ namespace AIHelper.Views
                     Logger.LogWarning($"ExecuteFileAction called with invalid action or file: action={action?.Name}, file={filePath}");
                     return;
                 }
+
+                if (action.IsBatchImage)
+                {
+                    // Let the toolbar hide before a file dialog may open
+                    _ = Dispatcher.BeginInvoke(new Action(() => OpenBatchImage(action, filePath)));
+                    return;
+                }
+                if (RejectWhileBatchRunning()) return;
 
                 ClipboardService.SetFileDropList(new[] { filePath });
                 var snapshot = ClipboardSnapshot.FromFileDropList(new[] { filePath });
@@ -830,6 +845,14 @@ namespace AIHelper.Views
 
         private async void ExecuteAction(ActionItem action)
         {
+            if (action == null) return;
+            if (action.IsBatchImage)
+            {
+                OpenBatchImage(action);
+                return;
+            }
+            if (RejectWhileBatchRunning()) return;
+
             ShowAndActivate();
             var clipboard = ClipboardService.GetSnapshot();
             var plan = HotkeyActionPlanner.Build(action.Prompt, clipboard);
@@ -841,6 +864,12 @@ namespace AIHelper.Views
         {
             actionPanel.Visibility = Visibility.Collapsed;
             if (action == null) return;
+            if (action.IsBatchImage)
+            {
+                OpenBatchImage(action);
+                return;
+            }
+            if (RejectWhileBatchRunning()) return;
 
             ShowAndActivate();
             var platform = GetPlatformForAction(action);
@@ -987,6 +1016,11 @@ namespace AIHelper.Views
         {
             if (sender is Button btn && btn.Tag is ActionItem action)
             {
+                if (action.IsBatchImage)
+                {
+                    OpenBatchImage(action);
+                    return;
+                }
                 await QuickInjectActionAsync(action);
             }
         }
@@ -997,6 +1031,7 @@ namespace AIHelper.Views
         private async Task QuickInjectActionAsync(ActionItem action)
         {
             if (action == null) return;
+            if (RejectWhileBatchRunning()) return;
 
             ShowAndActivate();
 
@@ -1090,10 +1125,10 @@ namespace AIHelper.Views
         }
 
         /// <summary>
-        /// Ensures the WebView2 is on the correct platform and executes the prompt.
-        /// Handles platform switching including proxy reinitializtion if needed.
+        /// Makes the WebView2 show the given platform (switching sites, or rebuilding the
+        /// WebView2 for a proxy change) and waits until its input is usable.
         /// </summary>
-        private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null, ClipboardSnapshot clipboard = null)
+        private async Task<InjectionResult> EnsurePlatformReadyAsync(AiPlatform platform)
         {
             if (_isBrowserMode)
             {
@@ -1103,7 +1138,7 @@ namespace AIHelper.Views
             if (platform == null)
             {
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", "No platform"));
-                return;
+                return new InjectionResult { Success = false, Reason = "NO_PLATFORM", Message = "No platform" };
             }
 
             bool needProxy = ShouldUseProxy(platform);
@@ -1124,17 +1159,20 @@ namespace AIHelper.Views
             }
             else
             {
-                return;
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
             }
 
-            if (!await EnsureWebViewReadyAsync()) return;
+            if (!await EnsureWebViewReadyAsync())
+            {
+                return new InjectionResult { Success = false, Reason = "WEBVIEW_NOT_READY", Message = LanguageManager.Instance["Inject_WebviewNotReady"] };
+            }
 
             // Update platform dropdown to reflect current platform
             var currentSelected = cmbPlatforms.SelectedItem as AiPlatform;
             if (currentSelected?.Id != platform.Id)
             {
                 cmbPlatforms.SelectionChanged -= CmbPlatforms_SelectionChanged;
-                cmbPlatforms.SelectedItem = platform;
+                cmbPlatforms.SelectedItem = _settings?.Platforms?.FirstOrDefault(p => p.Id == platform.Id) ?? platform;
                 cmbPlatforms.SelectionChanged += CmbPlatforms_SelectionChanged;
             }
 
@@ -1146,8 +1184,18 @@ namespace AIHelper.Views
             {
                 Logger.LogError($"Page not ready before injection ({platform.Name}): {ready.Reason}");
                 UpdateStatus(LanguageManager.Instance.GetString("Main_Status_Failed", ready.Message));
-                return;
             }
+            return ready;
+        }
+
+        /// <summary>
+        /// Ensures the WebView2 is on the correct platform and executes the prompt.
+        /// Handles platform switching including proxy reinitializtion if needed.
+        /// </summary>
+        private async Task EnsurePlatformAndExecuteAsync(AiPlatform platform, string prompt, string actionName = null, ClipboardSnapshot clipboard = null)
+        {
+            var ready = await EnsurePlatformReadyAsync(platform);
+            if (!ready.Success) return;
 
             // Starting a new chat can reload the whole page, which would wipe the prompt,
             // so it happens as its own step with its own wait.
@@ -1451,6 +1499,7 @@ namespace AIHelper.Views
 
         private async void ExecutePrompt(string prompt)
         {
+            if (RejectWhileBatchRunning()) return;
             var platform = _settings.GetActivePlatform();
             await EnsurePlatformAndExecuteAsync(platform, prompt);
         }
@@ -1458,6 +1507,9 @@ namespace AIHelper.Views
 
         private async void CmbPlatforms_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // Settings reload re-binds the list and lands here too; a running batch owns the WebView
+            if (IsBatchImageRunning) return;
+
             if (cmbPlatforms.SelectedItem is AiPlatform platform)
             {
                 foreach (var p in _settings.Platforms) p.IsActive = (p.Id == platform.Id);
@@ -1645,6 +1697,7 @@ namespace AIHelper.Views
         {
             try
             {
+                if (RejectWhileBatchRunning()) return;
                 _isBrowserMode = true;
                 pnlAiModeControls.Visibility = Visibility.Collapsed;
                 pnlBrowserModeControls.Visibility = Visibility.Visible;
@@ -2042,9 +2095,10 @@ namespace AIHelper.Views
 
                     ((App)Application.Current)?.UpdateTrayMenu();
 
-                    // Check if proxy settings changed for active platform
+                    // Check if proxy settings changed for active platform.
+                    // A running batch owns the WebView — it picks the change up on its next platform switch.
                     var active = _settings.GetActivePlatform();
-                    if (active != null && !string.IsNullOrEmpty(active.Url))
+                    if (!IsBatchImageRunning && active != null && !string.IsNullOrEmpty(active.Url))
                     {
                         bool needProxy = ShouldUseProxy(active);
                         if (needProxy != _currentWebViewUsesProxy)

@@ -94,6 +94,12 @@ namespace AIHelper.Services
                 settings.ConfigVersion = AppSettings.CurrentConfigVersion;
             }
 
+            // 老版本配置或恢复的配置可能缺少内置的批量生图操作
+            if (settings.EnsureSystemActions())
+            {
+                needSave = true;
+            }
+
             LanguageManager.Instance.CurrentLanguage = settings.Language;
 
             if (needSave)

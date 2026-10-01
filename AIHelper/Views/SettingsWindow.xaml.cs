@@ -14,6 +14,11 @@ namespace AIHelper.Views
 {
     public partial class SettingsWindow : Window
     {
+        /// <summary>
+        /// 「批量生图」页的序号（批量生图窗口的"参数设置"按钮直接打开这一页）
+        /// </summary>
+        public const int BatchImageTabIndex = 6;
+
         private AppSettings _settings;
         private ActionItem _selectedAction;
 
@@ -37,6 +42,7 @@ namespace AIHelper.Views
         private void LanguageManager_LanguageChanged(object sender, EventArgs e)
         {
             UpdateAutoHideTip();
+            UpdateBatchSavePathTip();
         }
 
         private void LoadSettings()
@@ -66,6 +72,13 @@ namespace AIHelper.Views
             txtSimulateMinDistance.Text = (_settings.SimulateVisitMinScrollDistance > 0 ? _settings.SimulateVisitMinScrollDistance : 100).ToString();
             txtSimulateMaxDistance.Text = (_settings.SimulateVisitMaxScrollDistance > 0 ? _settings.SimulateVisitMaxScrollDistance : 300).ToString();
             chkSimulateUseProxy.IsChecked = _settings.SimulateVisitUseProxy;
+
+            txtBatchSavePath.Text = _settings.BatchImageSavePath ?? "";
+            txtBatchTimeout.Text = _settings.BatchImageTimeoutSeconds.ToString();
+            txtBatchRetry.Text = _settings.BatchImageRetryCount.ToString();
+            txtBatchMinInterval.Text = _settings.BatchImageMinIntervalSeconds.ToString();
+            txtBatchMaxInterval.Text = _settings.BatchImageMaxIntervalSeconds.ToString();
+            UpdateBatchSavePathTip();
 
             UpdateSelectionToolbarControlStates();
             UpdateAutoHideTip();
@@ -244,6 +257,31 @@ namespace AIHelper.Views
             _settings.SimulateVisitMinScrollDistance = minDistance;
             _settings.SimulateVisitMaxScrollDistance = maxDistance;
             _settings.SimulateVisitUseProxy = chkSimulateUseProxy.IsChecked == true;
+
+            // Validate and save batch image settings
+            string batchSavePath = txtBatchSavePath.Text?.Trim() ?? "";
+            bool batchValid = int.TryParse(txtBatchTimeout.Text?.Trim(), out int batchTimeout) &
+                              int.TryParse(txtBatchRetry.Text?.Trim(), out int batchRetry) &
+                              int.TryParse(txtBatchMinInterval.Text?.Trim(), out int batchMinInterval) &
+                              int.TryParse(txtBatchMaxInterval.Text?.Trim(), out int batchMaxInterval);
+            if (!batchValid ||
+                !BatchImageOptions.IsValid(batchTimeout, batchRetry, batchMinInterval, batchMaxInterval) ||
+                !IsValidBatchSavePath(batchSavePath))
+            {
+                tabControl.SelectedIndex = BatchImageTabIndex;
+                MessageBox.Show(
+                    LanguageManager.Instance["Settings_Batch_ValidateError"],
+                    LanguageManager.Instance["Notice"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            _settings.BatchImageSavePath = batchSavePath;
+            _settings.BatchImageTimeoutSeconds = batchTimeout;
+            _settings.BatchImageRetryCount = batchRetry;
+            _settings.BatchImageMinIntervalSeconds = batchMinInterval;
+            _settings.BatchImageMaxIntervalSeconds = batchMaxInterval;
             
             string newProxy = txtProxyServer.Text?.Trim() ?? "";
             bool proxyChanged = (_settings.ProxyServer ?? "") != newProxy;
@@ -547,7 +585,8 @@ namespace AIHelper.Views
                     IsBuiltIn = selectedAction.IsBuiltIn,
                     SortOrder = selectedAction.SortOrder,
                     Icon = selectedAction.Icon,
-                    PlatformId = selectedAction.PlatformId
+                    PlatformId = selectedAction.PlatformId,
+                    ActionType = selectedAction.ActionType
                 };
 
                 var editWindow = new ActionEditWindow(clone, LanguageManager.Instance["ActionEdit_Title_Edit"], _settings.Platforms, _settings);
@@ -580,6 +619,12 @@ namespace AIHelper.Views
         {
             if (dgActions.SelectedItem is ActionItem a)
             {
+                if (a.IsBatchImage)
+                {
+                    MessageBox.Show(LanguageManager.Instance["Settings_Action_CannotDeleteBatch"], LanguageManager.Instance["Notice"], MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
                 _settings.Actions.Remove(a);
                 for (int i = 0; i < _settings.Actions.Count; i++)
                 {
@@ -736,6 +781,73 @@ namespace AIHelper.Views
             catch (Exception ex)
             {
                 MessageBox.Show(LanguageManager.Instance.GetString("Settings_Other_OpenDirFailed", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UpdateBatchSavePathTip()
+        {
+            if (tbBatchSavePathTip == null) return;
+            tbBatchSavePathTip.Text = LanguageManager.Instance.GetString("Settings_Batch_SavePathTip", AppSettings.GetDefaultBatchImageSaveRoot());
+        }
+
+        /// <summary>
+        /// 保存路径可以为空（使用默认路径），否则必须是合法的完整路径
+        /// </summary>
+        private static bool IsValidBatchSavePath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return true;
+            try
+            {
+                return Path.IsPathRooted(path) && !string.IsNullOrEmpty(Path.GetFullPath(path));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string GetEffectiveBatchSavePath()
+        {
+            string path = txtBatchSavePath.Text?.Trim();
+            return IsValidBatchSavePath(path) && !string.IsNullOrEmpty(path) ? path : AppSettings.GetDefaultBatchImageSaveRoot();
+        }
+
+        private void BtnBrowseBatchSavePath_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = LanguageManager.Instance["Settings_Batch_BrowseTitle"],
+                ShowNewFolderButton = true
+            })
+            {
+                string current = GetEffectiveBatchSavePath();
+                if (Directory.Exists(current))
+                {
+                    dialog.SelectedPath = current;
+                }
+
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+                {
+                    txtBatchSavePath.Text = dialog.SelectedPath;
+                }
+            }
+        }
+
+        private void BtnOpenBatchSavePath_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string path = GetEffectiveBatchSavePath();
+                Directory.CreateDirectory(path);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(LanguageManager.Instance.GetString("Settings_Batch_OpenDirFailed", ex.Message), LanguageManager.Instance["Error"], MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

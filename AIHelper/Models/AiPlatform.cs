@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -17,6 +18,8 @@ namespace AIHelper.Models
         private string _inputSelector;
         private string _submitSelector;
         private bool _useProxy = true;
+        private List<PageSetupStep> _batchSetupSteps = new List<PageSetupStep>();
+        private bool _batchOpenLargeImage;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -83,6 +86,24 @@ namespace AIHelper.Models
         {
             get => _useProxy;
             set { if (_useProxy != value) { _useProxy = value; OnPropertyChanged(); } }
+        }
+
+        /// <summary>
+        /// 批量生图页面预设：每次新建对话后按顺序重放的点击/表单操作（选择模型、比例等）
+        /// </summary>
+        public List<PageSetupStep> BatchSetupSteps
+        {
+            get => _batchSetupSteps;
+            set { _batchSetupSteps = value ?? new List<PageSetupStep>(); OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// 批量生图保存前先点击图片打开大图（对话里只显示缩略图的网站）
+        /// </summary>
+        public bool BatchOpenLargeImage
+        {
+            get => _batchOpenLargeImage;
+            set { if (_batchOpenLargeImage != value) { _batchOpenLargeImage = value; OnPropertyChanged(); } }
         }
     }
 }

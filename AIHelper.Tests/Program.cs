@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using Microsoft.Win32;
 using AIHelper.Models;
 using AIHelper.Services;
@@ -36,6 +39,19 @@ namespace AIHelper.Tests
             Run("auto visit config, history and matching tests", TestAutoVisitFeatures);
             Run("auto visit select first unvisited link on return", TestAutoVisitFirstUnvisitedLinkSelection);
             Run("auto check update default settings and language keys", TestAutoCheckUpdateDefaultSettingsAndLanguage);
+            Run("batch image csv parsing, header mapping and platform resolution", TestBatchImageCsvParsing);
+            Run("batch image csv encoding detection", TestBatchImageCsvEncoding);
+            Run("batch image prompt merge", TestBatchImagePromptMerge);
+            Run("batch image file name sanitizing and dedupe", TestBatchImageFileNames);
+            Run("batch image extension detection", TestBatchImageExtensionDetection);
+            Run("batch image output folder, alternates and report", TestBatchImageSaveAndReport);
+            Run("batch image system action and settings", TestBatchImageSystemActionAndSettings);
+            Run("batch image language keys in both languages", TestBatchImageLanguageKeys);
+            Run("batch image generation tracker", TestImageGenerationTracker);
+            Run("batch image pause and stop", TestBatchImageRunState);
+            Run("batch image window and action edit hint load", TestBatchImageWindowsLoad);
+            Run("batch image page preset merge, description and persistence", TestPagePresetSteps);
+            Run("batch image data url decoding", TestBatchImageDataUrl);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -1040,6 +1056,521 @@ namespace AIHelper.Tests
             {
                 LanguageManager.Instance.CurrentLanguage = originalLang;
             }
+        }
+
+        private static void TestBatchImageCsvParsing()
+        {
+            string originalLang = LanguageManager.Instance.CurrentLanguage;
+            LanguageManager.Instance.CurrentLanguage = "zh";
+            try
+            {
+                var chatgpt = new AiPlatform { Id = "p-chatgpt", Name = "ChatGPT" };
+                var gemini = new AiPlatform { Id = "p-gemini", Name = "Gemini" };
+                var platforms = new List<AiPlatform> { chatgpt, gemini };
+
+                // Header in a different column order; quoted field with comma, escaped quote and newline
+                string csv = "文件名,平台,提示词\r\n" +
+                             "cat,chatgpt,\"一只猫, 坐在\"\"月球\"\"上\nsecond line\"\r\n" +
+                             ",,水墨江南\r\n" +
+                             "\r\n" +
+                             "dog,Unknown,一只狗\r\n" +
+                             "empty,gemini,\r\n" +
+                             "cat,p-gemini,另一只猫";
+                var result = BatchImageService.BuildItems(BatchImageService.ParseCsv(csv), platforms, gemini);
+                AssertTrue(result.Error == null, "csv should parse without error");
+                AssertEquals("5", result.Items.Count.ToString(), "blank rows are skipped");
+
+                var first = result.Items[0];
+                AssertEquals("一只猫, 坐在\"月球\"上\nsecond line", first.Prompt, "quoted field keeps comma, quote and newline");
+                AssertEquals("cat", first.FileName, "file name column mapped by header");
+                AssertTrue(first.Platform == chatgpt, "platform matched by name ignoring case");
+                AssertEquals("Pending", first.Status.ToString(), "valid row is pending");
+
+                var second = result.Items[1];
+                AssertEquals("002", second.FileName, "empty file name falls back to row number");
+                AssertTrue(second.Platform == gemini, "empty platform uses the default platform");
+
+                AssertEquals("Invalid", result.Items[2].Status.ToString(), "unknown platform is invalid");
+                AssertTrue(result.Items[2].Message.Contains("Unknown"), "invalid platform message names the platform");
+                AssertEquals("Invalid", result.Items[3].Status.ToString(), "empty prompt is invalid");
+
+                var duplicate = result.Items[4];
+                AssertTrue(duplicate.Platform == gemini, "platform matched by id");
+                AssertEquals("cat_5", duplicate.FileName, "duplicate file name gets the row number");
+
+                // Without header the order is prompt, filename, platform
+                var noHeader = BatchImageService.BuildItems(BatchImageService.ParseCsv("a cat,c1,Gemini\nonly prompt"), platforms, chatgpt);
+                AssertEquals("2", noHeader.Items.Count.ToString(), "no header keeps the first row as data");
+                AssertEquals("a cat", noHeader.Items[0].Prompt, "no header: first column is the prompt");
+                AssertEquals("c1", noHeader.Items[0].FileName, "no header: second column is the file name");
+                AssertTrue(noHeader.Items[0].Platform == gemini, "no header: third column is the platform");
+                AssertTrue(noHeader.Items[1].Platform == chatgpt, "missing platform cell uses the default platform");
+
+                var noPromptColumn = BatchImageService.BuildItems(BatchImageService.ParseCsv("filename,platform\na,b"), platforms, chatgpt);
+                AssertTrue(!string.IsNullOrEmpty(noPromptColumn.Error), "header without a prompt column is rejected");
+
+                var empty = BatchImageService.BuildItems(BatchImageService.ParseCsv("\r\n\r\n"), platforms, chatgpt);
+                AssertTrue(!string.IsNullOrEmpty(empty.Error), "csv without data rows is rejected");
+
+                var noPlatforms = BatchImageService.BuildItems(BatchImageService.ParseCsv("x"), new List<AiPlatform>(), null);
+                AssertEquals("Invalid", noPlatforms.Items[0].Status.ToString(), "row without any platform is invalid");
+
+                var tsv = BatchImageService.ParseCsv("提示词\t文件名\nx\ty");
+                AssertEquals("y", tsv[1][1], "tab separated when the first line has no comma");
+            }
+            finally
+            {
+                LanguageManager.Instance.CurrentLanguage = originalLang;
+            }
+        }
+
+        private static void TestBatchImageCsvEncoding()
+        {
+            string text = "提示词,文件名\n一只猫,cat";
+            byte[] utf8Bom = new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(text)).ToArray();
+            byte[] utf16Bom = Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(text)).ToArray();
+
+            AssertEquals(text, BatchImageService.DecodeText(utf8Bom), "UTF-8 with BOM");
+            AssertEquals(text, BatchImageService.DecodeText(new UTF8Encoding(false).GetBytes(text)), "UTF-8 without BOM");
+            AssertEquals(text, BatchImageService.DecodeText(Encoding.GetEncoding(936).GetBytes(text)), "GBK saved by Chinese Excel");
+            AssertEquals(text, BatchImageService.DecodeText(utf16Bom), "UTF-16 LE with BOM");
+            AssertEquals("", BatchImageService.DecodeText(new byte[0]), "empty file");
+        }
+
+        private static void TestBatchImagePromptMerge()
+        {
+            AssertEquals("cat", BatchImageService.MergePrompt("", "cat"), "empty action prompt sends the csv prompt");
+            AssertEquals("cat", BatchImageService.MergePrompt(null, "cat"), "null action prompt sends the csv prompt");
+            AssertEquals("画：cat！", BatchImageService.MergePrompt("画：{content}！", "cat"), "{content} is replaced");
+            AssertEquals("请生成图片\n\ncat", BatchImageService.MergePrompt("请生成图片\n", "cat"), "without {content} the csv prompt is appended");
+
+            var zhDefault = ActionItem.CreateBatchImageAction(false, 1);
+            AssertEquals("请根据以下描述生成一张图片：\n\ncat", BatchImageService.MergePrompt(zhDefault.Prompt, "cat"), "default zh prompt asks for an image");
+            var enDefault = ActionItem.CreateBatchImageAction(true, 1);
+            AssertEquals("Generate an image based on the following description:\n\ncat", BatchImageService.MergePrompt(enDefault.Prompt, "cat"), "default en prompt asks for an image");
+        }
+
+        private static void TestBatchImageFileNames()
+        {
+            AssertEquals("a_b_c", BatchImageService.SanitizeFileName("a:b*c"), "invalid characters are replaced");
+            AssertEquals("cat", BatchImageService.SanitizeFileName("cat.png"), "image extension is stripped");
+            AssertEquals("cat", BatchImageService.SanitizeFileName(@"..\..\cat.JPG"), "path traversal is removed");
+            AssertEquals("photo", BatchImageService.SanitizeFileName("dir/sub/photo.webp"), "only the file name part is kept");
+            AssertEquals("v1.2", BatchImageService.SanitizeFileName("v1.2"), "non image extension is kept");
+            AssertEquals("_con", BatchImageService.SanitizeFileName("con"), "reserved device name is prefixed");
+            AssertTrue(BatchImageService.SanitizeFileName("..") == null, "dots only is rejected");
+            AssertTrue(BatchImageService.SanitizeFileName("   ") == null, "blank is rejected");
+            AssertEquals("120", BatchImageService.SanitizeFileName(new string('x', 300)).Length.ToString(), "long names are truncated");
+
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AssertEquals("cat", BatchImageService.MakeUniqueFileName("cat", 1, used), "first use keeps the name");
+            AssertEquals("CAT_2", BatchImageService.MakeUniqueFileName("CAT", 2, used), "duplicates are case insensitive");
+            used.Add("cat_3");
+            AssertEquals("cat_3_2", BatchImageService.MakeUniqueFileName("cat", 3, used), "suffix collision gets a counter");
+        }
+
+        private static readonly byte[] PngBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0 };
+        private static readonly byte[] JpegBytes = { 0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0 };
+
+        private static void TestBatchImageExtensionDetection()
+        {
+            byte[] webp = Encoding.ASCII.GetBytes("RIFF\0\0\0\0WEBPVP8 ");
+            byte[] gif = Encoding.ASCII.GetBytes("GIF89a\0\0");
+            byte[] unknown = { 1, 2, 3, 4, 5, 6 };
+            byte[] html = Encoding.ASCII.GetBytes("<html>error</html>");
+
+            AssertTrue(BatchImageService.TryGetImageExtension(PngBytes, null, out string ext) && ext == ".png", "png by magic bytes");
+            AssertTrue(BatchImageService.TryGetImageExtension(JpegBytes, "image/png", out ext) && ext == ".jpg", "magic bytes win over mime");
+            AssertTrue(BatchImageService.TryGetImageExtension(webp, null, out ext) && ext == ".webp", "webp by magic bytes");
+            AssertTrue(BatchImageService.TryGetImageExtension(gif, null, out ext) && ext == ".gif", "gif by magic bytes");
+            AssertTrue(BatchImageService.TryGetImageExtension(unknown, "image/jpeg; charset=binary", out ext) && ext == ".jpg", "falls back to mime");
+            AssertFalse(BatchImageService.TryGetImageExtension(html, "text/html", out ext), "html error page is not an image");
+            AssertFalse(BatchImageService.TryGetImageExtension(null, "image/png", out ext), "no data is not an image");
+        }
+
+        private static void TestBatchImageSaveAndReport()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "AIHelperTests_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var now = new DateTime(2026, 10, 1, 14, 30, 0);
+                string dir = BatchImageService.CreateOutputDirectory(root, now);
+                AssertEquals("20261001_143000", Path.GetFileName(dir), "output folder is named by time");
+                string dir2 = BatchImageService.CreateOutputDirectory(root, now);
+                AssertEquals("20261001_143000_2", Path.GetFileName(dir2), "same second gets a suffix");
+
+                var images = new List<ExtractedImage>
+                {
+                    new ExtractedImage { Data = PngBytes, Extension = ".png" },
+                    new ExtractedImage { Data = JpegBytes, Extension = ".jpg" },
+                    new ExtractedImage { Data = PngBytes, Extension = ".png" }
+                };
+                var saved = BatchImageService.SaveImages(dir, "备选", "cat", images);
+                AssertEquals("3", saved.Count.ToString(), "all images saved");
+                AssertEquals("cat.png", saved[0], "first image goes to the output folder");
+                AssertEquals(Path.Combine("备选", "cat_2.jpg"), saved[1], "second image goes to alternates");
+                AssertEquals(Path.Combine("备选", "cat_3.png"), saved[2], "third image goes to alternates");
+                AssertTrue(File.Exists(Path.Combine(dir, "cat.png")), "main image exists");
+                AssertTrue(File.Exists(Path.Combine(dir, "备选", "cat_2.jpg")), "alternate image exists");
+
+                var item = new BatchImageItem
+                {
+                    Index = 1,
+                    Prompt = "a, \"b\"",
+                    FileName = "cat",
+                    Status = BatchImageItemStatus.Success,
+                    SavedFiles = saved,
+                    ElapsedSeconds = 12.34
+                };
+                string reportPath = Path.Combine(dir, BatchImageService.ReportFileName);
+                BatchImageService.WriteReport(reportPath, new[] { item });
+
+                byte[] reportBytes = File.ReadAllBytes(reportPath);
+                AssertTrue(reportBytes.Length > 3 && reportBytes[0] == 0xEF && reportBytes[1] == 0xBB && reportBytes[2] == 0xBF, "report has a UTF-8 BOM for Excel");
+                string report = File.ReadAllText(reportPath, Encoding.UTF8);
+                AssertTrue(report.Contains("\"a, \"\"b\"\"\""), "report escapes commas and quotes");
+                AssertTrue(report.Contains("12.3"), "report contains elapsed seconds");
+
+                var parsedBack = BatchImageService.ParseCsv(report.TrimStart('\uFEFF'));
+                AssertEquals("2", parsedBack.Count(r => r.Count > 1).ToString(), "report parses back as header plus one row");
+                AssertEquals("a, \"b\"", parsedBack[1][1], "report round trips the prompt");
+            }
+            finally
+            {
+                try { Directory.Delete(root, true); } catch { }
+            }
+        }
+
+        private static void TestBatchImageSystemActionAndSettings()
+        {
+            var defaults = AppSettings.CreateDefault();
+            AssertEquals("1", defaults.Actions.Count(a => a.IsBatchImage).ToString(), "default settings contain one batch image action");
+            var batch = defaults.Actions.First(a => a.IsBatchImage);
+            AssertTrue(batch.IsBuiltIn, "batch action is built in");
+            AssertEquals(ActionTypes.BatchImage, batch.ActionType, "batch action type");
+            AssertTrue(batch.Prompt.Contains("{content}"), "batch prompt has the content placeholder");
+            AssertEquals("", batch.HotkeyKey, "batch action has no default hotkey");
+
+            // Legacy config without the batch action gets it appended, exactly once
+            var legacy = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(
+                "{\"Language\":\"en\",\"Actions\":[{\"Name\":\"Translate\",\"Prompt\":\"{content}\",\"SortOrder\":4}]}");
+            AssertTrue(legacy.EnsureSystemActions(), "missing batch action is added");
+            AssertEquals("2", legacy.Actions.Count.ToString(), "existing actions are kept");
+            var added = legacy.Actions.Single(a => a.IsBatchImage);
+            AssertEquals("Batch Image", added.Name, "added action follows the settings language");
+            AssertEquals("5", added.SortOrder.ToString(), "added action goes last");
+            AssertFalse(legacy.EnsureSystemActions(), "second call changes nothing");
+
+            legacy.Actions.Add(ActionItem.CreateBatchImageAction(false, 9));
+            AssertTrue(legacy.EnsureSystemActions(), "duplicate batch actions are removed");
+            AssertEquals("1", legacy.Actions.Count(a => a.IsBatchImage).ToString(), "only one batch action remains");
+            AssertTrue(legacy.Actions.Single(a => a.IsBatchImage) == added, "the first batch action is kept");
+
+            var nullActions = new AppSettings { Actions = null };
+            AssertTrue(nullActions.EnsureSystemActions(), "null action list is created");
+            AssertEquals("1", nullActions.Actions[0].SortOrder.ToString(), "first action sort order");
+
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(batch);
+            AssertTrue(json.Contains("\"ActionType\":\"BatchImage\""), "action type is persisted");
+            AssertFalse(json.Contains("IsBatchImage"), "computed flag is not persisted");
+            var roundTrip = Newtonsoft.Json.JsonConvert.DeserializeObject<ActionItem>(json);
+            AssertTrue(roundTrip.IsBatchImage, "batch type survives a round trip");
+            AssertFalse(new ActionItem().IsBatchImage, "normal actions are not batch actions");
+
+            // Batch settings defaults and clamping
+            AssertEquals("", defaults.BatchImageSavePath, "save path defaults to empty");
+            AssertEquals("300", defaults.BatchImageTimeoutSeconds.ToString(), "default timeout");
+            AssertEquals("1", defaults.BatchImageRetryCount.ToString(), "default retry");
+            AssertEquals("3", defaults.BatchImageMinIntervalSeconds.ToString(), "default min interval");
+            AssertEquals("8", defaults.BatchImageMaxIntervalSeconds.ToString(), "default max interval");
+            AssertTrue(defaults.GetBatchImageSaveRoot().EndsWith(Path.Combine("AIHelper", "BatchImages")), "default save root under Pictures");
+            defaults.BatchImageSavePath = @"  D:\Images  ";
+            AssertEquals(@"D:\Images", defaults.GetBatchImageSaveRoot(), "custom save root is trimmed");
+
+            var clamped = BatchImageOptions.FromSettings(new AppSettings
+            {
+                BatchImageTimeoutSeconds = 5,
+                BatchImageRetryCount = 99,
+                BatchImageMinIntervalSeconds = 10,
+                BatchImageMaxIntervalSeconds = 2
+            });
+            AssertEquals("30", clamped.TimeoutSeconds.ToString(), "timeout clamped to minimum");
+            AssertEquals("5", clamped.RetryCount.ToString(), "retry clamped to maximum");
+            AssertEquals("10", clamped.MaxIntervalSeconds.ToString(), "max interval never below min");
+            AssertTrue(BatchImageOptions.IsValid(300, 1, 3, 8), "default options are valid");
+            AssertFalse(BatchImageOptions.IsValid(300, 1, 9, 3), "min interval above max is invalid");
+            AssertFalse(BatchImageOptions.IsValid(10, 1, 3, 8), "timeout below 30 is invalid");
+            AssertFalse(BatchImageOptions.IsValid(300, 6, 3, 8), "retry above 5 is invalid");
+        }
+
+        private static void TestBatchImageLanguageKeys()
+        {
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+            var zh = (Dictionary<string, string>)typeof(LanguageManager).GetField("_zhDict", flags).GetValue(null);
+            var en = (Dictionary<string, string>)typeof(LanguageManager).GetField("_enDict", flags).GetValue(null);
+
+            Func<string, bool> isBatchKey = k => k.StartsWith("Batch_") || k.StartsWith("Settings_Batch_") ||
+                                                 k == "Settings_Tab_BatchImage" || k == "Settings_Action_CannotDeleteBatch" ||
+                                                 k == "ActionEdit_BatchPromptHint";
+            var zhKeys = zh.Keys.Where(isBatchKey).ToList();
+            AssertTrue(zhKeys.Count > 50, "batch keys exist");
+            foreach (var key in zhKeys)
+            {
+                AssertTrue(en.ContainsKey(key), "English dictionary is missing " + key);
+            }
+            foreach (var key in en.Keys.Where(isBatchKey))
+            {
+                AssertTrue(zh.ContainsKey(key), "Chinese dictionary is missing " + key);
+            }
+            foreach (BatchImageItemStatus status in Enum.GetValues(typeof(BatchImageItemStatus)))
+            {
+                AssertTrue(zh.ContainsKey("Batch_ItemStatus_" + status) && en.ContainsKey("Batch_ItemStatus_" + status), "status text for " + status);
+            }
+            AssertEquals("8", zh["Batch_Report_Header"].Split(',').Length.ToString(), "zh report header has 8 columns");
+            AssertEquals("8", en["Batch_Report_Header"].Split(',').Length.ToString(), "en report header has 8 columns");
+        }
+
+        private static ImageProbeResult Probe(bool generating, int textLength, int pending = 0, params string[] srcs)
+        {
+            return new ImageProbeResult
+            {
+                ok = true,
+                generating = generating,
+                textLength = textLength,
+                pending = pending,
+                images = srcs.Select(s => new ImageProbeImage { src = s, w = 1024, h = 1024 }).ToList()
+            };
+        }
+
+        private static void TestImageGenerationTracker()
+        {
+            var t0 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // Normal flow: generating, image appears, generation ends, image stays stable
+            var tracker = new ImageGenerationTracker(t0);
+            AssertEquals("Waiting", tracker.Update(Probe(true, 50), t0.AddSeconds(1)).ToString(), "generating without image waits");
+            AssertEquals("Waiting", tracker.Update(Probe(true, 60, 0, "img1"), t0.AddSeconds(5)).ToString(), "image while generating waits");
+            AssertEquals("Waiting", tracker.Update(Probe(false, 60, 0, "img1"), t0.AddSeconds(6)).ToString(), "just finished waits for stability");
+            AssertEquals("Completed", tracker.Update(Probe(false, 60, 0, "img1"), t0.AddSeconds(8.5)).ToString(), "stable image completes");
+            AssertEquals("1", tracker.Images.Count.ToString(), "tracker reports the image");
+            AssertTrue(tracker.SeenGenerating, "generating state was seen");
+
+            // Reply finished without image
+            var noImage = new ImageGenerationTracker(t0);
+            noImage.Update(Probe(true, 50), t0.AddSeconds(1));
+            AssertEquals("Waiting", noImage.Update(Probe(false, 100), t0.AddSeconds(2)).ToString(), "text just finished waits");
+            AssertEquals("NoImage", noImage.Update(Probe(false, 100), t0.AddSeconds(11)).ToString(), "quiet page without image is no image");
+
+            // Stop button never detected: grace period before declaring no image
+            var noSignal = new ImageGenerationTracker(t0);
+            AssertEquals("Waiting", noSignal.Update(Probe(false, 10), t0.AddSeconds(5)).ToString(), "early probe waits");
+            AssertEquals("Waiting", noSignal.Update(Probe(false, 10), t0.AddSeconds(15)).ToString(), "within grace waits");
+            AssertEquals("NoImage", noSignal.Update(Probe(false, 10), t0.AddSeconds(21)).ToString(), "after grace no image");
+
+            // Stop button never detected but image appears: longer stability required
+            var unconfirmed = new ImageGenerationTracker(t0);
+            unconfirmed.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(1));
+            AssertEquals("Waiting", unconfirmed.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(5)).ToString(), "unconfirmed image needs longer stability");
+            AssertEquals("Completed", unconfirmed.Update(Probe(false, 10, 0, "img1"), t0.AddSeconds(9.5)).ToString(), "unconfirmed image completes later");
+
+            // Loading images block completion; a changed image restarts the stability window
+            var pending = new ImageGenerationTracker(t0);
+            pending.Update(Probe(true, 10), t0.AddSeconds(1));
+            AssertEquals("Waiting", pending.Update(Probe(false, 10, 1, "img1"), t0.AddSeconds(2)).ToString(), "pending image waits");
+            AssertEquals("Waiting", pending.Update(Probe(false, 10, 1, "img1"), t0.AddSeconds(20)).ToString(), "still pending keeps waiting");
+            AssertEquals("Waiting", pending.Update(Probe(false, 10, 0, "img1", "img2"), t0.AddSeconds(21)).ToString(), "new image restarts stability");
+            AssertEquals("Completed", pending.Update(Probe(false, 10, 0, "img1", "img2"), t0.AddSeconds(24)).ToString(), "both images complete");
+            AssertEquals("2", pending.Images.Count.ToString(), "both images reported");
+
+            // Null probe (page switching) never decides anything
+            var nullProbe = new ImageGenerationTracker(t0);
+            AssertEquals("Waiting", nullProbe.Update(null, t0.AddSeconds(100)).ToString(), "null probe waits");
+
+            // Stop button stuck on "generating": timeout fallback accepts stable images
+            var stuck = new ImageGenerationTracker(t0);
+            stuck.Update(Probe(true, 10, 0, "img1"), t0.AddSeconds(1));
+            AssertEquals("Waiting", stuck.Update(Probe(true, 10, 0, "img1"), t0.AddSeconds(20)).ToString(), "stuck generating waits");
+            AssertTrue(stuck.HasStableImages(t0.AddSeconds(20), TimeSpan.FromSeconds(10)), "stable images accepted on timeout");
+            AssertFalse(new ImageGenerationTracker(t0).HasStableImages(t0.AddSeconds(20), TimeSpan.FromSeconds(10)), "no images is not stable");
+        }
+
+        private static void TestBatchImageRunState()
+        {
+            using (var run = new BatchImageRunState())
+            {
+                AssertTrue(run.WaitIfPausedAsync().Wait(1000), "not paused completes immediately");
+
+                run.Pause();
+                AssertTrue(run.IsPaused, "paused");
+                var waiting = run.WaitIfPausedAsync();
+                AssertFalse(waiting.Wait(100), "paused wait blocks");
+                run.Resume();
+                AssertTrue(waiting.Wait(1000), "resume releases the wait");
+                AssertFalse(run.IsPaused, "resumed");
+
+                run.Pause();
+                var cancelled = run.WaitIfPausedAsync();
+                run.Cancel();
+                bool threw = false;
+                try
+                {
+                    cancelled.Wait(1000);
+                }
+                catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+                {
+                    threw = true;
+                }
+                AssertTrue(threw, "stop releases a paused wait with cancellation");
+                AssertTrue(run.IsCancellationRequested, "stop is recorded");
+
+                run.Pause();
+                AssertFalse(run.IsPaused, "cannot pause after stop");
+            }
+        }
+
+        private static void TestBatchImageWindowsLoad()
+        {
+            // Window icons are application pack URIs: they need a WPF Application, and the
+            // icon is linked into this test assembly as a resource (see the csproj)
+            if (System.Windows.Application.Current == null)
+            {
+                new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+            }
+
+            // Parses the XAML at runtime; no settings file is read when no CSV is given
+            var batchWindow = new AIHelper.Views.BatchImageWindow(null, "missing-action", null);
+            var startButton = (System.Windows.Controls.Button)batchWindow.FindName("btnStart");
+            AssertFalse(startButton.IsEnabled, "start is disabled without rows");
+            var outputText = (System.Windows.Controls.TextBlock)batchWindow.FindName("tbOutputDir");
+            AssertTrue(outputText.Text.Contains(AppSettings.GetDefaultBatchImageSaveRoot()), "output folder preview shows the default root");
+            var recordButton = (System.Windows.Controls.Button)batchWindow.FindName("btnPresetRecord");
+            AssertFalse(recordButton.IsEnabled, "preset recording needs a platform");
+            AssertFalse(((System.Windows.Controls.Button)batchWindow.FindName("btnPresetTest")).IsEnabled, "preset test needs steps");
+            var presetInfo = (System.Windows.Controls.TextBlock)batchWindow.FindName("tbPresetInfo");
+            AssertFalse(string.IsNullOrEmpty(presetInfo.Text), "preset hint is shown");
+            batchWindow.Close();
+
+            var settings = AppSettings.CreateDefault();
+            var batchAction = settings.Actions.First(a => a.IsBatchImage);
+            var batchEdit = new AIHelper.Views.ActionEditWindow(batchAction, null, settings.Platforms, settings);
+            var batchHint = (System.Windows.Controls.TextBlock)batchEdit.FindName("tbPromptHint");
+            AssertEquals("Visible", batchHint.Visibility.ToString(), "batch action shows the prompt hint");
+            batchEdit.Close();
+
+            var normalEdit = new AIHelper.Views.ActionEditWindow(new ActionItem { Name = "x", Prompt = "{content}" }, null, settings.Platforms, settings);
+            var normalHint = (System.Windows.Controls.TextBlock)normalEdit.FindName("tbPromptHint");
+            AssertEquals("Collapsed", normalHint.Visibility.ToString(), "normal action hides the prompt hint");
+            normalEdit.Close();
+        }
+
+        private static PageSetupStep Click(string selector, string text, string state = "")
+        {
+            return new PageSetupStep { Kind = "click", Selector = selector, Text = text, State = state };
+        }
+
+        private static void TestPagePresetSteps()
+        {
+            var steps = new List<PageSetupStep>();
+
+            // A recorded dropdown choice: trigger (opens), option, then two toggle buttons
+            PageSetupService.Append(steps, new[]
+            {
+                Click("button.model-trigger", "GPT Image 2", "on"),
+                Click("li.model-option", "GPT Image 2.5"),
+                Click("button.ratio-btn", "16:9", "on"),
+                Click("button.ratio-btn", "2", "on")
+            });
+            AssertEquals("4", steps.Count.ToString(), "distinct clicks are all kept");
+
+            // The same toggle clicked again (on -> off): only the final state is kept
+            PageSetupService.Append(steps, new[] { Click("button.ratio-btn", "2", "off") });
+            AssertEquals("4", steps.Count.ToString(), "re-clicking a stateful toggle replaces it");
+            AssertEquals("off", steps[3].State, "final toggle state kept");
+
+            // Clicks without a known state are never merged: two clicks differ from one
+            PageSetupService.Append(steps, new[] { Click("div.x", "Mode"), Click("div.x", "Mode") });
+            AssertEquals("6", steps.Count.ToString(), "stateless clicks are not merged");
+
+            // Form controls: only the last value per control survives, moved to the end
+            PageSetupService.Append(steps, new[]
+            {
+                new PageSetupStep { Kind = "select", Selector = "select[name=\"size\"]", Text = "Size", Value = "512", ValueText = "512px" },
+                Click("button.y", "Y"),
+                new PageSetupStep { Kind = "SELECT", Selector = "select[name=\"size\"]", Text = "Size", Value = "1024", ValueText = "1024px" }
+            });
+            AssertEquals("8", steps.Count.ToString(), "one select step kept");
+            AssertEquals("1024", steps[7].Value, "last select value wins");
+            AssertEquals("select", steps[7].Kind, "kind is normalized");
+
+            // Junk is dropped and unknown values are normalized
+            PageSetupService.Append(steps, new[] { null, new PageSetupStep { Kind = "click", Selector = " ", Text = "" } });
+            AssertEquals("8", steps.Count.ToString(), "empty steps are ignored");
+            var odd = new List<PageSetupStep>();
+            PageSetupService.Append(odd, new[] { new PageSetupStep { Kind = "hover", Selector = "a", State = "maybe" } });
+            AssertEquals("click", odd[0].Kind, "unknown kind becomes click");
+            AssertEquals("", odd[0].State, "unknown state becomes empty");
+
+            // Hard cap against runaway recordings
+            var many = new List<PageSetupStep>();
+            PageSetupService.Append(many, Enumerable.Range(0, 50).Select(i => Click("b" + i, "B" + i)));
+            AssertEquals(PageSetupService.MaxSteps.ToString(), many.Count.ToString(), "steps are capped");
+
+            // Display text in both languages
+            var lm = LanguageManager.Instance;
+            string oldLanguage = lm.CurrentLanguage;
+            try
+            {
+                lm.CurrentLanguage = "zh";
+                AssertEquals("点击「16:9」", PageSetupService.Describe(Click("button.ratio-btn", "16:9")), "zh click text");
+                AssertEquals("取消勾选「HD」", PageSetupService.Describe(new PageSetupStep { Kind = "check", Text = "HD", Value = "false" }), "zh uncheck text");
+                lm.CurrentLanguage = "en";
+                AssertEquals("Select \"1024px\" in \"Size\"", PageSetupService.Describe(steps[7]), "en select text");
+                AssertEquals("Click \"button.icon\"", PageSetupService.Describe(Click("button.icon", "")), "selector shown when there is no text");
+                AssertTrue(PageSetupService.Describe(Click("x", new string('a', 100))).EndsWith("…\""), "long labels are shortened");
+            }
+            finally
+            {
+                lm.CurrentLanguage = oldLanguage;
+            }
+
+            // Persistence: new platform fields round-trip, and legacy configs get safe defaults
+            var platform = new AiPlatform { Name = "P", BatchOpenLargeImage = true, BatchSetupSteps = steps.Take(2).ToList() };
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(platform);
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<AiPlatform>(json);
+            AssertTrue(back.BatchOpenLargeImage, "open large flag survives a round trip");
+            AssertEquals("2", back.BatchSetupSteps.Count.ToString(), "steps survive a round trip");
+            AssertEquals("GPT Image 2.5", back.BatchSetupSteps[1].Text, "step text survives a round trip");
+            AssertTrue(json.Contains("\"Selector\""), "settings keep PascalCase names");
+
+            var legacy = Newtonsoft.Json.JsonConvert.DeserializeObject<AiPlatform>("{\"Name\":\"Old\",\"Url\":\"https://x\"}");
+            AssertFalse(legacy.BatchOpenLargeImage, "legacy platform does not open large images");
+            AssertTrue(legacy.BatchSetupSteps != null && legacy.BatchSetupSteps.Count == 0, "legacy platform has an empty preset");
+            var nulled = Newtonsoft.Json.JsonConvert.DeserializeObject<AiPlatform>("{\"BatchSetupSteps\":null}");
+            AssertTrue(nulled.BatchSetupSteps != null, "null preset becomes an empty list");
+
+            // Steps read back from the page script use camelCase keys
+            var poll = Newtonsoft.Json.JsonConvert.DeserializeObject<PresetRecordingPoll>(
+                "{\"active\":true,\"steps\":[{\"kind\":\"click\",\"selector\":\"li.model-option\",\"tag\":\"li\",\"text\":\"GPT Image 2.5\",\"state\":\"\",\"value\":\"\"}]}");
+            AssertTrue(poll.active, "poll active flag");
+            AssertEquals("li.model-option", poll.steps[0].Selector, "camelCase selector maps to the model");
+        }
+
+        private static void TestBatchImageDataUrl()
+        {
+            byte[] png = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D };
+            string url = "data:image/png;base64," + Convert.ToBase64String(png);
+            AssertTrue(BatchImageService.TryDecodeDataUrl(url, out var data, out var mime), "png data url decodes");
+            AssertEquals("image/png", mime, "data url mime");
+            AssertEquals(png.Length.ToString(), data.Length.ToString(), "data url bytes");
+            AssertTrue(BatchImageService.TryGetImageExtension(data, mime, out var ext) && ext == ".png", "decoded bytes are a png");
+
+            string escaped = "data:image/png;base64," + Uri.EscapeDataString(Convert.ToBase64String(new byte[] { 0xFB, 0xFF, 0xFE }));
+            AssertTrue(BatchImageService.TryDecodeDataUrl(escaped, out var unescaped, out _) && unescaped.Length == 3, "percent-encoded base64 decodes");
+
+            AssertFalse(BatchImageService.TryDecodeDataUrl("https://x/a.png", out _, out _), "http url is not a data url");
+            AssertFalse(BatchImageService.TryDecodeDataUrl("data:image/svg+xml,<svg/>", out _, out _), "non-base64 data url is skipped");
+            AssertFalse(BatchImageService.TryDecodeDataUrl("data:image/png;base64,***", out _, out _), "corrupt base64 is rejected");
+            AssertFalse(BatchImageService.TryDecodeDataUrl(null, out _, out _), "null is not a data url");
         }
 
         private static void AssertTrue(bool condition, string message)

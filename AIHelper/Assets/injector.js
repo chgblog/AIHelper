@@ -363,6 +363,414 @@
         return true;
     }
 
+    // The composer area around the input (form, or the closest ancestor holding buttons).
+    // Kept tight on purpose: generated images must never fall inside it.
+    function findComposer(inputEl) {
+        if (!inputEl) return null;
+        const form = inputEl.closest('form');
+        if (form) return form;
+        let parent = inputEl.parentElement;
+        for (let i = 0; i < 6; i++) {
+            if (!parent || parent === document.body) break;
+            if (parent.querySelector('button, [role="button"]')) return parent;
+            parent = parent.parentElement;
+        }
+        return inputEl.parentElement;
+    }
+
+    const STOP_LABEL = /(^|[^a-z])stop([^a-z]|$)|停止|中止/;
+
+    // True while the platform is still answering: the send button turns into a
+    // stop button on every supported platform. Attributes are checked page wide,
+    // class names only inside the composer (class names are too noisy elsewhere).
+    function isGeneratingNow(inputEl) {
+        const composer = findComposer(inputEl);
+        const nodes = document.querySelectorAll('button, [role="button"]');
+        for (let i = 0; i < nodes.length; i++) {
+            const el = nodes[i];
+            if (!isUsable(el)) continue;
+            const attrs = ((el.getAttribute('aria-label') || '') + ' ' +
+                           (el.getAttribute('data-testid') || '') + ' ' +
+                           (el.getAttribute('title') || '')).toLowerCase();
+            if (STOP_LABEL.test(attrs)) return true;
+            if (composer && composer.contains(el)) {
+                const cls = (el.className || '').toString().toLowerCase();
+                if (STOP_LABEL.test(cls)) return true;
+            }
+        }
+        return false;
+    }
+
+    // Text of the newest reply, used to explain why no image came back
+    function lastReplyText() {
+        const selectors = [
+            '[data-message-author-role="assistant"]', 'model-response', 'message-content',
+            '[class*="markdown" i]', '[class*="message-content" i]', '[class*="answer" i]'
+        ];
+        for (let i = 0; i < selectors.length; i++) {
+            let list;
+            try { list = document.querySelectorAll(selectors[i]); } catch (e) { continue; }
+            if (list && list.length) {
+                const text = (list[list.length - 1].textContent || '').replace(/\s+/g, ' ').trim();
+                if (text) return text.slice(-200);
+            }
+        }
+        return '';
+    }
+
+    // ---- Page preset: recording and replaying the setup clicks (model, ratio, ...) ----
+
+    // Classes that only describe a transient state; a selector built on them stops matching
+    const STATE_CLASS = /^(is-|has-)?(active|selected|checked|current|open|opened|expanded|show|shown|visible|focus|focused|focus-visible|hover|hovered|pressed|disabled|on|off)$/i;
+    const ON_CLASS = /^(is-|has-)?(active|selected|checked|current|on)$/i;
+    const CLICKABLE = 'button, a, summary, label, [role="button"], [role="option"], [role="menuitem"], [role="menuitemradio"], ' +
+                      '[role="menuitemcheckbox"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [role="combobox"], [role="treeitem"]';
+    const RECORDER_BADGE_ID = '__aihelper_recorder_badge';
+
+    function normalizeText(s) {
+        return (s || '').replace(/\s+/g, ' ').trim();
+    }
+
+    // Shown, as opposed to merely present: closed menus often stay in the DOM hidden
+    function isShown(el) {
+        return !!el && isUsable(el) && el.getClientRects().length > 0;
+    }
+
+    // Text pieces joined with spaces: "GPT Image 2.5<span>生图</span>" reads "GPT Image 2.5 生图"
+    function spacedText(el) {
+        const parts = [];
+        try {
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            let node;
+            while ((node = walker.nextNode()) && parts.length < 40) {
+                const t = normalizeText(node.nodeValue);
+                if (t) parts.push(t);
+            }
+        } catch (e) {
+            return normalizeText(el.textContent);
+        }
+        return parts.join(' ');
+    }
+
+    function elementText(el) {
+        if (!el || !el.getAttribute) return '';
+        let t = normalizeText(el.getAttribute('aria-label'));
+        if (!t) t = spacedText(el);
+        if (!t) t = normalizeText(el.getAttribute('title') || el.getAttribute('alt') || el.getAttribute('placeholder'));
+        if (!t && el.querySelector) {
+            const img = el.querySelector('img[alt]');
+            if (img) t = normalizeText(img.getAttribute('alt'));
+        }
+        return t.slice(0, 80);
+    }
+
+    // Label of a form control (its own text would be all of a select's options)
+    function controlLabel(el) {
+        if (!el || !el.getAttribute) return '';
+        let t = '';
+        try {
+            if (el.labels && el.labels.length) t = normalizeText(el.labels[0].textContent);
+        } catch (e) {}
+        if (!t) {
+            t = normalizeText(el.getAttribute('aria-label') || el.getAttribute('title') ||
+                              el.getAttribute('placeholder') || el.getAttribute('name') || el.id);
+        }
+        return t.slice(0, 80);
+    }
+
+    function stepText(el, kind) {
+        return kind === 'click' ? elementText(el) : controlLabel(el);
+    }
+
+    function hasPointerCursor(el) {
+        try {
+            const c = window.getComputedStyle(el).cursor;
+            return c === 'pointer' || c === 'zoom-in';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // The element a click actually activates: the nearest interactive ancestor, else the
+    // outermost ancestor that still shows a pointer cursor (div based buttons and options)
+    function clickRoot(el) {
+        if (el && el.nodeType !== 1) el = el.parentElement;
+        if (!el || !el.closest) return null;
+        const semantic = el.closest(CLICKABLE);
+        if (semantic) return semantic;
+
+        let best = null;
+        for (let p = el; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+            if (hasPointerCursor(p)) best = p;
+            else if (best) break;
+        }
+        return best || el.closest('li, [onclick], [tabindex]') || el;
+    }
+
+    // "on" / "off" / "" (no signal). Recorded after a click, so replay can leave an element
+    // alone when it is already in that state instead of toggling it back.
+    function elementState(el) {
+        if (!el || !el.isConnected || !el.getAttribute) return '';
+        let off = false;
+        const attrs = ['aria-pressed', 'aria-checked', 'aria-selected', 'aria-expanded'];
+        for (let i = 0; i < attrs.length; i++) {
+            const v = (el.getAttribute(attrs[i]) || '').toLowerCase();
+            if (v === 'true' || v === 'mixed') return 'on';
+            if (v === 'false') off = true;
+        }
+        const ds = (el.getAttribute('data-state') || '').toLowerCase();
+        if (/^(on|checked|active|open|selected)$/.test(ds)) return 'on';
+        if (/^(off|unchecked|inactive|closed)$/.test(ds)) off = true;
+        const classes = el.classList ? Array.from(el.classList) : [];
+        if (classes.some(c => ON_CLASS.test(c))) return 'on';
+        return off ? 'off' : '';
+    }
+
+    function stableClasses(el) {
+        const classes = el.classList ? Array.from(el.classList) : [];
+        return classes.filter(c => c && !STATE_CLASS.test(c) && !/[:\[\]\/@!%]/.test(c));
+    }
+
+    // Generated ids (React useId, Radix, Headless UI, hashes) change on every render
+    function isStableId(id) {
+        return !!id && !/[:\s]/.test(id) &&
+               !/^(radix|headlessui|mui|rc[-_]|react|ember|_r_|r[-_]\d)/i.test(id) &&
+               !/\d{3,}/.test(id) && !/[0-9a-f]{8,}/i.test(id);
+    }
+
+    function countMatches(sel) {
+        try {
+            return document.querySelectorAll(sel).length;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function isUniqueSelector(sel) {
+        return countMatches(sel) === 1;
+    }
+
+    function cssAttrValue(v) {
+        return String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    // A selector that survives re-renders. It may still match several elements (a group of
+    // ratio buttons, the options of a menu): the recorded text picks the right one on replay.
+    function buildSelector(el) {
+        const tag = el.tagName.toLowerCase();
+        if (isStableId(el.id)) {
+            const byId = '#' + CSS.escape(el.id);
+            if (isUniqueSelector(byId)) return byId;
+        }
+
+        const attrs = ['data-testid', 'data-test', 'data-test-id', 'data-qa', 'name', 'aria-label', 'title', 'data-value', 'value'];
+        for (let i = 0; i < attrs.length; i++) {
+            const v = el.getAttribute(attrs[i]);
+            if (!v || v.length > 80) continue;
+            const sel = tag + '[' + attrs[i] + '="' + cssAttrValue(v) + '"]';
+            if (isUniqueSelector(sel)) return sel;
+        }
+
+        let own = tag + stableClasses(el).slice(0, 3).map(c => '.' + CSS.escape(c)).join('');
+        if (isUniqueSelector(own)) return own;
+
+        // Without text nothing else can tell siblings apart, so fall back to position
+        if (!elementText(el) && el.parentElement) {
+            const siblings = Array.from(el.parentElement.children).filter(c => c.tagName === el.tagName);
+            if (siblings.length > 1) own += ':nth-of-type(' + (siblings.indexOf(el) + 1) + ')';
+        }
+
+        // Ancestors are only prepended while they narrow the match: every extra class in the
+        // chain is one more thing a site update can break
+        let sel = own;
+        let count = countMatches(sel);
+        let cur = el.parentElement;
+        for (let depth = 0; count > 1 && cur && cur !== document.body && cur !== document.documentElement && depth < 6; depth++, cur = cur.parentElement) {
+            let segment = null;
+            if (isStableId(cur.id)) {
+                segment = '#' + CSS.escape(cur.id);
+            } else {
+                const classes = stableClasses(cur).slice(0, 2);
+                if (classes.length) segment = cur.tagName.toLowerCase() + classes.map(c => '.' + CSS.escape(c)).join('');
+            }
+            if (!segment) continue;
+
+            const candidate = segment + ' ' + sel;
+            const candidateCount = countMatches(candidate);
+            if (candidateCount > 0 && candidateCount < count) {
+                sel = candidate;
+                count = candidateCount;
+            }
+        }
+        return sel;
+    }
+
+    // Opens a file chooser; a recorded click on it would be useless on replay
+    function isFileTrigger(el) {
+        if (!el) return false;
+        if (el.tagName === 'INPUT' && el.type === 'file') return true;
+        if (el.querySelector && el.querySelector('input[type="file"]')) return true;
+        const label = ((el.getAttribute('aria-label') || '') + ' ' + (el.getAttribute('title') || '')).toLowerCase();
+        return /upload|attach|上传|附件/.test(label);
+    }
+
+    // Typing the prompt, sending it and starting a new chat are the batch run's own steps
+    function isIgnoredForPreset(el, ctx) {
+        if (!el || el === document.body || el === document.documentElement) return true;
+        if (el.closest && el.closest('#' + RECORDER_BADGE_ID)) return true;
+        if (isFileTrigger(el)) return true;
+
+        const inputEl = findInput(ctx.platform, ctx.inputSelector);
+        if (inputEl && (inputEl === el || inputEl.contains(el) || el.contains(inputEl))) return true;
+        const submitBtn = inputEl ? findSubmitButton(ctx.platform, inputEl, ctx.submitSelector) : null;
+        if (submitBtn && (submitBtn === el || submitBtn.contains(el))) return true;
+        const newChatBtn = findNewChatButton(ctx.platform, ctx.newChatSelector);
+        if (newChatBtn && (newChatBtn === el || newChatBtn.contains(el))) return true;
+        return false;
+    }
+
+    function findStepElement(step) {
+        const kind = step.kind || 'click';
+        const want = normalizeText(step.text);
+        // Form controls are often visually hidden behind a styled label, so only clicks need to be visible
+        const usable = kind === 'click' ? isShown : (el => el.isConnected && !el.disabled);
+
+        let candidates = [];
+        if (step.selector) {
+            try { candidates = Array.from(document.querySelectorAll(step.selector)).filter(usable); } catch (e) {}
+        }
+        if (want) {
+            const exact = candidates.filter(c => stepText(c, kind) === want);
+            if (exact.length) return exact[0];
+        }
+        // A unique match whose text changed, e.g. a model picker that shows the current model
+        if (candidates.length === 1) return candidates[0];
+        if (!want) return candidates[0] || null;
+        if (kind !== 'click') return null;
+
+        // The selector broke (class names changed): look the element up by its text
+        let pool = [];
+        try { pool = document.querySelectorAll(step.tag || '*'); } catch (e) { return null; }
+        for (let i = 0; i < pool.length; i++) {
+            const el = pool[i];
+            if (elementText(el) === want && isShown(el) && clickRoot(el) === el) return el;
+        }
+        return null;
+    }
+
+    // Full pointer sequence: several component libraries open menus on pointerdown, not click
+    function fireClick(el) {
+        if (!el) return;
+        try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+        let x = 0, y = 0;
+        try {
+            const r = el.getBoundingClientRect();
+            x = r.left + r.width / 2;
+            y = r.top + r.height / 2;
+        } catch (e) {}
+        const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
+        const pointer = { pointerId: 1, pointerType: 'mouse', isPrimary: true };
+        try {
+            el.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, pointer, opts)));
+            el.dispatchEvent(new MouseEvent('mousedown', Object.assign({ buttons: 1 }, opts)));
+            el.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, pointer, opts)));
+            el.dispatchEvent(new MouseEvent('mouseup', opts));
+            el.dispatchEvent(new MouseEvent('click', opts));
+        } catch (e) {
+            try { el.click(); } catch (e2) {}
+        }
+    }
+
+    function setControlValue(el, value) {
+        const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype
+            : (el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype);
+        if (el._valueTracker) {
+            try { el._valueTracker.setValue(''); } catch (e) {}
+        }
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) setter.call(el, value); else el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+    }
+
+    // Returns true when something was done, false when the element already matched the step
+    function performStep(el, step) {
+        const kind = step.kind || 'click';
+        if (kind === 'select' || kind === 'input') {
+            const value = step.value || '';
+            if (String(el.value) === value) return false;
+            setControlValue(el, value);
+            return true;
+        }
+        if (kind === 'check') {
+            const want = step.value === 'true';
+            if (!!el.checked === want) return false;
+            fireClick(el);
+            if (!!el.checked !== want) {
+                const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'checked')?.set;
+                if (setter) setter.call(el, want); else el.checked = want;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return true;
+        }
+        if (step.state && elementState(el) === step.state) return false;
+        fireClick(el);
+        return true;
+    }
+
+    // ---- Full-size image viewer ----
+
+    function looksLikeImageUrl(url) {
+        return /^(blob:|data:image\/)/i.test(url) || /\.(png|jpe?g|webp|gif|avif|bmp)(\?|#|$)/i.test(url);
+    }
+
+    function fixedAncestor(el) {
+        for (let p = el; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+            try {
+                if (window.getComputedStyle(p).position === 'fixed') return p;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    // For viewers that draw without an <img> (canvas, background-image): the large fixed
+    // element that appeared after the click
+    function addedOverlay(nodes) {
+        const minArea = window.innerWidth * window.innerHeight * 0.4;
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (!n.isConnected || !isShown(n)) continue;
+            try {
+                const r = n.getBoundingClientRect();
+                if (window.getComputedStyle(n).position === 'fixed' && r.width * r.height >= minArea) return n;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    const CLOSE_LABEL = /close|关闭|dismiss|退出/i;
+    const CLOSE_TEXT = /^(×|✕|✖|╳|x|X|关闭|close|Close)$/;
+
+    function findCloseButton(root) {
+        if (!root || !root.querySelectorAll) return null;
+        const groups = ['button, [role="button"], a', 'span, div, i'];
+        for (let g = 0; g < groups.length; g++) {
+            const nodes = root.querySelectorAll(groups[g]);
+            for (let i = 0; i < nodes.length; i++) {
+                const el = nodes[i];
+                if (!isShown(el)) continue;
+                const label = (el.getAttribute('aria-label') || '') + ' ' + (el.getAttribute('title') || '');
+                const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
+                if (CLOSE_LABEL.test(label) || CLOSE_TEXT.test(normalizeText(el.textContent)) ||
+                    /(^|[\s_-])close([\s_-]|$)/.test(cls)) {
+                    return el;
+                }
+            }
+        }
+        return null;
+    }
+
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     // Poll interval used by waitReady, and how long the input element must stay
@@ -693,6 +1101,441 @@
                 return { success: true, reason: "SUCCESS" };
             } catch (err) {
                 return { success: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Marks every image already on the page so probeImages only reports the
+        /// images produced by the prompt that is about to be sent.
+        snapshotImages: function() {
+            try {
+                const imgs = document.querySelectorAll('img');
+                const srcs = [];
+                for (let i = 0; i < imgs.length; i++) {
+                    imgs[i].__aiHelperBaseline = true;
+                    const src = imgs[i].currentSrc || imgs[i].src;
+                    if (src) srcs.push(src);
+                }
+                window.__aiHelperImageBaseline = srcs;
+                return { ok: true, count: imgs.length };
+            } catch (err) {
+                return { ok: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// One-shot report of the generation state. Deliberately synchronous: the host
+        /// does the waiting, because page timers get throttled while the window is hidden.
+        probeImages: function(inputSelector, minSize) {
+            try {
+                const platform = detectPlatform();
+                const loginReason = checkLogin(platform);
+                if (loginReason) return { ok: false, reason: loginReason };
+
+                const inputEl = findInput(platform, inputSelector);
+                const composer = findComposer(inputEl);
+                const baseline = new Set(window.__aiHelperImageBaseline || []);
+                const min = minSize || 256;
+                const images = [];
+                const seen = new Set();
+                let pending = 0;
+
+                const imgs = document.querySelectorAll('img');
+                for (let i = 0; i < imgs.length; i++) {
+                    const img = imgs[i];
+                    if (img.__aiHelperBaseline) continue;
+                    const src = img.currentSrc || img.src || '';
+                    if (!src || baseline.has(src) || seen.has(src)) continue;
+                    if (/^data:image\/svg/i.test(src) || /\.svg(\?|#|$)/i.test(src)) continue;
+                    if (composer && composer.contains(img)) continue;
+                    if (!isUsable(img) || img.getClientRects().length === 0) continue;
+
+                    let style = null;
+                    try { style = window.getComputedStyle(img); } catch (e) {}
+                    if (style && style.opacity !== '' && parseFloat(style.opacity) < 0.05) continue;
+
+                    if (!img.complete) {
+                        // Lazy images never load while the window is hidden or the image is
+                        // off screen — force them, otherwise the wait would never end.
+                        if (img.loading === 'lazy') { try { img.loading = 'eager'; } catch (e) {} }
+                        try { img.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+                        pending++;
+                        continue;
+                    }
+                    if (img.naturalWidth < min || img.naturalHeight < min) continue;
+
+                    // A blurred image is a progressive preview that is still being refined
+                    if (style && /blur\(/i.test(style.filter || '')) {
+                        pending++;
+                        continue;
+                    }
+
+                    // Avatars and icons ship large files but are drawn small. The drawn size
+                    // is only judged when layout is available (hidden window measures 0x0).
+                    const rect = img.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0 && (rect.width < 64 || rect.height < 64)) continue;
+
+                    seen.add(src);
+                    images.push({ src: src, w: img.naturalWidth, h: img.naturalHeight });
+                }
+
+                return {
+                    ok: true,
+                    reason: "OK",
+                    generating: isGeneratingNow(inputEl),
+                    images: images,
+                    pending: pending,
+                    textLength: document.body ? (document.body.textContent || '').length : 0,
+                    snippet: images.length === 0 ? lastReplyText() : ''
+                };
+            } catch (err) {
+                return { ok: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Reads an image as base64 from inside the page, so blob:/data: URLs and
+        /// same-origin images (sent with the page's cookies) work. Cross-origin images
+        /// without CORS fail here; the host falls back to its network capture.
+        fetchImage: async function(src) {
+            const toBase64 = blob => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const s = String(reader.result || '');
+                    const comma = s.indexOf(',');
+                    resolve(comma >= 0 ? s.substring(comma + 1) : '');
+                };
+                reader.onerror = () => reject(reader.error || new Error('READ_FAILED'));
+                reader.readAsDataURL(blob);
+            });
+
+            let lastReason = "FETCH_FAILED";
+            const attempts = [{}, { credentials: 'include' }];
+            for (let i = 0; i < attempts.length; i++) {
+                try {
+                    const resp = await fetch(src, attempts[i]);
+                    if (!resp.ok) {
+                        lastReason = "HTTP_" + resp.status;
+                        continue;
+                    }
+                    const blob = await resp.blob();
+                    if (!blob || blob.size === 0) {
+                        lastReason = "EMPTY";
+                        continue;
+                    }
+                    const data = await toBase64(blob);
+                    return { ok: true, reason: "OK", mime: blob.type || '', data: data };
+                } catch (err) {
+                    lastReason = "FETCH_FAILED";
+                }
+            }
+            return { ok: false, reason: lastReason };
+        },
+
+        /// Starts recording the user's own clicks and form changes as page preset steps.
+        /// Steps are queued on window.__aiHelperRecorder and drained by the host; a page
+        /// reload drops the recorder, which the host notices and starts it again.
+        startRecording: function(inputSelector, submitSelector, newChatSelector, badgeText) {
+            try {
+                const old = window.__aiHelperRecorder;
+                if (old && typeof old.cleanup === 'function') {
+                    try { old.cleanup(); } catch (e) {}
+                }
+
+                const ctx = { platform: detectPlatform(), inputSelector, submitSelector, newChatSelector };
+                const rec = { active: true, steps: [], cleanup: null };
+
+                const onClick = (e) => {
+                    if (!rec.active || !e.isTrusted) return;
+                    const target = e.target;
+                    if (!target || target.nodeType !== 1) return;
+
+                    // Native controls are recorded by their change event instead
+                    const tag = target.tagName.toLowerCase();
+                    if (tag === 'input' || tag === 'select' || tag === 'option' || tag === 'textarea') return;
+                    const label = target.closest('label');
+                    if (label && label.control) return;
+
+                    const el = clickRoot(target);
+                    if (!el || el.isContentEditable || isIgnoredForPreset(el, ctx)) return;
+
+                    // Built now, while the element (e.g. a menu option) is still in the DOM
+                    const step = { kind: 'click', selector: buildSelector(el), tag: el.tagName.toLowerCase(), text: elementText(el), state: '', value: '' };
+                    // The state the click leads to is read once the page has reacted. Frameworks
+                    // that re-create the buttons on render leave el detached: read its replacement.
+                    setTimeout(() => {
+                        const live = el.isConnected ? el : findStepElement(step);
+                        step.state = live ? elementState(live) : '';
+                        if (rec.active) rec.steps.push(step);
+                    }, 300);
+                };
+
+                const onChange = (e) => {
+                    if (!rec.active || !e.isTrusted) return;
+                    const el = e.target;
+                    if (!el || !el.tagName || isIgnoredForPreset(el, ctx)) return;
+
+                    const tag = el.tagName.toLowerCase();
+                    let step = null;
+                    if (tag === 'select') {
+                        const opt = el.options[el.selectedIndex];
+                        step = { kind: 'select', value: el.value, valueText: opt ? normalizeText(opt.textContent) : el.value };
+                    } else if (tag === 'input' && (el.type === 'checkbox' || el.type === 'radio')) {
+                        step = { kind: 'check', value: el.checked ? 'true' : 'false' };
+                    } else if ((tag === 'input' && !/^(file|password|hidden|submit|button|image|reset)$/i.test(el.type)) || tag === 'textarea') {
+                        step = { kind: 'input', value: String(el.value || '').slice(0, 500) };
+                    }
+                    if (!step) return;
+
+                    step.selector = buildSelector(el);
+                    step.tag = tag;
+                    step.text = controlLabel(el);
+                    step.state = '';
+                    rec.steps.push(step);
+                };
+
+                document.addEventListener('click', onClick, true);
+                document.addEventListener('change', onChange, true);
+
+                const badge = document.createElement('div');
+                badge.id = RECORDER_BADGE_ID;
+                badge.textContent = badgeText || '● REC';
+                Object.assign(badge.style, {
+                    position: 'fixed', top: '8px', left: '50%', transform: 'translateX(-50%)',
+                    zIndex: '2147483647', pointerEvents: 'none',
+                    background: 'rgba(220, 38, 38, 0.92)', color: '#fff', borderRadius: '12px',
+                    padding: '2px 12px', font: '12px/1.6 "Segoe UI", "Microsoft YaHei", sans-serif',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                });
+                (document.body || document.documentElement).appendChild(badge);
+
+                rec.cleanup = () => {
+                    rec.active = false;
+                    try { document.removeEventListener('click', onClick, true); } catch (e) {}
+                    try { document.removeEventListener('change', onChange, true); } catch (e) {}
+                    try { if (badge.parentNode) badge.parentNode.removeChild(badge); } catch (e) {}
+                };
+
+                window.__aiHelperRecorder = rec;
+                return { started: true, reason: "STARTED" };
+            } catch (err) {
+                return { started: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Hands the steps recorded since the last call to the host
+        takeRecordedSteps: function() {
+            const rec = window.__aiHelperRecorder;
+            if (!rec || !rec.active) return { active: false, steps: [] };
+            return { active: true, steps: rec.steps.splice(0, rec.steps.length) };
+        },
+
+        stopRecording: function() {
+            const rec = window.__aiHelperRecorder;
+            window.__aiHelperRecorder = null;
+            if (!rec) return { active: false, steps: [] };
+            const steps = rec.steps.splice(0, rec.steps.length);
+            try { rec.cleanup(); } catch (e) {}
+            return { active: false, steps: steps };
+        },
+
+        /// Replays page preset steps in order. Each step waits for its element, because
+        /// menu options only appear once the previous step opened the menu.
+        applySetupSteps: async function(steps, stepTimeoutMs) {
+            try {
+                const myRun = window.__aiHelperRunId;
+                const list = steps || [];
+                let applied = 0;
+                let skipped = 0;
+
+                for (let i = 0; i < list.length; i++) {
+                    const step = list[i] || {};
+                    const deadline = Date.now() + (stepTimeoutMs || 6000);
+                    let el = null;
+                    while (true) {
+                        if (window.__aiHelperRunId !== myRun) return { success: false, reason: "SUPERSEDED", index: i };
+                        el = findStepElement(step);
+                        if (el || Date.now() >= deadline) break;
+                        await sleep(200);
+                    }
+                    if (!el) {
+                        return { success: false, reason: "STEP_NOT_FOUND", index: i, text: step.text || step.selector || '' };
+                    }
+
+                    if (performStep(el, step)) {
+                        applied++;
+                        await sleep(450);
+                    } else {
+                        skipped++;
+                        await sleep(60);
+                    }
+                }
+                return { success: true, reason: "APPLIED", applied: applied, skipped: skipped };
+            } catch (err) {
+                return { success: false, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Clicks a generated image and waits for the viewer to show the full-size version.
+        /// The viewer is remembered on window so closeImageViewer can close it afterwards.
+        openLargeImage: async function(src, minSize, timeoutMs) {
+            try {
+                const myRun = window.__aiHelperRunId;
+                const min = minSize || 256;
+                window.__aiHelperViewer = null;
+
+                const imgs = document.querySelectorAll('img');
+                let thumb = null;
+                for (let i = imgs.length - 1; i >= 0; i--) {
+                    if (!imgs[i].__aiHelperBaseline && (imgs[i].currentSrc || imgs[i].src || '') === src) {
+                        thumb = imgs[i];
+                        break;
+                    }
+                }
+                if (!thumb) return { ok: false, clicked: false, reason: "THUMB_NOT_FOUND" };
+
+                // A link around the image normally points at the full-size file itself
+                const link = thumb.closest('a[href]');
+                if (link) {
+                    const href = link.href || '';
+                    if (href && (href === src || looksLikeImageUrl(href))) {
+                        return { ok: true, clicked: false, reason: "LINK", src: href };
+                    }
+                    // Clicking would leave the chat page
+                    return { ok: false, clicked: false, reason: "LINK_NOT_IMAGE" };
+                }
+
+                const before = new Map();
+                for (let i = 0; i < imgs.length; i++) before.set(imgs[i], imgs[i].currentSrc || imgs[i].src || '');
+                const url = location.href;
+                const added = [];
+                const observer = new MutationObserver(list => {
+                    for (let i = 0; i < list.length; i++) {
+                        const nodes = list[i].addedNodes;
+                        for (let j = 0; j < nodes.length; j++) {
+                            if (nodes[j].nodeType === 1) added.push(nodes[j]);
+                        }
+                    }
+                });
+                observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
+                try { thumb.scrollIntoView({ block: 'center' }); } catch (e) {}
+                const clickedAt = Date.now();
+                fireClick(thumb);
+
+                const deadline = clickedAt + (timeoutMs || 15000);
+                let best = null;
+                let bestSrc = '';
+                let stableSince = 0;
+                try {
+                    while (Date.now() < deadline) {
+                        if (window.__aiHelperRunId !== myRun) return { ok: false, clicked: true, reason: "SUPERSEDED" };
+                        await sleep(250);
+
+                        let cand = null;
+                        let candArea = 0;
+                        let loading = false;
+                        const now = document.querySelectorAll('img');
+                        for (let i = 0; i < now.length; i++) {
+                            const img = now[i];
+                            const s = img.currentSrc || img.src || '';
+                            if (!s || /^data:image\/svg/i.test(s) || /\.svg(\?|#|$)/i.test(s)) continue;
+                            // New images, or an existing one whose source was swapped (in-place zoom)
+                            if (before.has(img) && before.get(img) === s) continue;
+                            if (!isShown(img)) continue;
+                            if (!img.complete) {
+                                loading = true;
+                                continue;
+                            }
+                            if (img.naturalWidth < min || img.naturalHeight < min) continue;
+                            const area = img.naturalWidth * img.naturalHeight;
+                            if (area > candArea) {
+                                cand = img;
+                                candArea = area;
+                            }
+                        }
+
+                        if (cand) {
+                            const s = cand.currentSrc || cand.src;
+                            if (s !== bestSrc) {
+                                best = cand;
+                                bestSrc = s;
+                                stableSince = Date.now();
+                            } else if (!loading && Date.now() - stableSince >= 800) {
+                                break;
+                            }
+                        } else if (!loading && Date.now() - clickedAt >= 5000) {
+                            // Nothing is opening: the click does not show a viewer on this page
+                            break;
+                        }
+                    }
+                } finally {
+                    observer.disconnect();
+                }
+
+                // In-place zoom (the thumbnail itself got the bigger source) has no overlay to close
+                const overlay = best ? fixedAncestor(best) : addedOverlay(added);
+                window.__aiHelperViewer = { overlay: overlay, url: url };
+                if (!best) return { ok: false, clicked: true, reason: "NO_LARGE_IMAGE" };
+                return { ok: true, clicked: true, reason: "OPENED", src: bestSrc, w: best.naturalWidth, h: best.naturalHeight };
+            } catch (err) {
+                return { ok: false, clicked: true, reason: "EXCEPTION", message: err.message };
+            }
+        },
+
+        /// Closes the viewer opened by openLargeImage: Escape, then a close button, then
+        /// the backdrop, then history back if the viewer changed the URL. Buttons and the
+        /// backdrop are only clicked inside a detected overlay, never elsewhere on the page.
+        closeImageViewer: async function() {
+            try {
+                const viewer = window.__aiHelperViewer;
+                window.__aiHelperViewer = null;
+                if (!viewer) return { closed: true, reason: "NO_VIEWER" };
+
+                const isOpen = () => {
+                    if (location.href !== viewer.url) return true;
+                    return !!viewer.overlay && viewer.overlay.isConnected && isShown(viewer.overlay);
+                };
+                const settled = async () => {
+                    await sleep(400);
+                    return !isOpen();
+                };
+                const pressEscape = () => {
+                    const keyTarget = document.activeElement || document.body;
+                    ['keydown', 'keyup'].forEach(type => {
+                        try {
+                            keyTarget.dispatchEvent(new KeyboardEvent(type, {
+                                key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true
+                            }));
+                        } catch (e) {}
+                    });
+                };
+
+                if (!isOpen()) {
+                    // No overlay was found (in-place zoom, or nothing opened): Escape is the only safe move
+                    if (!viewer.overlay) pressEscape();
+                    return { closed: true, reason: viewer.overlay ? "ALREADY_CLOSED" : "NO_OVERLAY" };
+                }
+
+                pressEscape();
+                if (await settled()) return { closed: true, reason: "ESCAPE" };
+
+                if (viewer.overlay && viewer.overlay.isConnected) {
+                    const closeBtn = findCloseButton(viewer.overlay);
+                    if (closeBtn) {
+                        fireClick(closeBtn);
+                        if (await settled()) return { closed: true, reason: "CLOSE_BUTTON" };
+                    }
+
+                    // Dispatched on the backdrop itself, so "click outside" handlers see it as their own target
+                    fireClick(viewer.overlay);
+                    if (await settled()) return { closed: true, reason: "BACKDROP" };
+                }
+
+                if (location.href !== viewer.url) {
+                    history.back();
+                    if (await settled()) return { closed: true, reason: "HISTORY_BACK" };
+                }
+                return { closed: !isOpen(), reason: "STILL_OPEN" };
+            } catch (err) {
+                return { closed: false, reason: "EXCEPTION", message: err.message };
             }
         },
 

@@ -10,4 +10,9 @@
   <ItemGroup>
     <ProjectReference Include="..\AIHelper\AIHelper.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Window XAML uses Icon="/icon.ico", which resolves against the entry assembly -->
+    <Resource Include="..\AIHelper\icon.ico" Link="icon.ico" />
+  </ItemGroup>
 </Project>
