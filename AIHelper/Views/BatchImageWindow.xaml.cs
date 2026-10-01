@@ -59,9 +59,22 @@ namespace AIHelper.Views
 
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
             Closed += (s, e) => LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
+            // Coming back (from the tray, a trigger…) means the test-result bar on the main window is no longer needed
+            IsVisibleChanged += (s, e) =>
+            {
+                if (IsVisible && !_presetStarting && !_presetRecording) _host?.HidePresetBar();
+            };
 
             tbStatus.Text = LanguageManager.Instance["Batch_Status_Ready"];
             LoadCsv(csvPath);
+            if (_csvPath == null)
+            {
+                // 没有 CSV（从设置页进入，或文件读取失败）时页面预设仍然可用
+                var context = LoadContext();
+                _saveRootPreview = context.Settings.GetBatchImageSaveRoot();
+                tbDefaultPlatform.Text = LanguageManager.Instance.GetString("Batch_DefaultPlatform", context.DefaultPlatform?.Name ?? "-");
+                PopulatePresetPlatforms(context.Settings, context.DefaultPlatform);
+            }
             UpdateUi();
         }
 
@@ -353,7 +366,7 @@ namespace AIHelper.Views
             _host?.ShowSettings(SettingsWindow.BatchImageTabIndex);
 
             // Platforms may have been added, renamed or deleted
-            if (_host != null && IsLoaded && _run == null && !PresetBusy && _csvPath != null)
+            if (_host != null && IsLoaded && _run == null && !PresetBusy)
             {
                 var context = LoadContext();
                 PopulatePresetPlatforms(context.Settings, context.DefaultPlatform);
@@ -362,6 +375,23 @@ namespace AIHelper.Views
         }
 
         #region Page preset
+
+        /// <summary>
+        /// 这个窗口是主窗口的从属窗口，总是盖在主窗口上面。录制、试运行时要让用户看到并操作平台页面，
+        /// 所以先把本窗口隐藏，由主窗口上方的操作条代替按钮（见 MainWindow.ShowPresetBar）。
+        /// </summary>
+        private void HideForPage()
+        {
+            if (IsLoaded) Hide();
+        }
+
+        private void RestoreFromPage()
+        {
+            if (!IsLoaded) return;
+            Show();
+            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+            Activate();
+        }
 
         private void PopulatePresetPlatforms(AppSettings settings, AiPlatform preferred)
         {
@@ -461,6 +491,7 @@ namespace AIHelper.Views
             _presetSteps = new List<PageSetupStep>();
             _presetStarting = true;
             UpdateUi();
+            HideForPage();
 
             InjectionResult started;
             try
@@ -470,7 +501,9 @@ namespace AIHelper.Views
                     if (!_presetRecording) return;
                     _presetSteps = steps.ToList();
                     UpdatePresetUi();
-                });
+                },
+                () => { _ = FinishPresetRecordingAsync(true); },
+                () => { _ = FinishPresetRecordingAsync(false); });
             }
             finally
             {
@@ -482,10 +515,14 @@ namespace AIHelper.Views
                 _presetRecording = true;
                 SetStatus(lm["Batch_Preset_RecordingStatus"]);
             }
-            else if (started.Reason != "CANCELLED")
+            else
             {
-                _presetSteps = _presetBeforeRecording ?? new List<PageSetupStep>();
-                MessageBox.Show(this, lm.GetString("Batch_Preset_RecordFailed", started.Message), lm["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                RestoreFromPage();
+                if (started.Reason != "CANCELLED")
+                {
+                    _presetSteps = _presetBeforeRecording ?? new List<PageSetupStep>();
+                    MessageBox.Show(this, lm.GetString("Batch_Preset_RecordFailed", started.Message), lm["Notice"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             if (IsLoaded) UpdateUi();
         }
@@ -517,7 +554,11 @@ namespace AIHelper.Views
                 SetStatus(save ? lm["Batch_Preset_NothingRecorded"] : lm["Batch_Preset_RecordCancelled"]);
             }
             _presetBeforeRecording = null;
-            if (IsLoaded) UpdateUi();
+            if (IsLoaded)
+            {
+                RestoreFromPage();
+                UpdateUi();
+            }
         }
 
         private void BtnPresetRemoveStep_Click(object sender, RoutedEventArgs e)
@@ -566,16 +607,23 @@ namespace AIHelper.Views
             _presetTesting = true;
             UpdateUi();
             SetStatus(lm["Batch_Preset_Testing"]);
+            HideForPage();
+            bool barShown = false;
             try
             {
                 var result = await _host.TestPagePresetAsync(platform, _presetSteps.ToList());
-                SetStatus(result.Success
+                string text = result.Success
                     ? lm.GetString("Batch_Preset_TestOk", result.Applied, result.Skipped)
-                    : lm.GetString("Batch_Preset_TestFailed", result.Message));
+                    : lm.GetString("Batch_Preset_TestFailed", result.Message);
+                SetStatus(text);
+                // Stay on the page until the user has looked at the result
+                _host.ShowPresetBar(text, lm["Batch_Preset_BarBack"], RestoreFromPage, null, null);
+                barShown = true;
             }
             finally
             {
                 _presetTesting = false;
+                if (!barShown) RestoreFromPage();
                 if (IsLoaded) UpdateUi();
             }
         }

@@ -91,6 +91,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="34"/>
             </Grid.RowDefinitions>
@@ -211,11 +212,28 @@
                                       ActionSubmitted="ActionPanel_ActionSubmitted"
                                       CloseRequested="ActionPanel_CloseRequested"/>
 
+            <!-- Page preset bar: recording / test result. The batch window is hidden meanwhile so the page is visible. -->
+            <Border x:Name="presetBar" Grid.Row="2" Visibility="Collapsed" Background="#4c2a8c" Padding="12,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtPresetBar" Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Button x:Name="btnPresetBarPrimary" Click="BtnPresetBarPrimary_Click" Padding="12,4" Margin="0,0,6,0"
+                                Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        <Button x:Name="btnPresetBarSecondary" Click="BtnPresetBarSecondary_Click" Padding="12,4"
+                                Background="#3a3a5e" Foreground="#e0e0e0" BorderThickness="0" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <!-- WebView2 Container -->
-            <Grid x:Name="webViewContainer" Grid.Row="2"/>
+            <Grid x:Name="webViewContainer" Grid.Row="3"/>
 
             <!-- Bottom Taskbar (Status & Quick Actions) -->
-            <Grid Grid.Row="3" Background="#161622">
+            <Grid Grid.Row="4" Background="#161622">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>

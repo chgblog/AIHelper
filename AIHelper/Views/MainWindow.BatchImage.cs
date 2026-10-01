@@ -49,8 +49,9 @@ namespace AIHelper.Views
         /// <summary>
         /// 批量生图入口：快捷栏、热键、划词工具条、操作面板、文件右键都走这里。
         /// 对 .csv 文件触发时直接使用该文件，否则先弹出文件选择。
+        /// withoutCsv：不选文件直接打开窗口（设置页的「页面预设」入口：录制不需要 CSV）。
         /// </summary>
-        public void OpenBatchImage(ActionItem action, string csvPath = null)
+        public void OpenBatchImage(ActionItem action, string csvPath = null, bool withoutCsv = false)
         {
             try
             {
@@ -72,8 +73,8 @@ namespace AIHelper.Views
 
                 if (!hasCsv)
                 {
-                    csvPath = PickBatchCsvFile(this);
-                    if (csvPath == null) return;
+                    csvPath = withoutCsv ? null : PickBatchCsvFile(this);
+                    if (csvPath == null && !withoutCsv) return;
                 }
 
                 var window = new BatchImageWindow(this, action.Id, csvPath) { Owner = this };

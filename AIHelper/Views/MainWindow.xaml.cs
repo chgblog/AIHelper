@@ -2085,7 +2085,9 @@ namespace AIHelper.Views
 
                 _currentSettingsWindow = new SettingsWindow(initialTabIndex);
                 _currentSettingsWindow.Owner = this;
-                if (_currentSettingsWindow.ShowDialog() == true)
+                bool saved = _currentSettingsWindow.ShowDialog() == true;
+                bool openBatchImage = saved && _currentSettingsWindow.OpenBatchImageRequested;
+                if (saved)
                 {
                     _settings = SettingsService.Instance.Load();
                     RegisterHotkeys();
@@ -2137,6 +2139,12 @@ namespace AIHelper.Views
                     }
                 }
                 _currentSettingsWindow = null;
+
+                if (openBatchImage)
+                {
+                    var batchAction = _settings?.Actions?.FirstOrDefault(a => a.IsBatchImage);
+                    if (batchAction != null) OpenBatchImage(batchAction, withoutCsv: true);
+                }
             }
             catch (Exception ex)
             {

@@ -360,6 +360,16 @@
                                     <TextBlock Text="{Binding [Settings_Batch_RunTip], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
+
+                            <!-- 页面预设：录制在批量生图窗口里，这里给出入口 -->
+                            <Border Background="#1e1e2e" BorderBrush="#3a3a5e" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Settings_Batch_PresetSection], Source={x:Static services:LanguageManager.Instance}}" FontWeight="Bold" Foreground="#e0e0e0" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{Binding [Settings_Batch_PresetDesc], Source={x:Static services:LanguageManager.Instance}}" Foreground="#a0a0b0" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <Button Content="{Binding [Settings_Batch_PresetOpen], Source={x:Static services:LanguageManager.Instance}}" Click="BtnOpenBatchPreset_Click"
+                                            HorizontalAlignment="Left" Padding="12,5" Background="#7c3aed" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Grid>
                 </ScrollViewer>

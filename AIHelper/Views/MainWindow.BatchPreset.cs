@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Threading;
 using AIHelper.Models;
 using AIHelper.Services;
@@ -31,11 +32,71 @@ namespace AIHelper.Views
             public bool Polling;
         }
 
+        // 页面预设操作条上两个按钮当前对应的动作
+        private Action _presetBarPrimary;
+        private Action _presetBarSecondary;
+
+        /// <summary>
+        /// 在主窗口页面上方显示操作条。批量窗口是主窗口的从属窗口，永远盖在它上面，
+        /// 所以录制和试运行时批量窗口会先隐藏，由这条操作条代替它的按钮。按钮标签为 null 则隐藏该按钮。
+        /// </summary>
+        internal void ShowPresetBar(string text, string primaryLabel, Action primary, string secondaryLabel, Action secondary)
+        {
+            txtPresetBar.Text = text ?? "";
+            _presetBarPrimary = primary;
+            _presetBarSecondary = secondary;
+            btnPresetBarPrimary.Content = primaryLabel;
+            btnPresetBarPrimary.Visibility = primaryLabel != null ? Visibility.Visible : Visibility.Collapsed;
+            btnPresetBarPrimary.IsEnabled = true;
+            btnPresetBarSecondary.Content = secondaryLabel;
+            btnPresetBarSecondary.Visibility = secondaryLabel != null ? Visibility.Visible : Visibility.Collapsed;
+            btnPresetBarSecondary.IsEnabled = true;
+            presetBar.Visibility = Visibility.Visible;
+        }
+
+        internal void SetPresetBarText(string text)
+        {
+            txtPresetBar.Text = text ?? "";
+        }
+
+        internal void HidePresetBar()
+        {
+            presetBar.Visibility = Visibility.Collapsed;
+            _presetBarPrimary = null;
+            _presetBarSecondary = null;
+        }
+
+        private void BtnPresetBarPrimary_Click(object sender, RoutedEventArgs e)
+        {
+            RunPresetBarAction(_presetBarPrimary);
+        }
+
+        private void BtnPresetBarSecondary_Click(object sender, RoutedEventArgs e)
+        {
+            RunPresetBarAction(_presetBarSecondary);
+        }
+
+        private void RunPresetBarAction(Action action)
+        {
+            if (action == null) return;
+            // Stops a double click from finishing or cancelling twice
+            btnPresetBarPrimary.IsEnabled = false;
+            btnPresetBarSecondary.IsEnabled = false;
+            action();
+        }
+
+        private string PresetBarRecordingText(AiPlatform platform, int steps)
+        {
+            return LanguageManager.Instance.GetString("Batch_Preset_BarRecording", platform?.Name ?? "-", steps);
+        }
+
         /// <summary>
         /// 打开平台、新建对话（与批量运行时的起点一致），然后开始录制。
-        /// 录到新步骤时在 UI 线程上调用 <paramref name="changed"/>。
+        /// 录到新步骤时在 UI 线程上调用 <paramref name="changed"/>；
+        /// 主窗口上方的「完成录制」「取消」按钮分别调用 <paramref name="finishRequested"/>、<paramref name="cancelRequested"/>。
         /// </summary>
-        internal async Task<InjectionResult> StartPresetRecordingAsync(AiPlatform platform, Action<IList<PageSetupStep>> changed)
+        internal async Task<InjectionResult> StartPresetRecordingAsync(AiPlatform platform, Action<IList<PageSetupStep>> changed,
+            Action finishRequested, Action cancelRequested)
         {
             var lm = LanguageManager.Instance;
             if (platform == null) return PresetFail("NO_PLATFORM", lm["Batch_Msg_NoPlatform"]);
@@ -49,6 +110,7 @@ namespace AIHelper.Views
             try
             {
                 ShowAndActivate();
+                ShowPresetBar(lm.GetString("Batch_Preset_BarStarting", platform.Name), null, null, lm["Batch_Preset_Cancel"], cancelRequested);
 
                 var ready = await EnsurePlatformReadyAsync(platform);
                 if (_presetRecording != recording) return PresetFail("CANCELLED", "");
@@ -84,6 +146,8 @@ namespace AIHelper.Views
                 recording.Timer.Start();
 
                 UpdateStatus(lm["Batch_Preset_RecordingStatus"]);
+                ShowPresetBar(PresetBarRecordingText(platform, recording.Steps.Count),
+                    lm["Batch_Preset_Finish"], finishRequested, lm["Batch_Preset_Cancel"], cancelRequested);
                 webView?.Focus();
                 Logger.LogInfo($"Page preset recording started on {platform.Name}");
                 return new InjectionResult { Success = true, Reason = "RECORDING", Message = "" };
@@ -120,6 +184,7 @@ namespace AIHelper.Views
                 if (poll.steps != null && poll.steps.Count > 0)
                 {
                     PageSetupService.Append(recording.Steps, poll.steps);
+                    SetPresetBarText(PresetBarRecordingText(recording.Platform, recording.Steps.Count));
                     recording.Changed?.Invoke(recording.Steps.ToList());
                 }
             }
@@ -166,6 +231,7 @@ namespace AIHelper.Views
             if (_presetRecording != recording) return;
             _presetRecording = null;
             _presetBusy = false;
+            HidePresetBar();
             SetBatchUiLocked(false);
             UpdateStatus(LanguageManager.Instance["Main_Status_Ready"]);
         }

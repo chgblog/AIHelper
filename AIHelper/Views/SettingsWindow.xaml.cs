@@ -471,6 +471,21 @@ namespace AIHelper.Views
             this.Close();
         }
 
+        /// <summary>
+        /// 保存后打开批量生图窗口（页面预设的录制在那里）。设置窗口是模态的，由 MainWindow 在它关闭后再打开。
+        /// </summary>
+        public bool OpenBatchImageRequested { get; private set; }
+
+        private void BtnOpenBatchPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (SaveSettings())
+            {
+                OpenBatchImageRequested = true;
+                this.DialogResult = true;
+                this.Close();
+            }
+        }
+
         private void BtnAddPlatform_Click(object sender, RoutedEventArgs e)
         {
             AddPlatform(LanguageManager.Instance["Settings_Platform_NewPlatform"], "https://");
