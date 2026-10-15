@@ -52,6 +52,7 @@ namespace AIHelper.Tests
             Run("batch image window and action edit hint load", TestBatchImageWindowsLoad);
             Run("batch image page preset merge, description and persistence", TestPagePresetSteps);
             Run("batch image data url decoding", TestBatchImageDataUrl);
+            Run("window size persistence and migration", TestWindowSizePersistenceAndMigration);
 
             Console.WriteLine("All tests passed.");
             return 0;
@@ -1580,6 +1581,55 @@ namespace AIHelper.Tests
             AssertFalse(BatchImageService.TryDecodeDataUrl("data:image/svg+xml,<svg/>", out _, out _), "non-base64 data url is skipped");
             AssertFalse(BatchImageService.TryDecodeDataUrl("data:image/png;base64,***", out _, out _), "corrupt base64 is rejected");
             AssertFalse(BatchImageService.TryDecodeDataUrl(null, out _, out _), "null is not a data url");
+        }
+
+        private static void TestWindowSizePersistenceAndMigration()
+        {
+            // 1. AppSettings default values
+            var defaults = new AppSettings();
+            AssertEquals("800", defaults.WindowWidth.ToString(), "Default WindowWidth should be 800");
+            AssertEquals("600", defaults.WindowHeight.ToString(), "Default WindowHeight should be 600");
+            AssertFalse(defaults.WindowMaximized, "Default WindowMaximized should be false");
+
+            var createdDefaults = AppSettings.CreateDefault();
+            AssertEquals("800", createdDefaults.WindowWidth.ToString(), "CreateDefault WindowWidth should be 800");
+            AssertEquals("600", createdDefaults.WindowHeight.ToString(), "CreateDefault WindowHeight should be 600");
+            AssertFalse(createdDefaults.WindowMaximized, "CreateDefault WindowMaximized should be false");
+
+            // 2. Serialization and Deserialization
+            defaults.WindowWidth = 1024;
+            defaults.WindowHeight = 768;
+            defaults.WindowMaximized = true;
+
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(defaults);
+            var deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(json);
+            AssertEquals("1024", deserialized.WindowWidth.ToString(), "Deserialized WindowWidth should be 1024");
+            AssertEquals("768", deserialized.WindowHeight.ToString(), "Deserialized WindowHeight should be 768");
+            AssertTrue(deserialized.WindowMaximized, "Deserialized WindowMaximized should be true");
+
+            // 3. Migration of legacy config with 520x800
+            string legacyJson = "{\"ConfigVersion\": \"0.8.7\", \"WindowWidth\": 520.0, \"WindowHeight\": 800.0, \"AutoCheckUpdate\": true}";
+            var legacySettings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(legacyJson);
+            bool migrated = SettingsService.Instance.MigrateSettingsIfNeeded(legacySettings);
+            AssertTrue(migrated, "Legacy 520x800 settings should trigger migration");
+            AssertEquals("800", legacySettings.WindowWidth.ToString(), "Migrated WindowWidth should be 800");
+            AssertEquals("600", legacySettings.WindowHeight.ToString(), "Migrated WindowHeight should be 600");
+
+            // 4. Migration with custom modified window size should NOT reset
+            string customJson = "{\"ConfigVersion\": \"0.8.7\", \"WindowWidth\": 960.0, \"WindowHeight\": 720.0, \"AutoCheckUpdate\": true}";
+            var customSettings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(customJson);
+            bool migratedCustom = SettingsService.Instance.MigrateSettingsIfNeeded(customSettings);
+            AssertFalse(migratedCustom, "Custom 960x720 settings should not trigger migration");
+            AssertEquals("960", customSettings.WindowWidth.ToString(), "Custom WindowWidth should remain 960");
+            AssertEquals("720", customSettings.WindowHeight.ToString(), "Custom WindowHeight should remain 720");
+
+            // 5. Migration with invalid window size (<= 0) should reset
+            string invalidJson = "{\"ConfigVersion\": \"0.8.7\", \"WindowWidth\": 0.0, \"WindowHeight\": -10.0, \"AutoCheckUpdate\": true}";
+            var invalidSettings = Newtonsoft.Json.JsonConvert.DeserializeObject<AppSettings>(invalidJson);
+            bool migratedInvalid = SettingsService.Instance.MigrateSettingsIfNeeded(invalidSettings);
+            AssertTrue(migratedInvalid, "Invalid window size should trigger migration");
+            AssertEquals("800", invalidSettings.WindowWidth.ToString(), "Invalid WindowWidth should reset to 800");
+            AssertEquals("600", invalidSettings.WindowHeight.ToString(), "Invalid WindowHeight should reset to 600");
         }
 
         private static void AssertTrue(bool condition, string message)

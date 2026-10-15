@@ -128,6 +128,13 @@ namespace AIHelper.Services
                 needMigration = true;
             }
 
+            if (settings.WindowWidth <= 0 || settings.WindowHeight <= 0 || (settings.WindowWidth == 520 && settings.WindowHeight == 800))
+            {
+                settings.WindowWidth = 800;
+                settings.WindowHeight = 600;
+                needMigration = true;
+            }
+
             if (needMigration)
             {
                 settings.AutoCheckUpdate = true;

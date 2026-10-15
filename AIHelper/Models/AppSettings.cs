@@ -41,8 +41,20 @@ namespace AIHelper.Models
         /// </summary>
         public bool ShowMainWindowOnStartup { get; set; } = true;
 
-        public double WindowWidth { get; set; } = 520;
-        public double WindowHeight { get; set; } = 800;
+        /// <summary>
+        /// 主窗口宽度（默认 800）
+        /// </summary>
+        public double WindowWidth { get; set; } = 800;
+
+        /// <summary>
+        /// 主窗口高度（默认 600）
+        /// </summary>
+        public double WindowHeight { get; set; } = 600;
+
+        /// <summary>
+        /// 主窗口是否最大化（默认 false）
+        /// </summary>
+        public bool WindowMaximized { get; set; } = false;
         public bool AutoStart { get; set; } = false;
         public bool AutoSubmit { get; set; } = true;
 
