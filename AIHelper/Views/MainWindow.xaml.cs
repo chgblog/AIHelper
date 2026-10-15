@@ -103,6 +103,8 @@ namespace AIHelper.Views
         private bool _currentBrowserWebViewUsesProxy;
         private string _currentBrowserProxyServer;
         private UpdateCheckService.UpdateInfo _availableUpdate;
+        private System.Windows.Threading.DispatcherTimer _saveWindowSizeTimer;
+        private bool _isWindowSizeLoaded = false;
 
         public bool IsExiting { get; set; } = false;
         public bool IsClosed { get; private set; } = false;
@@ -110,15 +112,59 @@ namespace AIHelper.Views
         public MainWindow()
         {
             InitializeComponent();
+            LoadAndApplyWindowSize();
             this.SourceInitialized += MainWindow_SourceInitialized;
             this.StateChanged += MainWindow_StateChanged;
+            this.SizeChanged += MainWindow_SizeChanged;
+        }
+
+        private void LoadAndApplyWindowSize()
+        {
+            try
+            {
+                if (_settings == null)
+                {
+                    _settings = SettingsService.Instance.Load();
+                }
+
+                double width = _settings?.WindowWidth > 0 ? _settings.WindowWidth : 800;
+                double height = _settings?.WindowHeight > 0 ? _settings.WindowHeight : 600;
+
+                if (width < this.MinWidth) width = this.MinWidth;
+                if (height < this.MinHeight) height = this.MinHeight;
+
+                var maxAllowedWidth = Math.Max(SystemParameters.WorkArea.Width, SystemParameters.VirtualScreenWidth);
+                var maxAllowedHeight = Math.Max(SystemParameters.WorkArea.Height, SystemParameters.VirtualScreenHeight);
+                if (maxAllowedWidth > 0 && width > maxAllowedWidth) width = maxAllowedWidth;
+                if (maxAllowedHeight > 0 && height > maxAllowedHeight) height = maxAllowedHeight;
+
+                this.Width = width;
+                this.Height = height;
+
+                _saveWindowSizeTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(500)
+                };
+                _saveWindowSizeTimer.Tick += (s, e) =>
+                {
+                    _saveWindowSizeTimer.Stop();
+                    SaveWindowSize();
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error in LoadAndApplyWindowSize", ex);
+            }
         }
 
         private async void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
             try
             {
-                _settings = SettingsService.Instance.Load();
+                if (_settings == null)
+                {
+                    _settings = SettingsService.Instance.Load();
+                }
 
                 HotkeyService.Instance.Initialize(this);
                 HotkeyService.Instance.HotkeyPressed += HotkeyService_HotkeyPressed;
@@ -144,6 +190,12 @@ namespace AIHelper.Views
                 var helper = new System.Windows.Interop.WindowInteropHelper(this);
                 var source = System.Windows.Interop.HwndSource.FromHwnd(helper.Handle);
                 source?.AddHook(WndProc);
+
+                if (_settings?.WindowMaximized == true)
+                {
+                    this.WindowState = WindowState.Maximized;
+                }
+                _isWindowSizeLoaded = true;
 
                 // Start initializing WebView2 immediately in background
                 var initTask = InitializeWebViewAsync();
@@ -739,6 +791,7 @@ namespace AIHelper.Views
         {
             if (IsMainWindowActive())
             {
+                SaveWindowSize();
                 if (_currentSettingsWindow != null && _currentSettingsWindow.IsLoaded)
                 {
                     _currentSettingsWindow.Close();
@@ -805,7 +858,7 @@ namespace AIHelper.Views
             this.Show();
             if (this.WindowState == WindowState.Minimized)
             {
-                this.WindowState = WindowState.Normal;
+                this.WindowState = _settings?.WindowMaximized == true ? WindowState.Maximized : WindowState.Normal;
             }
             this.Activate();
             this.Topmost = true;
@@ -1938,6 +1991,78 @@ namespace AIHelper.Views
         private void MainWindow_StateChanged(object sender, EventArgs e)
         {
             UpdateMaximizeRestoreState();
+
+            if (!_isWindowSizeLoaded || _settings == null) return;
+
+            if (this.WindowState == WindowState.Maximized)
+            {
+                _settings.WindowMaximized = true;
+                _saveWindowSizeTimer?.Stop();
+                _saveWindowSizeTimer?.Start();
+            }
+            else if (this.WindowState == WindowState.Normal)
+            {
+                _settings.WindowMaximized = false;
+                if (this.ActualWidth > 0 && this.ActualHeight > 0)
+                {
+                    _settings.WindowWidth = Math.Round(this.ActualWidth);
+                    _settings.WindowHeight = Math.Round(this.ActualHeight);
+                }
+                _saveWindowSizeTimer?.Stop();
+                _saveWindowSizeTimer?.Start();
+            }
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (!_isWindowSizeLoaded || _settings == null) return;
+
+            if (this.WindowState == WindowState.Normal)
+            {
+                if (this.ActualWidth > 0 && this.ActualHeight > 0)
+                {
+                    _settings.WindowWidth = Math.Round(this.ActualWidth);
+                    _settings.WindowHeight = Math.Round(this.ActualHeight);
+                    _settings.WindowMaximized = false;
+                    _saveWindowSizeTimer?.Stop();
+                    _saveWindowSizeTimer?.Start();
+                }
+            }
+        }
+
+        public void SaveWindowSize()
+        {
+            if (!_isWindowSizeLoaded || _settings == null) return;
+
+            try
+            {
+                _saveWindowSizeTimer?.Stop();
+
+                if (this.WindowState == WindowState.Normal)
+                {
+                    if (this.ActualWidth > 0 && this.ActualHeight > 0)
+                    {
+                        _settings.WindowWidth = Math.Round(this.ActualWidth);
+                        _settings.WindowHeight = Math.Round(this.ActualHeight);
+                    }
+                    _settings.WindowMaximized = false;
+                }
+                else if (this.WindowState == WindowState.Maximized)
+                {
+                    _settings.WindowMaximized = true;
+                    if (this.RestoreBounds.Width > 0 && this.RestoreBounds.Height > 0)
+                    {
+                        _settings.WindowWidth = Math.Round(this.RestoreBounds.Width);
+                        _settings.WindowHeight = Math.Round(this.RestoreBounds.Height);
+                    }
+                }
+
+                SettingsService.Instance.Save(_settings);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to save window size", ex);
+            }
         }
 
         private void UpdateMaximizeRestoreState()
@@ -2092,6 +2217,7 @@ namespace AIHelper.Views
 
         public void RefreshSettings()
         {
+            SaveWindowSize();
             _settings = SettingsService.Instance.Load();
             UpdateTextSelectionServiceState();
             LoadQuickActions();
@@ -2100,16 +2226,19 @@ namespace AIHelper.Views
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
+            SaveWindowSize();
             this.Hide();
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
+            SaveWindowSize();
             this.Hide();
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            SaveWindowSize();
             if (!IsExiting)
             {
                 e.Cancel = true;
@@ -2121,7 +2250,9 @@ namespace AIHelper.Views
 
         protected override void OnClosed(EventArgs e)
         {
+            SaveWindowSize();
             IsClosed = true;
+            this.SizeChanged -= MainWindow_SizeChanged;
             this.StateChanged -= MainWindow_StateChanged;
             // 静态事件会持有窗口引用，窗口可能被重建，必须解绑
             UpdateCheckService.UpdateAvailable -= UpdateCheckService_UpdateAvailable;

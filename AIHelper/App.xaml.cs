@@ -290,6 +290,7 @@ namespace AIHelper
             {
                 if (_mainWindow != null)
                 {
+                    _mainWindow.SaveWindowSize();
                     _mainWindow.IsExiting = true;
                     _mainWindow.Close();
                 }
@@ -338,6 +339,15 @@ namespace AIHelper
 
         protected override void OnExit(ExitEventArgs e)
         {
+            try
+            {
+                if (_mainWindow != null && !_mainWindow.IsClosed)
+                {
+                    _mainWindow.SaveWindowSize();
+                }
+            }
+            catch { }
+
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
